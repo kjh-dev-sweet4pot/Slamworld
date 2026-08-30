@@ -1,0 +1,34 @@
+{
+  "name": "owm-report",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:public-read": "node scripts/apply-public-read.mjs",
+    "db:seed": "node scripts/apply-seed.mjs",
+    "db:setup": "node scripts/db-setup.mjs",
+    "sync-metrics": "tsx scripts/sync-metrics.ts",
+    "sync-profile-photos": "tsx scripts/sync-profile-photos.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.1",
+    "@supabase/supabase-js": "^2.46.1",
+    "apify-client": "^2.25.0",
+    "next": "15.0.3",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10",
+    "pg": "^8.13.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  }
+}

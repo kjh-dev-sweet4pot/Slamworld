@@ -1,0 +1,421 @@
+'use client'
+import { useEffect, useState, useCallback } from 'react'
+import SnapshotBar from '@/components/SnapshotBar'
+import ContentCard from '@/components/ContentCard'
+import MonthlyBarChart from '@/components/MonthlyBarChart'
+import ChannelDonut from '@/components/ChannelDonut'
+import BrandPipeline from '@/components/BrandPipeline'
+import type { Content, Summary, LocationSummary, ChannelSummary } from '@/lib/types'
+
+type Tab = 'perf' | 'month' | 'all'
+
+const CAMPAIGNS = ['전체','명동오픈_0811','남포오픈','신사메가_6월','6월_중화권','6월_영미권','4_5월_영미권','3월_영미권']
+const LOCATIONS = ['전체','명동점','남포점','신사점','이태원점','성수점','북촌점','종각점','강남점']
+const CHANNELS  = ['전체','샤오홍슈','인스타그램','틱톡','도우인','웨이보']
+const PERF_PREVIEW_COUNT = 9
+const PERF_MORE_COUNT = 6
+
+const CHANNEL_SHORT: Record<string, string> = {
+  '샤오홍슈': '샤오홍슈',
+  '인스타그램': '인스타',
+  '틱톡': '틱톡',
+  '도우인': '도우인',
+  '웨이보': '웨이보',
+}
+
+function channelRankTags(rows: Content[]): Map<number, string[]> {
+  const tags = new Map<number, string[]>()
+  const add = (id: number, tag: string) => {
+    const list = tags.get(id) ?? []
+    if (!list.includes(tag)) list.push(tag)
+    tags.set(id, list)
+  }
+  const metrics = [
+    { key: 'views' as const, label: '조회수' },
+    { key: 'likes' as const, label: '좋아요' },
+    { key: 'saves' as const, label: '저장수' },
+  ]
+  for (const ch of [...new Set(rows.map(r => r.channel))]) {
+    const group = rows.filter(r => r.channel === ch)
+    const short = CHANNEL_SHORT[ch] ?? ch
+    for (const { key, label } of metrics) {
+      let winner: Content | null = null
+      for (const row of group) {
+        const n = row[key]
+        if (n == null || n <= 0) continue
+        if (!winner || n > (winner[key] ?? 0)) winner = row
+      }
+      if (winner) add(winner.id, `#${short} ${label} 1등`)
+    }
+  }
+  return tags
+}
+
+function SectionHeader({ no, title, sub, right }: {
+  no: string; title: string; sub?: string; right?: string
+}) {
+  return (
+    <div className="flex items-end gap-3 flex-wrap mb-3 px-0.5">
+      <div>
+        <span className="num text-[11px] text-azure tracking-widest">{no}</span>
+        <h2 className="text-xl font-extrabold tracking-tight mt-1">{title}</h2>
+        {sub && <p className="text-[12.5px] text-body mt-1 leading-relaxed">{sub}</p>}
+      </div>
+      {right && <span className="num text-[11px] text-slate ml-auto">{right}</span>}
+    </div>
+  )
+}
+
+export default function Dashboard() {
+  const [summary, setSummary] = useState<Summary | null>(null)
+  const [locations, setLocations] = useState<LocationSummary[]>([])
+  const [monthly, setMonthly]   = useState<{month:string;count:number}[]>([])
+  const [channels, setChannels] = useState<ChannelSummary[]>([])
+  const [contents, setContents] = useState<Content[]>([])
+  const [tab, setTab]           = useState<Tab>('perf')
+  const [campaign, setCampaign] = useState('전체')
+  const [location, setLocation] = useState('전체')
+  const [channel, setChannel]   = useState('전체')
+  const [loading, setLoading]   = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [visibleCount, setVisibleCount] = useState(PERF_PREVIEW_COUNT)
+
+  // 요약 데이터
+  useEffect(() => {
+    fetch('/api/summary')
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok || d.error) {
+          setLoadError(d.error ?? '요약 데이터를 불러오지 못했습니다.')
+          return
+        }
+        setSummary(d.summary)
+        setLocations(d.locations ?? [])
+        setMonthly(d.monthly ?? [])
+        setChannels(d.channels ?? [])
+      })
+      .catch(() => setLoadError('요약 데이터를 불러오지 못했습니다.'))
+  }, [])
+
+  // 콘텐츠 데이터
+  const fetchContents = useCallback(() => {
+    setLoading(true)
+    const params = new URLSearchParams({
+      sort: tab === 'all' ? 'date' : 'perf',
+      limit: '300',
+    })
+    if (campaign !== '전체') params.set('campaign', campaign)
+    if (location !== '전체') params.set('location', location)
+    if (channel  !== '전체') params.set('channel',  channel)
+    fetch(`/api/contents?${params}`)
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok || d.error) {
+          setLoadError(d.error ?? '콘텐츠 데이터를 불러오지 못했습니다.')
+          setContents([])
+        } else {
+          setContents(d.data ?? [])
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoadError('콘텐츠 데이터를 불러오지 못했습니다.')
+        setLoading(false)
+      })
+  }, [tab, campaign, location, channel])
+
+  useEffect(() => { fetchContents() }, [fetchContents])
+  useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel])
+
+  const rankTags = channelRankTags(contents)
+
+  // 전체 탭용 테이블
+  const tableContents = [...contents].sort((a,b) =>
+    (b.likes ?? 0) + (b.saves ?? 0) - ((a.likes ?? 0) + (a.saves ?? 0))
+  ).slice(0, 100)
+
+  return (
+    <main className="max-w-[1180px] mx-auto px-5 py-5 pb-24">
+
+      {/* ── 상단 네비 ── */}
+      <nav className="glass sticky top-3 z-40 flex items-center gap-2 px-4 py-2 mb-3 flex-wrap">
+        <span className="text-[11px] font-bold tracking-widest text-azure-deep whitespace-nowrap">
+          OWM × 브랜드슬램
+        </span>
+        <div className="flex gap-1 ml-auto flex-wrap">
+          {([
+            ['콘텐츠 현황', '#s1'],
+            ['계약 브랜드', '#s-brands'],
+            ['준비 중', '#s-prep'],
+            ['영업 예정', '#s-pipeline'],
+            ['지점 현황', '#s2'],
+            ['자료', '#s3'],
+          ] as const).map(([label, href]) => (
+            <a key={label}
+              href={href}
+              className="text-[12.5px] font-semibold text-slate px-3 py-2 rounded
+                hover:text-azure-deep hover:bg-white/70 transition-colors">
+              {label}
+            </a>
+          ))}
+        </div>
+        <span className="num text-[10px] text-slate whitespace-nowrap">08.30 기준</span>
+      </nav>
+
+      {/* ── 스냅샷 ── */}
+      {loadError && (
+        <div className="glass px-4 py-3 mb-3 text-sm text-amber-ink bg-amber/10 border border-amber/20">
+          {loadError}
+          <span className="block text-[12px] text-body mt-1">
+            Supabase RLS 정책이 막혀 있으면 SQL Editor에서 <code className="text-[11px]">supabase/enable-public-read.sql</code> 을 실행하세요.
+          </span>
+        </div>
+      )}
+      {!loadError && summary && summary.total_rows === 0 && (
+        <div className="glass px-4 py-3 mb-3 text-sm text-amber-ink bg-amber/10 border border-amber/20">
+          Supabase <code className="text-[11px]">contents</code> 테이블에 데이터가 없습니다.
+          SQL Editor에서 <code className="text-[11px]">supabase/seed.sql</code> 을 실행해 주세요. (329건)
+        </div>
+      )}
+      <SnapshotBar summary={summary} />
+      <div className="glass px-4 py-2.5 mb-8 text-[11.5px] text-body leading-relaxed">
+        <b className="text-azure-deep">수치 기준 —</b> 샤오홍슈는 조회수를 플랫폼이 제공하지 않아
+        좋아요·저장만 집계했습니다. 실제 노출은 표시된 조회수보다 큽니다.
+        지표는 수동 수집이며 마지막 갱신은 2026.08.30입니다.
+      </div>
+
+      {/* ── §1 콘텐츠 현황 ── */}
+      <section id="s1" className="mb-10 scroll-mt-20">
+        <SectionHeader no="01" title="콘텐츠 업로드 현황"
+          sub="성과 상위 콘텐츠입니다. 아래에서 더 볼 수 있습니다."
+          right={tab === 'perf'
+            ? `${Math.min(visibleCount, contents.length)}건`
+            : `${contents.length}건`}
+        />
+
+        {/* 탭 */}
+        <div className="flex gap-1 bg-white/55 border border-white/75 rounded p-0.5 w-fit mb-3">
+          {([['perf','성과순'],['month','월별'],['all','전체']] as [Tab,string][]).map(([t,label]) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`text-[12.5px] font-semibold px-4 py-2 rounded transition-all
+                ${tab===t
+                  ? 'bg-azure text-white shadow-[0_2px_8px_rgba(24,104,240,.28)]'
+                  : 'text-slate hover:text-azure-deep'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 필터 */}
+        <div className="flex gap-2 flex-wrap mb-4">
+          {([
+            ['캠페인', CAMPAIGNS, campaign, setCampaign],
+            ['지점',   LOCATIONS, location, setLocation],
+            ['채널',   CHANNELS,  channel,  setChannel],
+          ] as [string, string[], string, (v:string)=>void][]).map(([label, opts, val, setter]) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <span className="text-[11px] text-slate font-semibold">{label}</span>
+              <select value={val} onChange={e => setter(e.target.value)}
+                className="text-[12px] bg-white/70 border border-mist rounded px-2 py-1.5
+                  text-ink focus:outline-none focus:border-azure">
+                {opts.map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+          ))}
+          {(campaign !== '전체' || location !== '전체' || channel !== '전체') && (
+            <button onClick={() => { setCampaign('전체'); setLocation('전체'); setChannel('전체') }}
+              className="text-[11.5px] font-semibold text-slate border border-mist rounded
+                px-2.5 py-1.5 hover:border-sky hover:text-azure-deep transition-colors">
+              초기화
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-4 items-start">
+          <div className="min-w-0">
+        {/* ── 성과순 ── */}
+        {tab === 'perf' && (
+          <>
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                {[...Array(PERF_PREVIEW_COUNT)].map((_, i) => (
+                  <div key={i} className="glass-solid h-40 animate-pulse" />
+                ))}
+              </div>
+            ) : contents.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {contents.slice(0, visibleCount).map(c => (
+                    <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
+                  ))}
+                </div>
+                {contents.length > visibleCount && (
+                  <div className="mt-3 flex items-center justify-between gap-3 px-1">
+                    <p className="text-[12px] text-slate">
+                      {visibleCount}건 표시 중 · 남은 {contents.length - visibleCount}건
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
+                      className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
+                    >
+                      {Math.min(PERF_MORE_COUNT, contents.length - visibleCount)}개 더 보기
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="glass px-5 py-10 text-center text-[13px] text-slate">
+                필터 조건에 맞는 콘텐츠가 없습니다.
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── 월별 ── */}
+        {tab === 'month' && (
+          <div className="glass p-5">
+            <span className="num text-[10.5px] text-slate tracking-widest uppercase">월별 업로드 건수</span>
+            <MonthlyBarChart data={monthly} highlightMonth="2026-08" />
+            <p className="text-[12.5px] text-body leading-relaxed pt-4 mt-4 border-t border-mist">
+              <b className="text-azure-deep">8월 {monthly.find(m=>m.month==='2026-08')?.count ?? 0}건.</b>{' '}
+              명동점 오픈(8/11) 122건과 남포점 오픈 47건이 같은 달에 진행됐습니다.
+            </p>
+          </div>
+        )}
+
+        {/* ── 전체 테이블 ── */}
+        {tab === 'all' && (
+          <div className="glass overflow-hidden">
+            <div className="grid grid-cols-6 gap-3 px-4 py-2.5 bg-white/40
+              num text-[10.5px] text-slate uppercase tracking-wider">
+              <div>지점</div><div>인플루언서</div><div>채널</div>
+              <div>조회수</div><div>좋아요</div><div>저장</div>
+            </div>
+            {tableContents.map(c => (
+              <div key={c.id}
+                className="grid grid-cols-6 gap-3 px-4 py-3 text-[12.5px]
+                  border-t border-mist hover:bg-white/70 transition-colors">
+                <div className="font-bold text-azure-deep">{c.location}</div>
+                <div>{c.influencer_name}</div>
+                <div className="text-slate">{c.channel}</div>
+                <div className="num">{c.views ? c.views.toLocaleString() : '—'}</div>
+                <div className="num">{c.likes?.toLocaleString() ?? '—'}</div>
+                <div className="num">{c.saves?.toLocaleString() ?? '—'}</div>
+              </div>
+            ))}
+          </div>
+        )}
+          </div>
+
+          <ChannelDonut data={channels} />
+        </div>
+      </section>
+
+      <BrandPipeline />
+
+      {/* ── 지점 현황 ── */}
+      <section id="s2" className="mb-10 scroll-mt-20">
+        <SectionHeader no="05" title="지점 현황" right={`${locations.length}개 지점`}/>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          {locations.map(loc => (
+            <div key={loc.location} className="glass-solid p-4">
+              <div className="font-extrabold text-[15px] tracking-tight mb-1">{loc.location}</div>
+              <div className="w-full h-1 rounded-full bg-mist overflow-hidden my-2">
+                <div className="h-full rounded-full"
+                  style={{
+                    width: `${Math.min((loc.uploaded / Math.max(loc.influencer_count,1))*100, 100)}%`,
+                    background: 'linear-gradient(90deg,#6FBFFF,#1868F0)'
+                  }}/>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <div>
+                  <div className="text-[10px] text-slate">방문</div>
+                  <div className="num text-[14px] font-semibold">{loc.influencer_count}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate">업로드</div>
+                  <div className="num text-[14px] font-semibold">{loc.uploaded}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate">좋아요 합</div>
+                  <div className="num text-[14px] font-semibold">{loc.total_likes?.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate">최대 조회</div>
+                  <div className="num text-[14px] font-semibold">
+                    {loc.max_views ? (loc.max_views/1000).toFixed(0)+'K' : '—'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── §3 자료 ── */}
+      <section id="s3" className="scroll-mt-20">
+        <SectionHeader no="06" title="자료 및 향후 개선"/>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          <div className="glass p-5">
+            <h3 className="font-bold text-[13.5px] mb-1">관련 링크</h3>
+            <p className="text-[11px] text-slate mb-3">원본 데이터</p>
+            {[
+              ['OWM 명동 본시트','#'],
+              ['브랜드슬램 × OWM 종합','#'],
+              ['콘텐츠 원본 드라이브','#'],
+            ].map(([label, href]) => (
+              <a key={label} href={href}
+                className="flex items-center gap-2 text-[12.5px] text-body
+                  px-2 py-2 rounded transition-colors hover:bg-white/85 hover:text-azure-deep">
+                {label}
+                <span className="num text-[10.5px] text-slate ml-auto">↗</span>
+              </a>
+            ))}
+          </div>
+          <div className="glass p-5">
+            <h3 className="font-bold text-[13.5px] mb-1">인플루언서 가이드라인</h3>
+            <p className="text-[11px] text-slate mb-3">최종 수정 2026.08.01</p>
+            {[
+              ['촬영 가이드 (구도 · 조명)','#'],
+              ['필수 해시태그 · 멘션','#'],
+              ['유료 광고 표기 규정','#'],
+            ].map(([label, href]) => (
+              <a key={label} href={href}
+                className="flex items-center gap-2 text-[12.5px] text-body
+                  px-2 py-2 rounded transition-colors hover:bg-white/85 hover:text-azure-deep">
+                {label}
+                <span className="num text-[10.5px] text-slate ml-auto">↗</span>
+              </a>
+            ))}
+          </div>
+          <div className="glass p-5">
+            <h3 className="font-bold text-[13.5px] mb-1">향후 개선</h3>
+            <p className="text-[11px] text-slate mb-3">다음에 열릴 기능</p>
+            <div className="relative pl-4 border-l border-mist space-y-3">
+              {[
+                ['9월 2주','샤오홍슈 추정 조회수 자동 계산'],
+                ['9월 4주','브랜드별 상세 리포트 · 리드타임 시각화'],
+                ['10월',  '채널 지표 자동 수집 · 기간 비교'],
+              ].map(([q, t], i) => (
+                <div key={q} className="relative">
+                  <div className={`absolute -left-[21px] top-1 w-2 h-2 rounded-[2px] border-2
+                    ${i===0 ? 'border-azure shadow-[0_0_0_3px_rgba(24,104,240,.15)] bg-white' : 'border-sky bg-white'}`}/>
+                  <div className="num text-[10px] text-azure tracking-wider">{q}</div>
+                  <div className="text-[12.5px] text-body mt-0.5">{t}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 px-5 py-4 text-[12.5px] text-body leading-relaxed
+          bg-white/50 border-l-[3px] border-azure rounded-r-[6px]">
+          <b className="text-azure-deep">참고사항 —</b>{' '}
+          조회수 합계는 샤오홍슈·도우인 미제공분을 제외한 값이라{' '}
+          <b className="text-azure-deep">실제 노출은 이보다 큽니다.</b>
+        </div>
+      </section>
+    </main>
+  )
+}

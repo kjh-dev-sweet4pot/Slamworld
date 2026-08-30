@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --r: 6px;
+  --glass: rgba(255,255,255,.55);
+  --edge: rgba(255,255,255,.75);
+  --shadow: 0 6px 24px rgba(12,58,130,.09), inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+body {
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  background: #F4F8FF;
+  color: #0A1F3C;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+.glass {
+  background: rgba(255,255,255,.55);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow: 0 6px 24px rgba(12,58,130,.09), inset 0 1px 0 rgba(255,255,255,.9);
+  border-radius: 6px;
+}
+
+.glass-solid {
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow: 0 3px 12px rgba(12,58,130,.06);
+  border-radius: 6px;
+}
+
+.num { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+
+/* 배경 orb */
+.orb {
+  position: fixed; border-radius: 50%;
+  filter: blur(90px); pointer-events: none;
+  opacity: .55;
+}
