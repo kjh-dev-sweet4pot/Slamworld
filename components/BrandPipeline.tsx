@@ -9,8 +9,12 @@ import {
   LEAD_RANGE,
   BUDGET_DISCLAIMER,
   MARKETING_NOTE,
+  contractPrepProgress,
+  formatContractDate,
+  pipelineCatStage,
   type BrandTier,
 } from '@/lib/brand-pipeline'
+import PipelineCatRunner from '@/components/PipelineCatRunner'
 
 const SEG_CLASS = [
   'bg-[#9ED2FF] text-azure-deep',
@@ -98,7 +102,13 @@ export default function BrandPipeline() {
           </p>
         </div>
 
-        {CONTRACT_BRANDS.map(b => (
+        {CONTRACT_BRANDS.map(b => {
+          const stage = pipelineCatStage(b)
+          const prepPct = b.contractCompletedOn
+            ? contractPrepProgress(b.contractCompletedOn, b.days)
+            : 0
+
+          return (
           <div key={b.name} className="glass px-5 py-4 mb-2">
             <div className="flex items-baseline gap-2.5 flex-wrap mb-2.5">
               <span className="text-[15px] font-extrabold tracking-tight">{b.name}</span>
@@ -111,6 +121,7 @@ export default function BrandPipeline() {
               </span>
             </div>
 
+            <PipelineCatRunner stage={stage} prepPct={prepPct}>
             <div className="flex gap-0.5 h-7 rounded overflow-hidden bg-mist items-stretch">
               <div className="flex-none w-[76px] sm:w-[92px] grid place-items-center text-[9px] sm:text-[9.5px] font-semibold bg-[#DCFCE7] text-[#166534] px-1 shrink-0">
                 계약서 전달
@@ -120,9 +131,15 @@ export default function BrandPipeline() {
                 <span className="text-[9px] text-azure-deep font-bold leading-none tracking-tight">
                   ◀ 계약 완료 ▶
                 </span>
-                <span className="num text-[8px] text-slate mt-0.5 whitespace-nowrap">
-                  이후 ~{LEAD_RANGE.typical}일
-                </span>
+                {b.contractCompletedOn ? (
+                  <span className="num text-[8.5px] text-azure font-bold mt-0.5 whitespace-nowrap">
+                    {formatContractDate(b.contractCompletedOn)}
+                  </span>
+                ) : (
+                  <span className="num text-[8px] text-slate mt-0.5 whitespace-nowrap">
+                    이후 ~{LEAD_RANGE.typical}일
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-1 gap-0.5 min-w-0 h-full">
@@ -137,17 +154,23 @@ export default function BrandPipeline() {
                 ))}
               </div>
             </div>
+            </PipelineCatRunner>
 
             <div className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_auto_1fr_auto] gap-x-2 gap-y-0.5 num text-[9.5px] text-slate mt-1.5 items-center">
               <span>계약서 전달</span>
-              <span className="hidden sm:inline text-azure-deep font-semibold">계약 완료</span>
+              <span className="hidden sm:inline text-azure-deep font-semibold">
+                {b.contractCompletedOn
+                  ? `계약 완료 ${formatContractDate(b.contractCompletedOn)}`
+                  : '계약 완료'}
+              </span>
               <span className="text-center sm:text-left text-body">
                 가이드 · 매칭 · 방문 준비 <span className="text-azure-deep font-semibold">(약 {b.days}일)</span>
               </span>
               <span className="text-right">{b.status}</span>
             </div>
           </div>
-        ))}
+          )
+        })}
         <p className="mt-3 px-1 text-[11.5px] text-slate leading-relaxed">{BUDGET_DISCLAIMER}</p>
       </section>
 

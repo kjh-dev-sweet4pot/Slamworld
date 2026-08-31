@@ -17,10 +17,10 @@ export interface BrandBudget {
 }
 
 export const BRAND_BUDGETS: BrandBudget[] = [
-  { brand: '옵티팜', amount: 4000, payment: '미입금', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '가이드 작성 중' },
-  { brand: '닥터 리앤장', amount: 3000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09' },
-  { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계획안·견적' },
-  { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09' },
+  { brand: '옵티팜', amount: 4000, payment: '미입금', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
+  { brand: '닥터 리앤장', amount: 3000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/30 입금 확인' },
+  { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
+  { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/31 입금 확인' },
   { brand: '해브블루', amount: 2000, rangeMax: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '온보딩 진행' },
   { brand: '달바', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
   { brand: '스킨스탠다드', amount: 1100, payment: '검토 중', stage: '10월 예정', securedMonth: null, marketingMonth: '2026-10' },

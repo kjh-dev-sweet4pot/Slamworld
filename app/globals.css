@@ -233,6 +233,51 @@ body {
     overflow-y: auto;
   }
 
+  .pipeline-cat-marker-delivering {
+    animation: pipeline-cat-enter-delivering 3.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .pipeline-cat-marker-prep {
+    animation: pipeline-cat-enter-prep 3.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .pipeline-cat-video {
+    filter: drop-shadow(0 2px 4px rgba(12, 58, 130, 0.2));
+    animation: pipeline-cat-bob 1.7s ease-in-out infinite;
+  }
+  .pipeline-cat-pct {
+    animation: pipeline-cat-fade 3.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .pipeline-cat-arrow {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #1868F0;
+    margin-top: 1px;
+    filter: drop-shadow(0 1px 1px rgba(12, 58, 130, 0.15));
+  }
+  @keyframes pipeline-cat-enter-delivering {
+    from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes pipeline-cat-enter-prep {
+    from { left: 4%; opacity: 0; }
+    to { left: var(--cat-enter-pct, 50%); opacity: 1; }
+  }
+  @keyframes pipeline-cat-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pipeline-cat-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pipeline-cat-marker-delivering,
+    .pipeline-cat-marker-prep,
+    .pipeline-cat-video,
+    .pipeline-cat-pct { animation: none; }
+  }
+
   .donut-enter { animation: donut-enter 0.45s cubic-bezier(0.4, 0, 0.2, 1) both; }
   .donut-arc {
     transition: stroke-dasharray 0.55s cubic-bezier(0.4, 0, 0.2, 1),
