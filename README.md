@@ -101,12 +101,14 @@ Estimated Views  = Total Interactions / R_eng
 | 콘텐츠 유형 | R_eng (인터랙션율) |
 |---|---|
 | 일반 이미지/피드 | 3.5% ~ 4.5% |
-| 정보성/가이드 피드 **(방문형 캠페인 기본)** | 6.0% ~ 8.0% |
+| 정보성/가이드 피드 **(방문형 캠페인 기본)** | **2.0% ~ 2.6%** (명동 캘리브 n=4) |
 | 숏폼 동영상 | 2.0% ~ 3.0% |
 
 `shareCount`가 크롤러에서 누락(0/null)이면 **R_eng에서 0.5%p 차감**합니다.
 
-#### 2. Component-Weighted Model (점 추정값)
+**점 추정값**은 Total Engagement Model을 사용합니다 (상호작용 합에 단조 증가).
+
+#### 2. Component-Weighted Model (참고·백테스트용)
 
 ```
 Estimated Views = (likedCount/r_like)×w1 + (collectedCount/r_collect)×w2
@@ -125,7 +127,7 @@ Estimated Views = (likedCount/r_like)×w1 + (collectedCount/r_collect)×w2
 #### 적용 방법
 
 ```bash
-# DB 일괄 역산 (views가 NULL인 샤오홍슈 행)
+# DB 일괄 역산 (샤오홍슈 전 행, 인스타 URL 오분류 실측 제거 포함)
 npm run estimate-xhs-views
 
 # 미리보기
@@ -138,16 +140,16 @@ Apify `sync-metrics` 실행 시 샤오홍슈 행은 지표 수집 직후 자동 
 #### 정확도
 
 **구조적 불확실성 (R_eng 밴드)**  
-가이드 피드 기준 R_eng 6.0~8.0% (공유 미수집 시 5.5~7.5%)를 쓰면, 동일 상호작용에 대해 추정 조회수가 약 **±15%** 범위로 변합니다. `views_est_low` / `views_est_high`가 이 밴드를 반영합니다.
+캘리브레이션 R_eng 2.0~2.6% (공유 미수집 시 1.5~2.1%)를 쓰면, 동일 상호작용에 대해 추정 조회수가 약 **±15%** 범위로 변합니다. `views_est_low` / `views_est_high`가 이 밴드를 반영합니다.
 
 **캘리브레이션 백테스트 (n=4, 인플루언서 자가 신고 조회수)**
 
 | 모델 | MAPE |
 |---|---|
-| Total Engagement | 65.0% |
+| **Total Engagement (점 추정)** | **32.6%** |
 | Component-Weighted | 55.8% |
-| Blended (점 추정) | 60.4% |
-| 구간 [low–high] 적중 | 0% (4/4) |
+| Blended | 14.6% |
+| 구간 [low–high] 적중 | 25% (1/4) |
 | (참고) 구 방식 interaction×41 | **13.2%** |
 
 ```bash
@@ -156,7 +158,7 @@ npm run estimate-xhs-views -- --dry-run
 ```
 
 **해석**  
-초기 4건은 인스타·샤오홍슈 혼재 데이터에서 뽑은 레거시 캘리브이며, 실측 조회 대비 인터랙션 비율이 약 **2.3%**(가이드 7%보다 낮음)입니다. 그래서 공식대로 가이드 R_eng를 쓰면 점 추정이 실측보다 낮게 나옵니다(과소 추정). 반면 단순 ×41 배수는 우연히 4건에 더 가깝습니다.
+초기 4건 캘리브에서 실측 조회 대비 인터랙션 비율이 약 **2.3%**였습니다. 가이드 기본값 7%를 쓰면 점 추정이 실측보다 낮고, 좋아요 순서와 조회수 순서가 뒤집힐 수 있습니다. 채널이 샤오홍슈인데 `instagram.com` URL인 행은 인스타 실측 조회수를 제거하고 역산만 씁니다.
 
 **운영 권장**
 - 방문형 가이드 콘텐츠 → 현재 기본값 `contentType: 'guide'` 유지

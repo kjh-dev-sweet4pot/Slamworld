@@ -51,6 +51,22 @@ function channelRankTags(rows: Content[]): Map<number, string[]> {
   return tags
 }
 
+function viewsForSort(c: Content): number {
+  if (c.channel === '샤오홍슈') return c.views_estimated ?? c.views ?? 0
+  return c.views ?? c.views_estimated ?? 0
+}
+
+function fmtTableViews(c: Content): string {
+  const v = c.channel === '샤오홍슈'
+    ? (c.views_estimated ?? c.views)
+    : (c.views ?? c.views_estimated)
+  if (!v) return '—'
+  const estimated = c.channel === '샤오홍슈'
+    ? !!c.views_estimated
+    : !c.views && !!c.views_estimated
+  return estimated ? `~${v.toLocaleString()}` : v.toLocaleString()
+}
+
 function SectionHeader({ no, title, sub, right }: {
   no: string; title: string; sub?: string; right?: string
 }) {
@@ -140,8 +156,8 @@ export default function Dashboard() {
 
   // 전체 탭용 테이블
   const tableContents = [...contents].sort((a, b) => {
-    const av = a[tableSort.key] ?? 0
-    const bv = b[tableSort.key] ?? 0
+    const av = tableSort.key === 'views' ? viewsForSort(a) : (a[tableSort.key] ?? 0)
+    const bv = tableSort.key === 'views' ? viewsForSort(b) : (b[tableSort.key] ?? 0)
     return tableSort.dir === 'desc' ? bv - av : av - bv
   }).slice(0, 100)
 
@@ -190,8 +206,8 @@ export default function Dashboard() {
       )}
       <SnapshotBar summary={summary} />
       <div className="glass px-4 py-2.5 mb-8 text-[11.5px] text-body leading-relaxed">
-        <b className="text-azure-deep">수치 기준 —</b> 샤오홍슈는 조회수를 플랫폼이 제공하지 않아
-        좋아요·저장만 집계했습니다. 실제 노출은 표시된 조회수보다 큽니다.
+        <b className="text-azure-deep">수치 기준 —</b> 샤오홍슈 조회수는 좋아요·저장·댓글로 역산했으며
+        상단 누적 조회수에 반영됩니다. 도우인은 미제공분이 남아 있을 수 있습니다.
         지표는 수동 수집이며 마지막 갱신은 2026.08.30입니다.
       </div>
 
@@ -380,7 +396,7 @@ export default function Dashboard() {
         {/* ── 전체 테이블 ── */}
         {tab === 'all' && (
           <div className="glass overflow-hidden">
-            <div className="grid grid-cols-6 gap-3 px-4 py-2.5 bg-white/40
+            <div className="grid grid-cols-7 gap-3 px-4 py-2.5 bg-white/40
               num text-[10.5px] text-slate uppercase tracking-wider items-center">
               <div>지점</div><div>인플루언서</div><div>채널</div>
               {([
@@ -406,39 +422,39 @@ export default function Dashboard() {
                   </button>
                 )
               })}
+              <div />
             </div>
-            {tableContents.map(c => {
-              const rowClass = `grid grid-cols-6 gap-3 px-4 py-3 text-[12.5px]
-                border-t border-mist transition-colors
-                ${c.upload_url
-                  ? 'hover:bg-white/70 cursor-pointer'
-                  : 'opacity-60 cursor-default'}`
-              const cells = (
-                <>
-                  <div className="font-bold text-azure-deep">{c.location}</div>
-                  <div>{c.influencer_name}</div>
-                  <div className="text-slate">{c.channel}</div>
-                  <div className="num">{c.views ? c.views.toLocaleString() : '—'}</div>
-                  <div className="num">{c.likes?.toLocaleString() ?? '—'}</div>
-                  <div className="num">{c.saves?.toLocaleString() ?? '—'}</div>
-                </>
-              )
-              return c.upload_url ? (
-                <a
-                  key={c.id}
-                  href={c.upload_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={rowClass}
-                >
-                  {cells}
-                </a>
-              ) : (
-                <div key={c.id} className={rowClass} title="링크 없음">
-                  {cells}
+            {tableContents.map(c => (
+              <div
+                key={c.id}
+                className={`grid grid-cols-7 gap-3 px-4 py-3 text-[12.5px]
+                  border-t border-mist transition-colors
+                  ${!c.upload_url ? 'opacity-60' : ''}`}
+              >
+                <div className="font-bold text-azure-deep">{c.location}</div>
+                <div>{c.influencer_name}</div>
+                <div className="text-slate">{c.channel}</div>
+                <div className="num">{fmtTableViews(c)}</div>
+                <div className="num">{c.likes?.toLocaleString() ?? '—'}</div>
+                <div className="num">{c.saves?.toLocaleString() ?? '—'}</div>
+                <div className="flex justify-end">
+                  {c.upload_url ? (
+                    <a
+                      href={c.upload_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-azure-deep
+                        hover:text-azure transition-colors whitespace-nowrap"
+                    >
+                      컨텐츠 보러가기
+                      <span className="num text-[10px]">↗</span>
+                    </a>
+                  ) : (
+                    <span className="text-[11px] text-slate">—</span>
+                  )}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
           </div>
@@ -548,8 +564,8 @@ export default function Dashboard() {
         <div className="mt-4 px-5 py-4 text-[12.5px] text-body leading-relaxed
           bg-white/50 border-l-[3px] border-azure rounded-r-[6px]">
           <b className="text-azure-deep">참고사항 —</b>{' '}
-          조회수 합계는 샤오홍슈·도우인 미제공분을 제외한 값이라{' '}
-          <b className="text-azure-deep">실제 노출은 이보다 큽니다.</b>
+          조회수 합계는 샤오홍슈 역산·도우인 미제공분을 반영한 값이며,{' '}
+          <b className="text-azure-deep">실제 노출과 차이가 있을 수 있습니다.</b>
         </div>
       </section>
     </main>

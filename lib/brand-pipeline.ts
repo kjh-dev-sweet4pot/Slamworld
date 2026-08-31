@@ -70,15 +70,15 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '클리어디어',
     budget: '1,000만원',
-    meta: '입금 완료 · 계획안·견적 진행',
+    meta: '입금 예정 · 계획안·견적 진행',
     days: 14,
     status: '9월 마케팅 목표',
     segs: [4, 2, 4, 2, 2],
   },
   {
     name: 'Rxme',
-    budget: '미확인',
-    meta: '미입금 · 8/31 원브랜디드 가이드 예정',
+    budget: '1,000만원',
+    meta: '입금 완료 · 8/31 원브랜디드 가이드 예정',
     days: 14,
     status: '9월 마케팅 목표',
     segs: [4, 2, 4, 2, 2],
@@ -158,7 +158,7 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: '원브랜디드 영상 가이드',
     eta: '8.31',
     pct: 55,
-    note: '미입금 · 진행 예정',
+    note: '1,000만원 · 입금 완료',
   },
   {
     brand: '옵티팜',
@@ -172,7 +172,7 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: '마케팅 계획안 · 견적서',
     eta: '견적 전달',
     pct: 35,
-    note: '1,000만원 · 입금 완료',
+    note: '1,000만원 · 입금 예정',
   },
 ]
 

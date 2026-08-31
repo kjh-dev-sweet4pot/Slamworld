@@ -19,8 +19,8 @@ export default function SnapshotBar({ summary }: { summary: Summary | null }) {
   const items = [
     { k:'누적 방문 인플루언서', v: fmt(summary.total_influencers), unit:'명', d:'8개 지점 · 3월~8월' },
     { k:'누적 업로드',           v: fmt(summary.uploaded),          unit:'건', d:`링크 없음 ${summary.total_rows - summary.uploaded}건` },
-    { k:'누적 조회수',           v: fmt(summary.total_views),       unit:'',   d:'인스타·틱톡·도우인·웨이보' },
-    { k:'누적 좋아요',           v: fmt(summary.total_likes),       unit:'',   d:`저장 ${fmt(summary.total_saves)} · 댓글 ${fmt(summary.total_comments)}` },
+    { k:'누적 조회수',           v: fmt(summary.total_views),       unit:'',   d:'전 채널 · 샤오홍슈 역산 포함' },
+    { k:'누적 좋아요',           v: fmt(summary.total_likes),       unit:'',   d:`샤오홍슈 포함 · 저장 ${fmt(summary.total_saves)} · 댓글 ${fmt(summary.total_comments)}` },
   ]
 
   return (

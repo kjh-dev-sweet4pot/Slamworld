@@ -27,6 +27,9 @@ const R_ENG: Record<XhsContentType, { low: number; mid: number; high: number }> 
   video: { low: 0.020, mid: 0.025, high: 0.030 },
 }
 
+// ponytail: 명동 캘리브 n=4 역산 — interaction/views ≈ 2.3%. guide 7%는 과소추정·순서 뒤집힘 유발
+const R_ENG_CALIBRATED = { low: 0.020, mid: 0.023, high: 0.026 }
+
 const RATES = {
   like: 0.025,
   collect: 0.015,
@@ -52,7 +55,7 @@ function round(v: number): number {
 }
 
 function rEngBand(type: XhsContentType, hasShares: boolean) {
-  const band = R_ENG[type]
+  const band = type === 'guide' ? R_ENG_CALIBRATED : R_ENG[type]
   const adj = hasShares ? 0 : SHARE_MISSING_ADJ
   return {
     low: band.low - adj,
@@ -120,20 +123,21 @@ export function estimateXhsViews(input: XhsInteractionInput): XhsViewEstimate | 
   const band = rEngBand(type, hasShares)
 
   const totalMid = estimateTotalEngagement(total, type, hasShares, 'mid')
-  const totalLow = estimateTotalEngagement(total, type, hasShares, 'high') // 높은 R_eng → 낮은 조회수
+  const totalLow = estimateTotalEngagement(total, type, hasShares, 'high')
   const totalHigh = estimateTotalEngagement(total, type, hasShares, 'low')
   const weighted = estimateComponentWeighted(input)
 
-  const point = round(weighted)
-  const low = round(Math.min(totalLow, weighted * 0.85))
-  const high = round(Math.max(totalHigh, weighted * 1.15))
+  // 점 추정 = Total Engagement (상호작용 합에 단조 증가)
+  const point = round(totalMid)
+  const low = round(totalLow)
+  const high = round(totalHigh)
 
   return {
     views_estimated: point,
     views_est_low: Math.min(low, point),
     views_est_high: Math.max(high, point),
     total_interactions: total,
-    total_engagement_model: round(totalMid),
+    total_engagement_model: point,
     component_weighted_model: round(weighted),
     r_eng_mid: band.mid,
     has_shares: hasShares,

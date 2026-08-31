@@ -41,10 +41,14 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
   const initial = c.influencer_name.slice(0, 2).toUpperCase()
   const photo = c.profile_image_url
     || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-photos/by-id/${c.id}`
-  const viewsDisplay = c.views
-    ? fmt(c.views)
-    : c.views_estimated
-    ? `~${fmt(c.views_estimated)}`
+  const displayViews = c.channel === '샤오홍슈'
+    ? (c.views_estimated ?? c.views)
+    : (c.views ?? c.views_estimated)
+  const viewsEstimated = c.channel === '샤오홍슈'
+    ? !!c.views_estimated
+    : !c.views && !!c.views_estimated
+  const viewsDisplay = displayViews
+    ? (viewsEstimated ? `~${fmt(displayViews)}` : fmt(displayViews))
     : '—'
 
   return (
@@ -107,7 +111,7 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
           <div className="text-[10px] text-slate">조회수</div>
           <div className="num text-[13.5px] font-semibold">
             {viewsDisplay}
-            {!c.views && c.views_estimated && (
+            {viewsEstimated && (
               <span className="text-[9px] text-slate ml-0.5">추정</span>
             )}
           </div>

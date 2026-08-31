@@ -8,7 +8,7 @@ export async function GET() {
     supabase.from('summary').select('*').single(),
     supabase.from('location_summary').select('*'),
     supabase.from('contents').select('visit_date, id').not('visit_date', 'is', null),
-    supabase.from('contents').select('channel, likes, saves, views, upload_url'),
+    supabase.from('contents').select('channel, likes, saves, comments, views, views_estimated, upload_url'),
   ])
 
   const error = summaryRes.error ?? locationRes.error ?? monthlyRes.error ?? channelRes.error
@@ -35,7 +35,9 @@ export async function GET() {
     if (row.upload_url) bucket.count += 1
     bucket.likes += row.likes ?? 0
     bucket.saves += row.saves ?? 0
-    bucket.views += row.views ?? 0
+    bucket.views += ch === '샤오홍슈'
+      ? (row.views_estimated ?? 0)
+      : (row.views ?? row.views_estimated ?? 0)
   }
   const channels = Object.entries(channelMap)
     .map(([channel, v]) => ({
@@ -46,8 +48,20 @@ export async function GET() {
     .filter(c => c.interaction > 0 || c.count > 0)
     .sort((a, b) => b.interaction - a.interaction)
 
+  const summary = summaryRes.data
+    ? {
+        ...summaryRes.data,
+        total_views: (channelRes.data ?? []).reduce((sum, row) => {
+          const ch = row.channel as string
+          return sum + (ch === '샤오홍슈'
+            ? (row.views_estimated ?? 0)
+            : (row.views ?? row.views_estimated ?? 0))
+        }, 0),
+      }
+    : null
+
   return NextResponse.json({
-    summary: summaryRes.data,
+    summary,
     locations: locationRes.data,
     monthly: monthlyData,
     channels,

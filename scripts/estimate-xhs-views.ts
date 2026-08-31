@@ -62,14 +62,14 @@ async function main() {
   const supabase = createAdminSupabase()
   const { data, error } = await supabase
     .from('contents')
-    .select('id, influencer_name, likes, saves, comments, views, views_source')
+    .select('id, influencer_name, likes, saves, comments, views, views_source, upload_url')
     .eq('channel', '샤오홍슈')
-    .is('views', null)
 
   if (error) throw new Error(error.message)
 
   let updated = 0
   let skipped = 0
+  let clearedWrongPlatform = 0
 
   for (const row of data ?? []) {
     const est = estimateXhsViews({
@@ -82,15 +82,22 @@ async function main() {
       continue
     }
 
+    const wrongPlatform = /instagram\.com/i.test(row.upload_url ?? '')
+    const patch: Record<string, unknown> = {
+      views_estimated: est.views_estimated,
+      views_est_low: est.views_est_low,
+      views_est_high: est.views_est_high,
+      views_source: 'estimated',
+    }
+    if (wrongPlatform) {
+      patch.views = null
+      clearedWrongPlatform++
+    }
+
     if (!dryRun) {
       const { error: upErr } = await supabase
         .from('contents')
-        .update({
-          views_estimated: est.views_estimated,
-          views_est_low: est.views_est_low,
-          views_est_high: est.views_est_high,
-          views_source: 'estimated',
-        })
+        .update(patch)
         .eq('id', row.id)
       if (upErr) throw new Error(upErr.message)
     }
@@ -108,10 +115,11 @@ async function main() {
   }
 
   console.log(
-    '%s %d건 역산 반영, %d건 스킵 (상호작용 없음)',
+    '%s %d건 역산 반영, %d건 스킵 (상호작용 없음), %d건 인스타 실측 제거',
     dryRun ? '[dry-run]' : '완료:',
     updated,
     skipped,
+    clearedWrongPlatform,
   )
 }
 
