@@ -1,8 +1,8 @@
 import type { Channel } from '@/lib/types'
 
-export type SyncChannel = Extract<Channel, '인스타그램' | '틱톡' | '샤오홍슈'>
+export type SyncChannel = Extract<Channel, '인스타그램' | '틱톡' | '샤오홍슈' | '도우인'>
 
-export const SYNC_CHANNELS: SyncChannel[] = ['인스타그램', '틱톡', '샤오홍슈']
+export const SYNC_CHANNELS: SyncChannel[] = ['인스타그램', '틱톡', '샤오홍슈', '도우인']
 
 export interface ContentRow {
   id: number

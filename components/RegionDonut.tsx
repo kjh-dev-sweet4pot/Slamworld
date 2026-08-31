@@ -1,18 +1,11 @@
 'use client'
 import type { ChannelSummary, DonutChartProps } from '@/lib/types'
 
-const CHANNEL_COLOR: Record<string, string> = {
-  '샤오홍슈': '#1868F0',
-  '인스타그램': '#0B47B4',
-  '틱톡': '#6FBFFF',
-  '도우인': '#4A6B93',
-  '웨이보': '#F5A524',
-}
+const CN_CHANNELS = new Set(['도우인', '웨이보', '샤오홍슈'])
 
-const FALLBACK = ['#1868F0', '#0B47B4', '#6FBFFF', '#4A6B93', '#F5A524']
-
-function colorFor(channel: string, i: number) {
-  return CHANNEL_COLOR[channel] ?? FALLBACK[i % FALLBACK.length]
+const REGION_COLOR: Record<string, string> = {
+  '중화권': '#EF4444',
+  '영미권': '#1868F0',
 }
 
 function fmt(n: number) {
@@ -21,21 +14,36 @@ function fmt(n: number) {
   return n.toLocaleString()
 }
 
+function aggregateRegions(data: ChannelSummary[]) {
+  let cn = 0
+  let west = 0
+  for (const d of data) {
+    if (CN_CHANNELS.has(d.channel)) cn += d.interaction
+    else west += d.interaction
+  }
+  return [
+    { region: '중화권', interaction: cn },
+    { region: '영미권', interaction: west },
+  ].filter(r => r.interaction > 0)
+}
+
 function slices(data: ChannelSummary[]) {
-  const total = data.reduce((s, d) => s + d.interaction, 0)
+  const regions = aggregateRegions(data)
+  const total = regions.reduce((s, d) => s + d.interaction, 0)
   if (total <= 0) return { total: 0, arcs: [] as never[] }
 
+  const sorted = [...regions].sort((a, b) => b.interaction - a.interaction)
   const r = 68
   const c = 2 * Math.PI * r
   let offset = 0
 
-  const arcs = data.map((d, i) => {
+  const arcs = sorted.map(d => {
     const ratio = d.interaction / total
     const dash = ratio * c
     const gap = c - dash
     const item = {
       ...d,
-      color: colorFor(d.channel, i),
+      color: REGION_COLOR[d.region],
       pct: Math.round(ratio * 100),
       dasharray: `${dash} ${gap}`,
       dashoffset: -offset,
@@ -47,14 +55,14 @@ function slices(data: ChannelSummary[]) {
   return { total, arcs }
 }
 
-export default function ChannelDonut({ data, scopeLabel, animationKey, loading }: DonutChartProps) {
+export default function RegionDonut({ data, scopeLabel, animationKey, loading }: DonutChartProps) {
   const { total, arcs } = slices(data)
   const top = arcs[0]
 
   return (
     <div className={`glass p-5 h-fit transition-opacity duration-300 ${loading ? 'opacity-60' : 'opacity-100'}`}>
-      <span className="num text-[10.5px] text-slate tracking-widest uppercase">채널별 성과</span>
-      <p className="text-[11.5px] text-body mt-1 mb-4">좋아요 + 저장 합산 · {scopeLabel}</p>
+      <span className="num text-[10.5px] text-slate tracking-widest uppercase">국가별 비중</span>
+      <p className="text-[11.5px] text-body mt-1 mb-4">중화권 / 영미권 · {scopeLabel}</p>
 
       {arcs.length === 0 ? (
         <div className="h-40 grid place-items-center text-[13px] text-slate">데이터가 없습니다.</div>
@@ -65,7 +73,7 @@ export default function ChannelDonut({ data, scopeLabel, animationKey, loading }
               <circle cx="88" cy="88" r="68" fill="none" stroke="#E8F2FF" strokeWidth="22" />
               {arcs.map((a, i) => (
                 <circle
-                  key={a.channel}
+                  key={a.region}
                   cx="88"
                   cy="88"
                   r="68"
@@ -93,7 +101,7 @@ export default function ChannelDonut({ data, scopeLabel, animationKey, loading }
           <ul className="mt-4 space-y-2">
             {arcs.map((a, i) => (
               <li
-                key={a.channel}
+                key={a.region}
                 className="donut-legend-item flex items-center gap-2"
                 style={{ animationDelay: `${120 + i * 50}ms` }}
               >
@@ -101,7 +109,7 @@ export default function ChannelDonut({ data, scopeLabel, animationKey, loading }
                   className="w-2 h-2 rounded-[2px] flex-none"
                   style={{ background: a.color }}
                 />
-                <span className="text-[12.5px] font-semibold truncate">{a.channel}</span>
+                <span className="text-[12.5px] font-semibold truncate">{a.region}</span>
                 <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
                   {a.pct}% · {fmt(a.interaction)}
                 </span>
@@ -112,7 +120,7 @@ export default function ChannelDonut({ data, scopeLabel, animationKey, loading }
           {top && (
             <p className="text-[11.5px] text-body leading-relaxed pt-3 mt-3 border-t border-mist donut-legend-item"
               style={{ animationDelay: `${120 + arcs.length * 50}ms` }}>
-              <b className="text-azure-deep">{top.channel}</b>이 상호작용의 {top.pct}%를 차지합니다.
+              <b className="text-azure-deep">{top.region}</b>이 상호작용의 {top.pct}%를 차지합니다.
             </p>
           )}
         </div>

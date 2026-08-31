@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   const campaign  = searchParams.get('campaign')
   const location  = searchParams.get('location')
   const channel   = searchParams.get('channel')
+  const month     = searchParams.get('month') // YYYY-MM
   const is_press  = searchParams.get('is_press')
   const sort      = searchParams.get('sort') ?? 'perf'   // 'perf' | 'date' | 'location'
   const limit     = parseInt(searchParams.get('limit') ?? '200')
@@ -19,6 +20,11 @@ export async function GET(req: NextRequest) {
   if (campaign)  query = query.eq('campaign', campaign)
   if (location)  query = query.eq('location', location)
   if (channel)   query = query.eq('channel', channel)
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split('-').map(Number)
+    const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+    query = query.gte('visit_date', `${month}-01`).lt('visit_date', next)
+  }
   if (is_press !== null && is_press !== '') {
     query = query.eq('is_press', is_press === 'true')
   }

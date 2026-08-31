@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import type { Content } from '@/lib/types'
+import { contentViewsDisplay } from '@/lib/content-views'
 
 const PERF_STYLE = {
   high:    { dot: 'bg-azure', label: '상위', text: 'text-azure-deep' },
@@ -41,10 +42,9 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
   const initial = c.influencer_name.slice(0, 2).toUpperCase()
   const photo = c.profile_image_url
     || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-photos/by-id/${c.id}`
-  const viewsDisplay = c.views
-    ? fmt(c.views)
-    : c.views_estimated
-    ? `~${fmt(c.views_estimated)}`
+  const { value: displayViews, estimated: viewsEstimated } = contentViewsDisplay(c)
+  const viewsDisplay = displayViews
+    ? (viewsEstimated ? `~${fmt(displayViews)}` : fmt(displayViews))
     : '—'
 
   return (
@@ -107,7 +107,7 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
           <div className="text-[10px] text-slate">조회수</div>
           <div className="num text-[13.5px] font-semibold">
             {viewsDisplay}
-            {!c.views && c.views_estimated && (
+            {viewsEstimated && (
               <span className="text-[9px] text-slate ml-0.5">추정</span>
             )}
           </div>

@@ -91,7 +91,9 @@ export default function BrandPipeline() {
             </div>
           </div>
           <p className="flex-1 min-w-[250px] text-[12.5px] text-body leading-relaxed">
-            미팅에서 마케팅 시작까지 <b className="text-azure-deep">통상 {LEAD_RANGE.min}~{LEAD_RANGE.max}일</b>이 걸립니다.
+            <b className="text-azure-deep">계약서 전달</b> 후 <b className="text-azure-deep">계약 완료</b> 시점부터
+            마케팅 시작까지 <b className="text-azure-deep">통상 {LEAD_RANGE.min}~{LEAD_RANGE.max}일</b>
+            (평균 {LEAD_RANGE.typical}일)이 걸립니다.
             8월 말까지 가이드라인을 확정하고, 9월 초부터 본격적인 방문·발행을 진행합니다.
           </p>
         </div>
@@ -103,21 +105,46 @@ export default function BrandPipeline() {
               <span className="num text-[10.5px] text-slate">{b.meta}</span>
               <span className="num text-[13px] font-semibold text-azure-deep ml-auto">
                 {b.budget}
-                <small className="text-[10px] text-slate font-normal ml-1.5">{b.days}일 구간</small>
+                <small className="text-[10px] text-slate font-normal ml-1.5">
+                  계약 완료 후 약 {b.days}일
+                </small>
               </span>
             </div>
-            <div className="flex gap-0.5 h-6 rounded overflow-hidden bg-mist">
-              {b.segs.map((n, i) => (
-                <div key={i} className={`grid place-items-center num text-[9.5px] font-medium whitespace-nowrap overflow-hidden ${SEG_CLASS[i]}`}
-                  style={{ flex: n }}>
-                  {n}일
-                </div>
-              ))}
+
+            <div className="flex gap-0.5 h-7 rounded overflow-hidden bg-mist items-stretch">
+              <div className="flex-none w-[76px] sm:w-[92px] grid place-items-center text-[9px] sm:text-[9.5px] font-semibold bg-[#DCFCE7] text-[#166534] px-1 shrink-0">
+                계약서 전달
+              </div>
+
+              <div className="flex-none flex flex-col items-center justify-center px-2 bg-white border-x border-mist shrink-0 min-w-[68px]">
+                <span className="text-[9px] text-azure-deep font-bold leading-none tracking-tight">
+                  ◀ 계약 완료 ▶
+                </span>
+                <span className="num text-[8px] text-slate mt-0.5 whitespace-nowrap">
+                  이후 ~{LEAD_RANGE.typical}일
+                </span>
+              </div>
+
+              <div className="flex flex-1 gap-0.5 min-w-0 h-full">
+                {b.segs.map((n, i) => (
+                  <div
+                    key={i}
+                    className={`grid place-items-center num text-[9.5px] font-medium whitespace-nowrap overflow-hidden ${SEG_CLASS[i]}`}
+                    style={{ flex: n }}
+                  >
+                    {n}일
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex justify-between num text-[9.5px] text-slate mt-1.5">
-              <span>최초 미팅</span>
-              <span>{b.status}</span>
-              <span>마케팅 시작</span>
+
+            <div className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_auto_1fr_auto] gap-x-2 gap-y-0.5 num text-[9.5px] text-slate mt-1.5 items-center">
+              <span>계약서 전달</span>
+              <span className="hidden sm:inline text-azure-deep font-semibold">계약 완료</span>
+              <span className="text-center sm:text-left text-body">
+                가이드 · 매칭 · 방문 준비 <span className="text-azure-deep font-semibold">(약 {b.days}일)</span>
+              </span>
+              <span className="text-right">{b.status}</span>
             </div>
           </div>
         ))}

@@ -61,6 +61,13 @@ export interface ChannelSummary {
   interaction: number
 }
 
+export interface DonutChartProps {
+  data: ChannelSummary[]
+  scopeLabel: string
+  animationKey: string
+  loading?: boolean
+}
+
 export interface FilterState {
   campaign: string
   location: string

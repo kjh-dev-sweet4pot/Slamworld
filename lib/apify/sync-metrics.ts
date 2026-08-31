@@ -4,7 +4,9 @@ import {
   scrapeInstagramBatch,
   scrapeTikTokBatch,
   scrapeXiaohongshuBatch,
+  scrapeDouyinBatch,
   isInstagramPostUrl,
+  isDouyinPostUrl,
 } from './scrapers'
 import type {
   ContentRow,
@@ -14,6 +16,7 @@ import type {
   SyncSummary,
 } from './types'
 import { SYNC_CHANNELS } from './types'
+import { estimateChannelViews, usesEstimatedViews } from '@/lib/content-views'
 
 export interface SyncOptions {
   channels?: SyncChannel[]
@@ -33,6 +36,7 @@ function detectScrapeChannel(url: string, dbChannel: string): SyncChannel | null
   if (u.includes('instagram.com')) return '인스타그램'
   if (u.includes('tiktok.com')) return '틱톡'
   if (u.includes('xiaohongshu.com') || u.includes('xhslink.')) return '샤오홍슈'
+  if (u.includes('douyin.com') || u.includes('iesdouyin.com')) return '도우인'
   if ((SYNC_CHANNELS as string[]).includes(dbChannel)) return dbChannel as SyncChannel
   return null
 }
@@ -53,6 +57,9 @@ async function scrapeChannel(
         break
       case '샤오홍슈':
         batchResult = await scrapeXiaohongshuBatch(batch)
+        break
+      case '도우인':
+        batchResult = await scrapeDouyinBatch(batch)
         break
     }
     for (const [url, m] of batchResult) merged.set(url, m)
@@ -107,7 +114,7 @@ export async function syncContentMetrics(opts: SyncOptions = {}): Promise<SyncSu
       influencer_name: row.influencer_name,
       upload_url: row.upload_url,
       status: 'skipped',
-      error: '인스타그램·틱톡·샤오홍슈 외 채널은 수집하지 않음',
+      error: '인스타그램·틱톡·샤오홍슈·도우인 외 채널은 수집하지 않음',
     })
   }
 
@@ -154,6 +161,19 @@ export async function syncContentMetrics(opts: SyncOptions = {}): Promise<SyncSu
         continue
       }
 
+      if (channel === '도우인' && row.upload_url && !isDouyinPostUrl(row.upload_url)) {
+        skipped++
+        results.push({
+          id: row.id,
+          channel: row.channel,
+          influencer_name: row.influencer_name,
+          upload_url: row.upload_url!,
+          status: 'skipped',
+          error: '게시물 URL이 아님 (프로필/잘못된 링크)',
+        })
+        continue
+      }
+
       const metrics = metricsByUrl.get(row.upload_url!)
       if (!metrics) {
         skipped++
@@ -175,6 +195,22 @@ export async function syncContentMetrics(opts: SyncOptions = {}): Promise<SyncSu
           saves: metrics.saves,
           comments: metrics.comments,
           views_source: metrics.views_source,
+        }
+        if (usesEstimatedViews(channel)) {
+          const skipDouyinMeasured = channel === '도우인' && metrics.views != null
+          if (!skipDouyinMeasured) {
+            const est = estimateChannelViews(channel, {
+              likes: metrics.likes,
+              saves: metrics.saves,
+              comments: metrics.comments,
+            })
+            if (est) {
+              patch.views_estimated = est.views_estimated
+              patch.views_est_low = est.views_est_low
+              patch.views_est_high = est.views_est_high
+              patch.views_source = 'estimated'
+            }
+          }
         }
         if (trackMetricsUpdatedAt) {
           patch.metrics_updated_at = new Date().toISOString()

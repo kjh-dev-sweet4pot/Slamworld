@@ -8,9 +8,10 @@ export interface MonthlyPoint {
 interface Props {
   data: MonthlyPoint[]
   highlightMonth?: string
+  onSelectMonth?: (month: string) => void
 }
 
-export default function MonthlyBarChart({ data, highlightMonth }: Props) {
+export default function MonthlyBarChart({ data, highlightMonth, onSelectMonth }: Props) {
   if (!data.length) {
     return (
       <div className="h-40 flex items-center justify-center text-[13px] text-slate">
@@ -40,32 +41,36 @@ export default function MonthlyBarChart({ data, highlightMonth }: Props) {
             const isHighlight = month === latestMonth
 
             return (
-              <div key={month} className="flex-1 h-full flex flex-col items-center min-w-0">
+              <button
+                key={month}
+                type="button"
+                onClick={() => onSelectMonth?.(month)}
+                aria-pressed={isHighlight}
+                title={`${month}: ${count}건`}
+                className="flex-1 h-full flex flex-col items-center min-w-0 group cursor-pointer
+                  rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-azure/40"
+              >
                 <span className="num text-[11px] font-semibold text-body mb-1.5 shrink-0">
                   {count}
                 </span>
 
                 <div className="flex-1 w-full flex items-end min-h-0">
                   <div
-                    className={`w-full rounded-t-[4px] transition-all duration-500 ease-out
-                      ${isHighlight ? 'shadow-[0_4px_14px_rgba(24,104,240,.28)]' : ''}`}
-                    style={{
-                      height: `${barPct}%`,
-                      background: isHighlight
-                        ? 'linear-gradient(180deg, #6FBFFF 0%, #1868F0 100%)'
-                        : 'linear-gradient(180deg, #E8F2FF 0%, #B8D4FF 100%)',
-                    }}
-                    title={`${month}: ${count}건`}
+                    className={`w-full rounded-t-[4px] transition-all duration-300 ease-out
+                      ${isHighlight
+                        ? 'shadow-[0_4px_14px_rgba(24,104,240,.28)] bg-gradient-to-b from-[#6FBFFF] to-[#1868F0]'
+                        : 'bg-gradient-to-b from-[#E8F2FF] to-[#B8D4FF] group-hover:from-[#C5DFFF] group-hover:to-[#7EB3F5]'}`}
+                    style={{ height: `${barPct}%` }}
                   />
                 </div>
 
                 <span
                   className={`num text-[10.5px] mt-2 shrink-0 whitespace-nowrap
-                    ${isHighlight ? 'font-semibold text-azure-deep' : 'text-slate'}`}
+                    ${isHighlight ? 'font-semibold text-azure-deep' : 'text-slate group-hover:text-azure-deep'}`}
                 >
-                  {month.slice(5)}월
+                  {Number(month.slice(5))}월
                 </span>
-              </div>
+              </button>
             )
           })}
         </div>

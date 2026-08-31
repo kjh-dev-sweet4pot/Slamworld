@@ -87,17 +87,80 @@ owm-report/
 - `mid`: 중앙값 × 0.8 ~ 1.2
 - `low`: 중앙값 × 0.8 미만
 
-### 샤오홍슈 추정 조회수 업데이트 방법
-```sql
--- 캘리브레이션 배수를 구한 뒤 일괄 업데이트
-UPDATE contents
-SET
-  views_estimated = (COALESCE(likes,0) + COALESCE(saves,0) + COALESCE(comments,0)) * 41,
-  views_est_low   = (COALESCE(likes,0) + COALESCE(saves,0) + COALESCE(comments,0)) * 37,
-  views_est_high  = (COALESCE(likes,0) + COALESCE(saves,0) + COALESCE(comments,0)) * 58,
-  views_source    = 'estimated'
-WHERE channel = '샤오홍슈'
-  AND views IS NULL
-  AND (likes IS NOT NULL OR saves IS NOT NULL);
+### 샤오홍슈 추정 조회수 (역산)
+
+샤오홍슈는 플랫폼이 조회수를 제공하지 않습니다. 좋아요·저장·댓글·공유(크롤러 미수집 시 0)로 **역산**하며, 결과는 `views_estimated` / `views_est_low` / `views_est_high`에 저장됩니다.
+
+#### 1. Total Engagement Model
+
 ```
-배수는 캘리브레이션 시트에서 나온 값으로 교체하세요 (현재 41/37/58은 명동 4건 기준 추정치).
+Total Interactions = likedCount + collectedCount + commentsCount + shareCount
+Estimated Views  = Total Interactions / R_eng
+```
+
+| 콘텐츠 유형 | R_eng (인터랙션율) |
+|---|---|
+| 일반 이미지/피드 | 3.5% ~ 4.5% |
+| 정보성/가이드 피드 **(방문형 캠페인 기본)** | **2.0% ~ 2.6%** (명동 캘리브 n=4) |
+| 숏폼 동영상 | 2.0% ~ 3.0% |
+
+`shareCount`가 크롤러에서 누락(0/null)이면 **R_eng에서 0.5%p 차감**합니다.
+
+**점 추정값**은 Total Engagement Model을 사용합니다 (상호작용 합에 단조 증가).
+
+#### 2. Component-Weighted Model (참고·백테스트용)
+
+```
+Estimated Views = (likedCount/r_like)×w1 + (collectedCount/r_collect)×w2
+                + (commentsCount/r_comment)×w3 + (shareCount/r_share)×w4
+```
+
+| 지표 | 전환율 r | 가중치 w |
+|---|---|---|
+| 좋아요 | 2.5% | 0.45 |
+| 저장 | 1.5% | 0.35 |
+| 댓글 | 0.2% | 0.15 |
+| 공유 | 0.1% | 0.05 |
+
+공유 미수집 시 w₄=0, 나머지 가중치를 비율 재분배합니다.
+
+#### 적용 방법
+
+```bash
+# DB 일괄 역산 (샤오홍슈 전 행, 인스타 URL 오분류 실측 제거 포함)
+npm run estimate-xhs-views
+
+# 미리보기
+npm run estimate-xhs-views -- --dry-run
+```
+
+Apify `sync-metrics` 실행 시 샤오홍슈 행은 지표 수집 직후 자동 역산됩니다.  
+구현: `lib/xhs-view-estimate.ts`
+
+#### 정확도
+
+**구조적 불확실성 (R_eng 밴드)**  
+캘리브레이션 R_eng 2.0~2.6% (공유 미수집 시 1.5~2.1%)를 쓰면, 동일 상호작용에 대해 추정 조회수가 약 **±15%** 범위로 변합니다. `views_est_low` / `views_est_high`가 이 밴드를 반영합니다.
+
+**캘리브레이션 백테스트 (n=4, 인플루언서 자가 신고 조회수)**
+
+| 모델 | MAPE |
+|---|---|
+| **Total Engagement (점 추정)** | **32.6%** |
+| Component-Weighted | 55.8% |
+| Blended | 14.6% |
+| 구간 [low–high] 적중 | 25% (1/4) |
+| (참고) 구 방식 interaction×41 | **13.2%** |
+
+```bash
+npm run estimate-xhs-accuracy   # MAPE만 출력 (DB 불필요)
+npm run estimate-xhs-views -- --dry-run
+```
+
+**해석**  
+초기 4건 캘리브에서 실측 조회 대비 인터랙션 비율이 약 **2.3%**였습니다. 가이드 기본값 7%를 쓰면 점 추정이 실측보다 낮고, 좋아요 순서와 조회수 순서가 뒤집힐 수 있습니다. 채널이 샤오홍슈인데 `instagram.com` URL인 행은 인스타 실측 조회수를 제거하고 역산만 씁니다.
+
+**운영 권장**
+- 방문형 가이드 콘텐츠 → 현재 기본값 `contentType: 'guide'` 유지
+- 샤오홍슈 전용 자가 신고 조회수가 쌓이면 `XHS_CALIBRATION_SAMPLES`를 갱신해 MAPE 재산출
+- 대시보드에는 `views_estimated`와 함께 `views_est_low`~`high` 구간을 보면 구조적 오차를 함께 판단

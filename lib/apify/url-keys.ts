@@ -33,7 +33,13 @@ export function urlMatchKeys(url: string): string[] {
       ?? url.match(/([a-f0-9]{24})/i)
     if (xhs) keys.add(`xhs:${xhs[1].toLowerCase()}`)
 
-    // xhslink short codes
+    // Douyin video id / short link
+    const dy = path.match(/\/(?:share\/)?video\/(\d+)/)
+    if (dy) keys.add(`douyin:${dy[1]}`)
+    const dyShort = path.match(/^\/([^/?#]+)/)
+    if (host.includes('v.douyin.com') && dyShort) keys.add(`douyin-short:${dyShort[1].toLowerCase()}`)
+    const dyUser = path.match(/\/user\/([^/?#]+)/)
+    if (dyUser) keys.add(`douyin-user:${dyUser[1].toLowerCase()}`)
     const short = path.match(/\/(?:m|o)\/([^/?#]+)/i)
     if (host.includes('xhslink') && short) keys.add(`xhslink:${short[1].toLowerCase()}`)
   } catch {

@@ -12,6 +12,12 @@ const config: Config = {
         paper: '#F4F8FF',
         ink:   '#0A1F3C',
         amber: { DEFAULT: '#F5A524', ink: '#B27210' },
+        'owm-bg': '#eef0f4',
+        'owm-border': '#e8eaef',
+        'owm-text': '#1a1d2e',
+        'owm-text2': '#6b728a',
+        'owm-text3': '#9aa0b3',
+        'owm-blue': '#4f8cff',
       },
       fontFamily: {
         sans: ['Pretendard Variable', 'Pretendard', 'system-ui', 'sans-serif'],
