@@ -103,7 +103,7 @@ function pickAvatar(item: Record<string, unknown>): string | null {
     item.profile_pic_url,
     item.avatarUrl,
     item.avatar,
-    item.covers?.[0],
+    Array.isArray(item.covers) ? item.covers[0] : undefined,
     user.avatar,
     user.profilePicUrl,
     user.profile_pic_url,
@@ -420,9 +420,7 @@ export async function syncProfilePhotos(opts: ProfileSyncOptions = {}): Promise<
 
   let query = supabase
     .from('contents')
-    .select(hasColumn
-      ? 'id, channel, influencer_name, profile_url, sns_id, upload_url, profile_image_url'
-      : 'id, channel, influencer_name, profile_url, sns_id, upload_url')
+    .select('id, channel, influencer_name, profile_url, sns_id, upload_url')
     .in('channel', channels)
     .order('id')
 
