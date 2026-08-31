@@ -1,5 +1,5 @@
 /**
- * 샤오홍슈 조회수 역산 → views_estimated / views_est_low / views_est_high 일괄 반영
+ * 샤오홍슈·도우인 조회수 역산 → views_estimated / views_est_low / views_est_high 일괄 반영
  *
  * Usage:
  *   npx tsx scripts/estimate-xhs-views.ts           # DB 업데이트
@@ -8,8 +8,8 @@
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import { createAdminSupabase } from '../lib/supabase-admin'
+import { estimateChannelViews } from '../lib/content-views'
 import {
-  estimateXhsViews,
   evaluateXhsAccuracy,
   XHS_CALIBRATION_SAMPLES,
 } from '../lib/xhs-view-estimate'
@@ -60,62 +60,72 @@ async function main() {
   if (accuracyOnly) return
 
   const supabase = createAdminSupabase()
-  const { data, error } = await supabase
-    .from('contents')
-    .select('id, influencer_name, likes, saves, comments, views, views_source, upload_url')
-    .eq('channel', '샤오홍슈')
-
-  if (error) throw new Error(error.message)
+  const channels = ['샤오홍슈', '도우인'] as const
 
   let updated = 0
   let skipped = 0
   let clearedWrongPlatform = 0
 
-  for (const row of data ?? []) {
-    const est = estimateXhsViews({
-      likes: row.likes,
-      saves: row.saves,
-      comments: row.comments,
-    })
-    if (!est) {
-      skipped++
-      continue
-    }
+  for (const channel of channels) {
+    const { data, error } = await supabase
+      .from('contents')
+      .select('id, influencer_name, channel, likes, saves, comments, views, views_source, upload_url')
+      .eq('channel', channel)
 
-    const wrongPlatform = /instagram\.com/i.test(row.upload_url ?? '')
-    const patch: Record<string, unknown> = {
-      views_estimated: est.views_estimated,
-      views_est_low: est.views_est_low,
-      views_est_high: est.views_est_high,
-      views_source: 'estimated',
-    }
-    if (wrongPlatform) {
-      patch.views = null
-      clearedWrongPlatform++
-    }
+    if (error) throw new Error(error.message)
 
-    if (!dryRun) {
-      const { error: upErr } = await supabase
-        .from('contents')
-        .update(patch)
-        .eq('id', row.id)
-      if (upErr) throw new Error(upErr.message)
-    }
+    for (const row of data ?? []) {
+      if (channel === '도우인' && row.views != null) {
+        skipped++
+        continue
+      }
 
-    updated++
-    if (dryRun && updated <= 5) {
-      console.log(
-        '[dry-run] %s  ~%s (%s–%s)',
-        row.influencer_name,
-        est.views_estimated.toLocaleString(),
-        est.views_est_low.toLocaleString(),
-        est.views_est_high.toLocaleString(),
-      )
+      const est = estimateChannelViews(channel, {
+        likes: row.likes,
+        saves: row.saves,
+        comments: row.comments,
+      })
+      if (!est) {
+        skipped++
+        continue
+      }
+
+      const wrongPlatform = channel === '샤오홍슈' && /instagram\.com/i.test(row.upload_url ?? '')
+      const patch: Record<string, unknown> = {
+        views_estimated: est.views_estimated,
+        views_est_low: est.views_est_low,
+        views_est_high: est.views_est_high,
+        views_source: 'estimated',
+      }
+      if (wrongPlatform) {
+        patch.views = null
+        clearedWrongPlatform++
+      }
+
+      if (!dryRun) {
+        const { error: upErr } = await supabase
+          .from('contents')
+          .update(patch)
+          .eq('id', row.id)
+        if (upErr) throw new Error(upErr.message)
+      }
+
+      updated++
+      if (dryRun && updated <= 8) {
+        console.log(
+          '[dry-run] [%s] %s  ~%s (%s–%s)',
+          channel,
+          row.influencer_name,
+          est.views_estimated.toLocaleString(),
+          est.views_est_low.toLocaleString(),
+          est.views_est_high.toLocaleString(),
+        )
+      }
     }
   }
 
   console.log(
-    '%s %d건 역산 반영, %d건 스킵 (상호작용 없음), %d건 인스타 실측 제거',
+    '%s %d건 역산 반영, %d건 스킵 (상호작용 없음·도우인 실측), %d건 인스타 실측 제거',
     dryRun ? '[dry-run]' : '완료:',
     updated,
     skipped,

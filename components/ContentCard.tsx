@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import type { Content } from '@/lib/types'
+import { contentViewsDisplay } from '@/lib/content-views'
 
 const PERF_STYLE = {
   high:    { dot: 'bg-azure', label: '상위', text: 'text-azure-deep' },
@@ -41,12 +42,7 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
   const initial = c.influencer_name.slice(0, 2).toUpperCase()
   const photo = c.profile_image_url
     || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile-photos/by-id/${c.id}`
-  const displayViews = c.channel === '샤오홍슈'
-    ? (c.views_estimated ?? c.views)
-    : (c.views ?? c.views_estimated)
-  const viewsEstimated = c.channel === '샤오홍슈'
-    ? !!c.views_estimated
-    : !c.views && !!c.views_estimated
+  const { value: displayViews, estimated: viewsEstimated } = contentViewsDisplay(c)
   const viewsDisplay = displayViews
     ? (viewsEstimated ? `~${fmt(displayViews)}` : fmt(displayViews))
     : '—'

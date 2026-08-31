@@ -16,7 +16,7 @@ import type {
   SyncSummary,
 } from './types'
 import { SYNC_CHANNELS } from './types'
-import { estimateXhsViews } from '@/lib/xhs-view-estimate'
+import { estimateChannelViews, usesEstimatedViews } from '@/lib/content-views'
 
 export interface SyncOptions {
   channels?: SyncChannel[]
@@ -196,17 +196,20 @@ export async function syncContentMetrics(opts: SyncOptions = {}): Promise<SyncSu
           comments: metrics.comments,
           views_source: metrics.views_source,
         }
-        if (channel === '샤오홍슈') {
-          const est = estimateXhsViews({
-            likes: metrics.likes,
-            saves: metrics.saves,
-            comments: metrics.comments,
-          })
-          if (est) {
-            patch.views_estimated = est.views_estimated
-            patch.views_est_low = est.views_est_low
-            patch.views_est_high = est.views_est_high
-            patch.views_source = 'estimated'
+        if (usesEstimatedViews(channel)) {
+          const skipDouyinMeasured = channel === '도우인' && metrics.views != null
+          if (!skipDouyinMeasured) {
+            const est = estimateChannelViews(channel, {
+              likes: metrics.likes,
+              saves: metrics.saves,
+              comments: metrics.comments,
+            })
+            if (est) {
+              patch.views_estimated = est.views_estimated
+              patch.views_est_low = est.views_est_low
+              patch.views_est_high = est.views_est_high
+              patch.views_source = 'estimated'
+            }
           }
         }
         if (trackMetricsUpdatedAt) {

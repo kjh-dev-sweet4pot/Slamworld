@@ -94,7 +94,7 @@ export function estimateComponentWeighted(input: XhsInteractionInput): number {
     w1 /= sum
     w2 /= sum
     w3 /= sum
-    w4 = 0
+    w4 = 0 as typeof w4
   }
 
   const parts = [

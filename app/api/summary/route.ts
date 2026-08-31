@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { contentViews } from '@/lib/content-views'
 import { createServerSupabase } from '@/lib/supabase-server'
 
 export async function GET() {
@@ -35,9 +36,7 @@ export async function GET() {
     if (row.upload_url) bucket.count += 1
     bucket.likes += row.likes ?? 0
     bucket.saves += row.saves ?? 0
-    bucket.views += ch === '샤오홍슈'
-      ? (row.views_estimated ?? 0)
-      : (row.views ?? row.views_estimated ?? 0)
+    bucket.views += contentViews(row)
   }
   const channels = Object.entries(channelMap)
     .map(([channel, v]) => ({
@@ -51,12 +50,7 @@ export async function GET() {
   const summary = summaryRes.data
     ? {
         ...summaryRes.data,
-        total_views: (channelRes.data ?? []).reduce((sum, row) => {
-          const ch = row.channel as string
-          return sum + (ch === '샤오홍슈'
-            ? (row.views_estimated ?? 0)
-            : (row.views ?? row.views_estimated ?? 0))
-        }, 0),
+        total_views: (channelRes.data ?? []).reduce((sum, row) => sum + contentViews(row), 0),
       }
     : null
 

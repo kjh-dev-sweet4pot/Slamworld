@@ -55,9 +55,9 @@ SELECT
   c.*,
   -- 상호작용 합계
   COALESCE(c.likes,0) + COALESCE(c.saves,0) + COALESCE(c.comments,0) AS total_interaction,
-  -- 실측 또는 추정 조회수 (샤오홍슈는 역산만 사용 — 인스타 실측 혼입 방지)
+  -- 실측 또는 추정 조회수 (샤오홍슈·도우인은 역산 우선 — 인스타 실측 혼입 방지)
   COALESCE(
-    CASE WHEN c.channel = '샤오홍슈' THEN c.views_estimated ELSE c.views END,
+    CASE WHEN c.channel IN ('샤오홍슈', '도우인') THEN c.views_estimated ELSE c.views END,
     c.views,
     c.views_estimated
   ) AS views_best,
@@ -80,7 +80,7 @@ SELECT
   COUNT(DISTINCT influencer_name)                   AS total_influencers,
   COUNT(CASE WHEN upload_url IS NOT NULL THEN 1 END) AS uploaded,
   SUM(
-    CASE WHEN channel = '샤오홍슈' THEN COALESCE(views_estimated, 0)
+    CASE WHEN channel IN ('샤오홍슈', '도우인') THEN COALESCE(views_estimated, views, 0)
          ELSE COALESCE(views, views_estimated, 0) END
   ) AS total_views,
   SUM(COALESCE(likes,0))                            AS total_likes,

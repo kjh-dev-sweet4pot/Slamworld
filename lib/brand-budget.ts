@@ -78,6 +78,69 @@ export function monthlySecuredForChart(summary: BudgetSummary) {
   }))
 }
 
+export type BudgetChartKind = 'confirmed' | 'planned'
+
+export interface MonthlyBudgetBreakdownItem {
+  brand: string
+  amount: number
+  amountLabel: string
+  stage: BudgetStage
+  kind: BudgetChartKind
+  payment: BrandBudget['payment']
+}
+
+export interface MonthlyBudgetChartRow {
+  month: string
+  items: MonthlyBudgetBreakdownItem[]
+  paidTotal: number
+  payPendingTotal: number
+  unpaidTotal: number
+  plannedReviewTotal: number
+  plannedOctTotal: number
+  total: number
+}
+
+/** 월별 막대 — 확보(securedMonth) + 미확보 파이프라인(marketingMonth) */
+export function monthlyBudgetForChart(): MonthlyBudgetChartRow[] {
+  const rows: MonthlyBudgetChartRow[] = BUDGET_CHART_MONTHS.map(month => ({
+    month,
+    items: [],
+    paidTotal: 0,
+    payPendingTotal: 0,
+    unpaidTotal: 0,
+    plannedReviewTotal: 0,
+    plannedOctTotal: 0,
+    total: 0,
+  }))
+  const byMonth = new Map(rows.map(r => [r.month, r]))
+
+  for (const b of BRAND_BUDGETS) {
+    const amt = budgetMid(b)
+    if (amt <= 0) continue
+    const amountLabel = fmtBudgetRange(b).replace('만원', '만')
+
+    if (b.securedMonth && byMonth.has(b.securedMonth)) {
+      const row = byMonth.get(b.securedMonth)!
+      row.items.push({ brand: b.brand, amount: amt, amountLabel, stage: b.stage, kind: 'confirmed', payment: b.payment })
+      if (b.payment === '입금 완료') row.paidTotal += amt
+      else if (b.payment === '입금 예정') row.payPendingTotal += amt
+      else if (b.payment === '미입금') row.unpaidTotal += amt
+      row.total += amt
+      continue
+    }
+
+    if (!b.securedMonth && byMonth.has(b.marketingMonth)) {
+      const row = byMonth.get(b.marketingMonth)!
+      row.items.push({ brand: b.brand, amount: amt, amountLabel, stage: b.stage, kind: 'planned', payment: b.payment })
+      if (b.stage === '계약 예정') row.plannedReviewTotal += amt
+      else if (b.stage === '10월 예정') row.plannedOctTotal += amt
+      row.total += amt
+    }
+  }
+
+  return rows
+}
+
 export function computeBudgetSummary(): BudgetSummary {
   const confirmed = BRAND_BUDGETS.filter(b => CONFIRMED_STAGES.includes(b.stage))
   const securedTotal = confirmed.reduce((s, b) => s + budgetMid(b), 0)

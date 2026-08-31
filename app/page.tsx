@@ -1,12 +1,18 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import SnapshotBar from '@/components/SnapshotBar'
 import BudgetSnapshot from '@/components/BudgetSnapshot'
+import SideTopCard from '@/components/SideTopCard'
+import SideLiveFeed from '@/components/SideLiveFeed'
 import ContentCard from '@/components/ContentCard'
 import MonthlyBarChart from '@/components/MonthlyBarChart'
 import ChannelDonut from '@/components/ChannelDonut'
+import RegionDonut from '@/components/RegionDonut'
 import BrandPipeline from '@/components/BrandPipeline'
-import type { Content, Summary, LocationSummary, ChannelSummary } from '@/lib/types'
+import LocationStatus from '@/components/LocationStatus'
+import type { Content, Summary, LocationSummary } from '@/lib/types'
+import { channelSummaryFromContents } from '@/lib/channel-summary'
+import { contentViews, contentViewsDisplay } from '@/lib/content-views'
 
 type Tab = 'perf' | 'month' | 'all'
 
@@ -53,19 +59,13 @@ function channelRankTags(rows: Content[]): Map<number, string[]> {
 }
 
 function viewsForSort(c: Content): number {
-  if (c.channel === '샤오홍슈') return c.views_estimated ?? c.views ?? 0
-  return c.views ?? c.views_estimated ?? 0
+  return contentViews(c)
 }
 
 function fmtTableViews(c: Content): string {
-  const v = c.channel === '샤오홍슈'
-    ? (c.views_estimated ?? c.views)
-    : (c.views ?? c.views_estimated)
-  if (!v) return '—'
-  const estimated = c.channel === '샤오홍슈'
-    ? !!c.views_estimated
-    : !c.views && !!c.views_estimated
-  return estimated ? `~${v.toLocaleString()}` : v.toLocaleString()
+  const { value, estimated } = contentViewsDisplay(c)
+  if (!value) return '—'
+  return estimated ? `~${value.toLocaleString()}` : value.toLocaleString()
 }
 
 function SectionHeader({ no, title, sub, right }: {
@@ -83,12 +83,21 @@ function SectionHeader({ no, title, sub, right }: {
   )
 }
 
+function monthLabel(ym: string): string {
+  return `${Number(ym.slice(5))}월`
+}
+
+function monthSub(ym: string): string {
+  return `${ym.replace('-', '.')} 방문 기준`
+}
+
 export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [locations, setLocations] = useState<LocationSummary[]>([])
   const [monthly, setMonthly]   = useState<{month:string;count:number}[]>([])
-  const [channels, setChannels] = useState<ChannelSummary[]>([])
   const [contents, setContents] = useState<Content[]>([])
+  const [chartContents, setChartContents] = useState<Content[]>([])
+  const [chartLoading, setChartLoading] = useState(true)
   const [tab, setTab]           = useState<Tab>('perf')
   const [campaign, setCampaign] = useState('전체')
   const [location, setLocation] = useState('전체')
@@ -97,10 +106,18 @@ export default function Dashboard() {
   const [loadError, setLoadError] = useState('')
   const [visibleCount, setVisibleCount] = useState(PERF_PREVIEW_COUNT)
   const [selectedMonth, setSelectedMonth] = useState('2026-08')
+  const [sidebarContents, setSidebarContents] = useState<Content[]>([])
   const [tableSort, setTableSort] = useState<{ key: 'views' | 'likes' | 'saves'; dir: 'asc' | 'desc' }>({
     key: 'likes',
     dir: 'desc',
   })
+
+  useEffect(() => {
+    fetch(`/api/contents?sort=perf&limit=300&month=${selectedMonth}`)
+      .then(r => r.json())
+      .then(d => setSidebarContents(d.data ?? []))
+      .catch(() => {})
+  }, [selectedMonth])
 
   // 요약 데이터
   useEffect(() => {
@@ -114,7 +131,6 @@ export default function Dashboard() {
         setSummary(d.summary)
         setLocations(d.locations ?? [])
         setMonthly(d.monthly ?? [])
-        setChannels(d.channels ?? [])
       })
       .catch(() => setLoadError('요약 데이터를 불러오지 못했습니다.'))
   }, [])
@@ -124,7 +140,7 @@ export default function Dashboard() {
     let cancelled = false
     setLoading(true)
     const params = new URLSearchParams({
-      sort: tab === 'perf' ? 'perf' : 'date',
+      sort: tab === 'all' ? 'date' : 'perf',
       limit: '300',
     })
     if (campaign !== '전체') params.set('campaign', campaign)
@@ -151,7 +167,35 @@ export default function Dashboard() {
     return () => { cancelled = true }
   }, [tab, campaign, location, channel, selectedMonth])
 
+  // 도넛 차트용 — 성과순·전체는 필터 기준 전체, 월별은 해당 월만
+  useEffect(() => {
+    let cancelled = false
+    setChartLoading(true)
+    const params = new URLSearchParams({ sort: 'date', limit: '1000' })
+    if (campaign !== '전체') params.set('campaign', campaign)
+    if (location !== '전체') params.set('location', location)
+    if (channel !== '전체') params.set('channel', channel)
+    if (tab === 'month') params.set('month', selectedMonth)
+    fetch(`/api/contents?${params}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return
+        setChartContents(d.data ?? [])
+        setChartLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setChartContents([])
+        setChartLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [tab, campaign, location, channel, selectedMonth])
+
   useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel, selectedMonth])
+
+  const chartChannels = useMemo(() => channelSummaryFromContents(chartContents), [chartContents])
+  const chartScopeLabel = tab === 'month' ? `${monthLabel(selectedMonth)} 기준` : '전체 기준'
+  const chartAnimKey = `${tab}-${selectedMonth}-${campaign}-${location}-${channel}`
 
   const rankTags = channelRankTags(contents)
 
@@ -162,38 +206,76 @@ export default function Dashboard() {
     return tableSort.dir === 'desc' ? bv - av : av - bv
   }).slice(0, 100)
 
-  return (
-    <main className="max-w-[1180px] mx-auto px-5 py-5 pb-24">
+  const NAV = [
+    ['예산', '#s-budget'],
+    ['누적 성과', '#s-summary'],
+    ['방문형 성과', '#s1'],
+    ['확정·진행', '#s-brands'],
+    ['준비 중', '#s-prep'],
+    ['계약 예정', '#s-pipeline'],
+    ['지점 현황', '#s2'],
+    ['자료', '#s3'],
+  ] as const
 
-      {/* ── 상단 네비 ── */}
-      <nav className="glass sticky top-3 z-40 flex items-center gap-2 px-4 py-2 mb-3 flex-wrap">
-        <span className="text-[11px] font-bold tracking-widest text-azure-deep whitespace-nowrap">
-          OWM × 브랜드슬램
-        </span>
-        <div className="flex gap-1 ml-auto flex-wrap">
-          {([
-            ['예산', '#s-budget'],
-            ['방문형 성과', '#s1'],
-            ['확정·진행', '#s-brands'],
-            ['준비 중', '#s-prep'],
-            ['계약 예정', '#s-pipeline'],
-            ['지점 현황', '#s2'],
-            ['자료', '#s3'],
-          ] as const).map(([label, href]) => (
-            <a key={label}
-              href={href}
-              className="text-[12.5px] font-semibold text-slate px-3 py-2 rounded
-                hover:text-azure-deep hover:bg-white/70 transition-colors">
-              {label}
-            </a>
-          ))}
+  const sideCards = (
+    <>
+      <SideTopCard
+        title={`${monthLabel(selectedMonth)} 좋아요 TOP 3`}
+        emoji="🏆"
+        sub={monthSub(selectedMonth)}
+        metric="likes"
+        items={sidebarContents}
+      />
+      <SideTopCard
+        title={`${monthLabel(selectedMonth)} 조회수 TOP 3`}
+        emoji="👀"
+        sub={`${monthSub(selectedMonth)} · 역산 포함`}
+        metric="views"
+        items={sidebarContents}
+      />
+    </>
+  )
+
+  return (
+    <>
+      <header className="owm-hdr">
+        <div>
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight">
+            <b className="text-[#2f1c13]">OWM</b>
+            <i className="not-italic text-owm-text3 font-normal mx-1">×</i>
+            브랜드슬램 인플루언서 리포트
+            <span className="align-middle text-[11px] text-owm-blue bg-[#eef3ff] px-2.5 py-0.5 rounded-[10px] ml-2 font-semibold">
+              v0.9
+            </span>
+          </h1>
+          <div className="text-[11px] text-owm-text2 mt-1 flex flex-wrap gap-1">
+            <span>08.30 기준</span><span className="text-[#bbb]">·</span>
+            <span>수동 수집</span><span className="text-[#bbb]">·</span>
+            <span>3월 ~ 8월 누적</span>
+          </div>
         </div>
-        <span className="num text-[10px] text-slate whitespace-nowrap">08.30 기준</span>
+        <span className="text-xs text-owm-text2 bg-[#f0f2f7] px-3.5 py-1.5 rounded-2xl border border-owm-border">
+          8개 지점
+        </span>
+      </header>
+
+      <nav className="owm-tab-bar">
+        {NAV.map(([label, href]) => (
+          <a key={href} href={href} className="owm-tab-btn">{label}</a>
+        ))}
       </nav>
 
-      {/* ── 스냅샷 ── */}
+      <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-5 lg:px-8 py-4 pb-24">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(240px,280px)_minmax(0,1fr)_minmax(240px,300px)] gap-4 xl:gap-5 items-start">
+          {/* 좌측 사이드 */}
+          <aside className="hidden xl:flex flex-col gap-4 sticky top-28 self-start w-full">
+            {sideCards}
+          </aside>
+
+          {/* 메인 */}
+          <main className="min-w-0 w-full">
       {loadError && (
-        <div className="glass px-4 py-3 mb-3 text-sm text-amber-ink bg-amber/10 border border-amber/20">
+        <div className="owm-info-box mb-3 text-amber-ink border-amber/30 bg-amber/10">
           {loadError}
           <span className="block text-[12px] text-body mt-1">
             Supabase RLS 정책이 막혀 있으면 SQL Editor에서 <code className="text-[11px]">supabase/enable-public-read.sql</code> 을 실행하세요.
@@ -201,17 +283,31 @@ export default function Dashboard() {
         </div>
       )}
       {!loadError && summary && summary.total_rows === 0 && (
-        <div className="glass px-4 py-3 mb-3 text-sm text-amber-ink bg-amber/10 border border-amber/20">
+        <div className="owm-info-box mb-3 text-amber-ink border-amber/30 bg-amber/10">
           Supabase <code className="text-[11px]">contents</code> 테이블에 데이터가 없습니다.
           SQL Editor에서 <code className="text-[11px]">supabase/seed.sql</code> 을 실행해 주세요. (329건)
         </div>
       )}
       <BudgetSnapshot />
-      <SnapshotBar summary={summary} />
-      <div className="glass px-4 py-2.5 mb-8 text-[11.5px] text-body leading-relaxed">
-        <b className="text-azure-deep">수치 기준 —</b> 샤오홍슈 조회수는 좋아요·저장·댓글로 역산했으며
-        상단 누적 조회수에 반영됩니다. 도우인은 미제공분이 남아 있을 수 있습니다.
-        지표는 수동 수집이며 마지막 갱신은 2026.08.30입니다.
+
+      <section id="s-summary" className="scroll-mt-28 mb-3">
+        <div className="owm-sec-title">
+          <span className="owm-sec-no">00</span>
+          누적 성과
+          <span className="text-xs font-normal text-owm-text2">8개 지점 · 2026.03 ~ 08</span>
+        </div>
+        <SnapshotBar summary={summary} />
+        <div className="owm-info-box">
+          <b className="text-owm-text">수치 기준 —</b> 샤오홍슈·도우인 조회수는 좋아요·저장·댓글로 역산했으며
+          상단 누적 조회수에 반영됩니다. 도우인은 실측 조회수가 있으면 실측을 우선합니다.
+          지표는 수동 수집이며 마지막 갱신은 2026.08.30입니다.
+        </div>
+      </section>
+
+      {/* 모바일·태블릿: 사이드 카드 */}
+      <div className="xl:hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {sideCards}
+        <SideLiveFeed />
       </div>
 
       {/* ── §1 콘텐츠 현황 ── */}
@@ -462,54 +558,30 @@ export default function Dashboard() {
         )}
           </div>
 
-          <ChannelDonut data={channels} />
+          <aside className="flex flex-col gap-2.5 w-full shrink-0 lg:sticky lg:top-16 self-start">
+            <ChannelDonut
+              data={chartChannels}
+              scopeLabel={chartScopeLabel}
+              animationKey={chartAnimKey}
+              loading={chartLoading}
+            />
+            <RegionDonut
+              data={chartChannels}
+              scopeLabel={chartScopeLabel}
+              animationKey={chartAnimKey}
+              loading={chartLoading}
+            />
+          </aside>
         </div>
       </section>
 
       <BrandPipeline />
 
-      {/* ── 지점 현황 ── */}
-      <section id="s2" className="mb-10 scroll-mt-20">
-        <SectionHeader no="05" title="지점 현황" right={`${locations.length}개 지점`}/>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-          {locations.map(loc => (
-            <div key={loc.location} className="glass-solid p-4">
-              <div className="font-extrabold text-[15px] tracking-tight mb-1">{loc.location}</div>
-              <div className="w-full h-1 rounded-full bg-mist overflow-hidden my-2">
-                <div className="h-full rounded-full"
-                  style={{
-                    width: `${Math.min((loc.uploaded / Math.max(loc.influencer_count,1))*100, 100)}%`,
-                    background: 'linear-gradient(90deg,#6FBFFF,#1868F0)'
-                  }}/>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <div>
-                  <div className="text-[10px] text-slate">방문</div>
-                  <div className="num text-[14px] font-semibold">{loc.influencer_count}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate">업로드</div>
-                  <div className="num text-[14px] font-semibold">{loc.uploaded}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate">좋아요 합</div>
-                  <div className="num text-[14px] font-semibold">{loc.total_likes?.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate">최대 조회</div>
-                  <div className="num text-[14px] font-semibold">
-                    {loc.max_views ? (loc.max_views/1000).toFixed(0)+'K' : '—'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <LocationStatus locations={locations} />
 
       {/* ── §3 자료 ── */}
       <section id="s3" className="scroll-mt-20">
-        <SectionHeader no="06" title="자료 및 향후 개선"/>
+        <SectionHeader no="07" title="자료 및 향후 개선"/>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
           <div className="glass p-5">
             <h3 className="font-bold text-[13.5px] mb-1">관련 링크</h3>
@@ -567,10 +639,18 @@ export default function Dashboard() {
         <div className="mt-4 px-5 py-4 text-[12.5px] text-body leading-relaxed
           bg-white/50 border-l-[3px] border-azure rounded-r-[6px]">
           <b className="text-azure-deep">참고사항 —</b>{' '}
-          조회수 합계는 샤오홍슈 역산·도우인 미제공분을 반영한 값이며,{' '}
+          조회수 합계는 샤오홍슈·도우인 역산을 반영한 값이며,{' '}
           <b className="text-azure-deep">실제 노출과 차이가 있을 수 있습니다.</b>
         </div>
       </section>
-    </main>
+
+          </main>
+
+          <aside className="hidden xl:block sticky top-28 self-start w-full">
+            <SideLiveFeed />
+          </aside>
+        </div>
+      </div>
+    </>
   )
 }
