@@ -5,7 +5,8 @@ import BudgetSnapshot from '@/components/BudgetSnapshot'
 import SideTopCard from '@/components/SideTopCard'
 import SideLiveFeed from '@/components/SideLiveFeed'
 import ContentCard from '@/components/ContentCard'
-import MonthlyBarChart, { type MonthlyPoint } from '@/components/MonthlyBarChart'
+import MonthlyBarChart from '@/components/MonthlyBarChart'
+import { aggregateByMonth, toCumulative } from '@/lib/monthly-performance'
 import ChannelDonut from '@/components/ChannelDonut'
 import RegionDonut from '@/components/RegionDonut'
 import BrandPipeline from '@/components/BrandPipeline'
@@ -94,7 +95,8 @@ function monthSub(ym: string): string {
 export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [locations, setLocations] = useState<LocationSummary[]>([])
-  const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
+  const [monthly, setMonthly] = useState<{ month: string; count: number; views: number; likes: number; saves: number }[]>([])
+  const [cumulativeMonth, setCumulativeMonth] = useState<string | undefined>()
   const [contents, setContents] = useState<Content[]>([])
   const [chartContents, setChartContents] = useState<Content[]>([])
   const [chartLoading, setChartLoading] = useState(true)
@@ -185,7 +187,13 @@ export default function Dashboard() {
 
   useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel, selectedMonth])
 
+  useEffect(() => {
+    if (tab === 'perf' || tab === 'all') setCumulativeMonth(undefined)
+  }, [tab, campaign, location, channel, chartContents])
+
   const chartChannels = useMemo(() => channelSummaryFromContents(chartContents), [chartContents])
+  const filteredMonthly = useMemo(() => aggregateByMonth(chartContents), [chartContents])
+  const cumulativeData = useMemo(() => toCumulative(filteredMonthly), [filteredMonthly])
   const chartScopeLabel = tab === 'month' ? `${monthLabel(selectedMonth)} 기준` : '전체 기준'
   const chartAnimKey = `${tab}-${selectedMonth}-${campaign}-${location}-${channel}`
 
@@ -352,6 +360,25 @@ export default function Dashboard() {
           )}
         </div>
 
+        {(tab === 'perf' || tab === 'all') && (
+          <div className="glass p-5 mb-4">
+            <span className="num text-[10.5px] text-slate tracking-widest uppercase">누적 성과</span>
+            <p className="text-[11px] text-slate mt-1">
+              필터 기준 · 누적 업로드(막대) · 누적 조회·좋아요·저장(선)
+            </p>
+            {chartLoading ? (
+              <div className="h-48 mt-4 rounded-lg bg-mist/40 animate-pulse" />
+            ) : (
+              <MonthlyBarChart
+                variant="cumulative"
+                data={cumulativeData}
+                highlightMonth={cumulativeMonth ?? cumulativeData[cumulativeData.length - 1]?.month}
+                onSelectMonth={setCumulativeMonth}
+              />
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-4 items-start">
           <div className="min-w-0">
         {/* ── 성과순 ── */}
@@ -416,6 +443,7 @@ export default function Dashboard() {
               <span className="num text-[10.5px] text-slate tracking-widest uppercase">월별 성과</span>
               <p className="text-[11px] text-slate mt-1">업로드 건수(막대) · 조회·좋아요·저장(선)</p>
               <MonthlyBarChart
+                variant="monthly"
                 data={monthly}
                 highlightMonth={selectedMonth}
                 onSelectMonth={m => {
