@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminSupabase } from '@/lib/supabase-admin'
 import { runActor } from './client'
 import { APIFY_ACTORS, BATCH_SIZE, PROFILE_BUCKET } from './config'
+import { isDouyinPostUrl, resolveDouyinPostUrl } from './scrapers'
 import { buildUrlIndex, findOriginalUrl, urlMatchKeys } from './url-keys'
 import type { SyncChannel } from './types'
 import { SYNC_CHANNELS } from './types'
@@ -73,7 +74,9 @@ export function resolveProfileUrl(row: ProfileRow): string | null {
 export function accountKey(channel: string, profileUrl: string | null, name: string): string {
   if (profileUrl) {
     const keys = urlMatchKeys(profileUrl)
-    const stable = keys.find(k => k.startsWith('ig-user:') || k.startsWith('tiktok-user:') || k.startsWith('xhs-user:'))
+    const stable = keys.find(k =>
+      k.startsWith('ig-user:') || k.startsWith('tiktok-user:') || k.startsWith('xhs-user:') || k.startsWith('douyin-user:'),
+    )
     return `${channel}|${stable ?? keys[0] ?? profileUrl}`
   }
   return `${channel}|name:${name.trim().toLowerCase()}`
@@ -95,7 +98,7 @@ function avatarFor(avatars: Map<string, string>, profileUrl: string): string | u
 }
 
 function pickAvatar(item: Record<string, unknown>): string | null {
-  const user = (item.user ?? item.authorMeta ?? item.owner ?? {}) as Record<string, unknown>
+  const user = (item.user ?? item.author ?? item.authorMeta ?? item.owner ?? {}) as Record<string, unknown>
   const candidates = [
     item.profilePicUrlHD,
     item.profilePicUrlHd,
@@ -105,6 +108,7 @@ function pickAvatar(item: Record<string, unknown>): string | null {
     item.avatar,
     Array.isArray(item.covers) ? item.covers[0] : undefined,
     user.avatar,
+    user.avatarUrl,
     user.profilePicUrl,
     user.profile_pic_url,
     (item.authorMeta as Record<string, unknown> | undefined)?.avatar,
@@ -116,9 +120,10 @@ function pickAvatar(item: Record<string, unknown>): string | null {
 }
 
 function pickMatchCandidates(item: Record<string, unknown>, channel: SyncChannel): string[] {
-  const user = (item.user ?? item.authorMeta ?? {}) as Record<string, unknown>
+  const user = (item.user ?? item.author ?? item.authorMeta ?? {}) as Record<string, unknown>
   const username = (item.username ?? user.uniqueId ?? user.nickname ?? item.uniqueId) as string | undefined
   const profileId = (item.profileId ?? item.user_id ?? user.user_id ?? item.note_id) as string | undefined
+  const secUid = (user.secUid ?? item.secUid) as string | undefined
   const list = [
     item.inputUrl as string,
     item.url as string,
@@ -130,6 +135,7 @@ function pickMatchCandidates(item: Record<string, unknown>, channel: SyncChannel
     username && channel === '인스타그램' ? `https://www.instagram.com/${username}/` : '',
     username && channel === '틱톡' ? `https://www.tiktok.com/@${username}` : '',
     profileId ? `https://www.xiaohongshu.com/user/profile/${profileId}` : '',
+    secUid && channel === '도우인' ? `https://www.douyin.com/user/${secUid}` : '',
   ]
   return list.filter(Boolean)
 }
@@ -180,6 +186,66 @@ async function scrapeTikTokProfiles(urls: string[]): Promise<Map<string, string>
       const avatar = pickAvatar(item)
       if (!avatar) continue
       const original = findOriginalUrl(index, pickMatchCandidates(item, '틱톡'))
+      if (original) out.set(original, avatar)
+    }
+  }
+  return out
+}
+
+async function scrapeDouyinProfiles(urls: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(urls.map(stripQuery))]
+  if (!unique.length) return new Map()
+  const index = buildUrlIndex(urls)
+  const out = new Map<string, string>()
+
+  for (const batch of chunk(unique, BATCH_SIZE)) {
+    const items = await runActor(APIFY_ACTORS.douyin, {
+      searchType: 'profile',
+      userUrls: batch,
+    })
+    for (const item of items) {
+      const avatar = pickAvatar(item)
+      if (!avatar) continue
+      const secUid = item.secUid as string | undefined
+      const candidates = [
+        ...pickMatchCandidates(item, '도우인'),
+        secUid ? `https://www.douyin.com/user/${secUid}` : '',
+      ].filter(Boolean)
+      const original = findOriginalUrl(index, candidates)
+      if (original) out.set(original, avatar)
+    }
+  }
+  return out
+}
+
+async function scrapeDouyinAvatarsFromPosts(urls: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(urls.filter(isDouyinPostUrl))]
+  if (!unique.length) return new Map()
+  const resolved = await Promise.all(unique.map(async u => ({
+    original: u,
+    target: await resolveDouyinPostUrl(u),
+  })))
+  const index = new Map<string, string>()
+  for (const { original, target } of resolved) {
+    for (const key of [...urlMatchKeys(original), ...urlMatchKeys(target)]) index.set(key, original)
+  }
+  const out = new Map<string, string>()
+  const scrapeUrls = [...new Set(resolved.map(r => r.target))]
+
+  for (const batch of chunk(scrapeUrls, BATCH_SIZE)) {
+    const items = await runActor(APIFY_ACTORS.douyin, {
+      searchType: 'video-detail',
+      videoUrls: batch,
+    })
+    for (const item of items) {
+      const avatar = pickAvatar(item)
+      if (!avatar) continue
+      const awemeId = (item.awemeId ?? item.aweme_id ?? item.videoId) as string | undefined
+      const original = findOriginalUrl(index, [
+        item.url as string,
+        item.shareUrl as string,
+        awemeId ? `https://www.douyin.com/video/${awemeId}` : '',
+      ])
       if (original) out.set(original, avatar)
     }
   }
@@ -248,6 +314,8 @@ async function scrapeAvatars(
     for (const [url, avatar] of await scrapeTikTokProfiles(profileUrls)) byUrl.set(url, avatar)
   } else if (channel === '샤오홍슈' && profileUrls.length) {
     for (const [url, avatar] of await scrapeXhsProfiles(profileUrls)) byUrl.set(url, avatar)
+  } else if (channel === '도우인' && profileUrls.length) {
+    for (const [url, avatar] of await scrapeDouyinProfiles(profileUrls)) byUrl.set(url, avatar)
   }
 
   for (const acc of accounts) {
@@ -263,6 +331,7 @@ async function scrapeAvatars(
 
   let fromPosts = new Map<string, string>()
   if (channel === '샤오홍슈') fromPosts = await scrapeXhsAvatarsFromPosts(postUrls)
+  else if (channel === '도우인') fromPosts = await scrapeDouyinAvatarsFromPosts(postUrls)
   else if (channel === '틱톡') {
     const index = buildUrlIndex(postUrls)
     for (const batch of chunk(postUrls, BATCH_SIZE)) {
@@ -377,7 +446,10 @@ export async function ensureProfileImageColumn(supabase: SupabaseClient): Promis
 
 function fileStem(account: ProfileAccount): string {
   const hash = createHash('sha1').update(account.key).digest('hex').slice(0, 16)
-  const slug = account.channel === '인스타그램' ? 'ig' : account.channel === '틱톡' ? 'tt' : 'xhs'
+  const slug = account.channel === '인스타그램' ? 'ig'
+    : account.channel === '틱톡' ? 'tt'
+    : account.channel === '도우인' ? 'dy'
+    : 'xhs'
   return `${slug}/${hash}`
 }
 

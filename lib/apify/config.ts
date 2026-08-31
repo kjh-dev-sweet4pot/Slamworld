@@ -4,6 +4,7 @@ export const APIFY_ACTORS = {
   tiktok: 'clockworks/tiktok-scraper',
   xiaohongshu: 'dltik/rednote-xiaohongshu-scraper',
   xiaohongshuProfile: 'maximedupre/rednote-profile-scraper',
+  douyin: 'atomus/douyin-scraper',
 } as const
 
 export const PROFILE_BUCKET = 'profile-photos'

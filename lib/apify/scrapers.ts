@@ -1,6 +1,6 @@
 import { runActor } from './client'
 import { APIFY_ACTORS } from './config'
-import { buildUrlIndex, findOriginalUrl } from './url-keys'
+import { buildUrlIndex, findOriginalUrl, urlMatchKeys } from './url-keys'
 import type { ScrapedMetrics } from './types'
 
 function num(v: unknown): number | null {
@@ -160,6 +160,112 @@ export async function scrapeXiaohongshuBatch(
     const original = findOriginalUrl(index, candidates)
     if (!original) continue
     const metrics = parseXhsItem(item)
+    if (metrics) out.set(original, metrics)
+  }
+
+  return out
+}
+
+const DY_POST_URL =
+  /^(https:\/\/)?(www\.)?((douyin|iesdouyin)\.com\/(video|share\/video)\/\d+|v\.douyin\.com\/[^/?#]+)/i
+
+export function isDouyinPostUrl(url: string): boolean {
+  const u = url.trim()
+  if (/^\d{15,22}$/.test(u)) return true
+  return DY_POST_URL.test(u)
+}
+
+function douyinVideoId(url: string): string | null {
+  const m = url.match(/\/(?:share\/)?video\/(\d+)/)
+  return m?.[1] ?? null
+}
+
+/** v.douyin.com 단축 URL → canonical video URL */
+export async function resolveDouyinPostUrl(url: string): Promise<string> {
+  const u = url.trim()
+  const bareId = /^\d{15,22}$/.test(u)
+  if (bareId) return `https://www.douyin.com/video/${u}`
+  const knownId = douyinVideoId(u)
+  if (knownId && !/v\.douyin\.com/i.test(u)) {
+    return `https://www.douyin.com/video/${knownId}`
+  }
+  if (!/v\.douyin\.com/i.test(u)) return u
+  try {
+    const res = await fetch(u, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(20000),
+    })
+    const id = douyinVideoId(res.url)
+    if (id) return `https://www.douyin.com/video/${id}`
+    return res.url || u
+  } catch {
+    return u
+  }
+}
+
+function parseDouyinItem(item: Record<string, unknown>): ScrapedMetrics | null {
+  if (item.error || item.errorCode) return null
+  const stats = (item.stats ?? {}) as Record<string, unknown>
+  const likes = num(stats.diggCount ?? item.diggCount ?? item.likeCount)
+  const rawViews = num(stats.playCount ?? item.playCount)
+  // ponytail: Douyin often returns playCount=0 when hidden — treat as unavailable
+  const views = rawViews === 0 ? null : rawViews
+  const saves = num(stats.collectCount ?? item.collectCount)
+  const comments = num(stats.commentCount ?? item.commentCount)
+  if (likes == null && views == null && saves == null && comments == null) return null
+  return {
+    views,
+    likes,
+    saves,
+    comments,
+    views_source: views != null ? 'measured' : 'none',
+  }
+}
+
+/** Douyin 게시물 URL 배치 → 원본 URL별 metrics */
+export async function scrapeDouyinBatch(
+  urls: string[],
+): Promise<Map<string, ScrapedMetrics>> {
+  const validUrls = [...new Set(urls.filter(isDouyinPostUrl))]
+  if (!validUrls.length) return new Map()
+
+  const resolvedPairs = await Promise.all(
+    validUrls.map(async original => ({ original, resolved: await resolveDouyinPostUrl(original) })),
+  )
+  const index = new Map<string, string>()
+  for (const { original, resolved } of resolvedPairs) {
+    for (const key of [...urlMatchKeys(original), ...urlMatchKeys(resolved)]) {
+      index.set(key, original)
+    }
+  }
+  for (const url of urls) {
+    for (const key of urlMatchKeys(url)) index.set(key, url)
+  }
+  const scrapeUrls = [...new Set(resolvedPairs.map(p => p.resolved))]
+  const out = new Map<string, ScrapedMetrics>()
+
+  const items = await runActor(APIFY_ACTORS.douyin, {
+    searchType: 'video-detail',
+    videoUrls: scrapeUrls,
+  })
+
+  for (const item of items) {
+    const awemeId = (item.awemeId ?? item.aweme_id ?? item.videoId) as string | undefined
+    const candidates = [
+      item.url as string,
+      item.shareUrl as string,
+      item.inputUrl as string,
+      item.videoPageUrl as string,
+      awemeId ? `https://www.douyin.com/video/${awemeId}` : '',
+    ].filter(Boolean)
+    const original = findOriginalUrl(index, candidates)
+    if (!original) continue
+    const metrics = parseDouyinItem(item)
     if (metrics) out.set(original, metrics)
   }
 

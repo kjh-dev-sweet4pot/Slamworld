@@ -10,7 +10,9 @@
     "db:seed": "node scripts/apply-seed.mjs",
     "db:setup": "node scripts/db-setup.mjs",
     "sync-metrics": "tsx scripts/sync-metrics.ts",
-    "sync-profile-photos": "tsx scripts/sync-profile-photos.ts"
+    "sync-profile-photos": "tsx scripts/sync-profile-photos.ts",
+    "estimate-xhs-views": "tsx scripts/estimate-xhs-views.ts",
+    "estimate-xhs-accuracy": "tsx scripts/estimate-xhs-views.ts -- --accuracy-only"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",

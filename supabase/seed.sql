@@ -328,6 +328,6 @@ VALUES
   ('6월_영미권', '이태원점', '브랜드슬램', 'Achachu Getahun Worku', NULL, NULL, '인스타그램', 1722, NULL, FALSE, '2026-06-27', '브랜드슬램 패키지', 'https://www.instagram.com/lesyeoux?igsh=b3pqZ2NsZTN1Y2U5&utm_source=qr', NULL, NULL, NULL, NULL, 'none'),
   ('신사메가_6월', '신사점', '브랜드슬램', 'pada_heli', NULL, 'https://www.instagram.com/pada_heli', '인스타그램', NULL, '미국, 이란', FALSE, '2026-06-25', '메가 인플루언서', 'https://www.instagram.com/reels/DanWmjJz66J/', 200000, 8968, NULL, 944, 'measured'),
   ('신사메가_6월', '신사점', '브랜드슬램', 'youronlyjen', NULL, 'https://www.tiktok.com/@youronlyjen', '틱톡', NULL, '미국, 대만', FALSE, '2026-06-28', '메가 인플루언서', 'https://www.tiktok.com/@youronlyjen/video/7659335224488168726', 76306, 2911, NULL, 22, 'measured'),
-  ('신사메가_6월', '신사점', '브랜드슬램', '홍수아', NULL, 'https://v.douyin.com/', '도우인', NULL, '중국', FALSE, '2026-06-25', '메가 인플루언서', 'https://v.douyin.com/yuA8YwBhnHU/', NULL, 1657, NULL, 29, 'none'),
+  ('신사메가_6월', '신사점', '브랜드슬램', '홍수아', NULL, 'https://v.douyin.com/', '도우인', NULL, '중국', FALSE, '2026-06-25', '메가 인플루언서', 'https://v.douyin.com/yuA8YwBhnHU/', NULL, 1694, 90, 38, 'none'),
   ('신사메가_6월', '신사점', '브랜드슬램', '리즈', NULL, 'https://weibo.com/', '웨이보', NULL, '중국', FALSE, '2026-06-25', '메가 인플루언서', 'https://weibo.com/5042468475/5315986862646498', 153000, 1217, NULL, 276, 'measured'),
   ('신사메가_6월', '신사점', '브랜드슬램', '지나', NULL, NULL, '샤오홍슈', NULL, '중국', FALSE, '2026-07-09', '메가 인플루언서', NULL, NULL, NULL, NULL, NULL, 'none');

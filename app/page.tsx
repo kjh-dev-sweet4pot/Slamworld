@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import SnapshotBar from '@/components/SnapshotBar'
 import ContentCard from '@/components/ContentCard'
 import MonthlyBarChart from '@/components/MonthlyBarChart'
@@ -79,6 +79,11 @@ export default function Dashboard() {
   const [loading, setLoading]   = useState(true)
   const [loadError, setLoadError] = useState('')
   const [visibleCount, setVisibleCount] = useState(PERF_PREVIEW_COUNT)
+  const [selectedMonth, setSelectedMonth] = useState('2026-08')
+  const [tableSort, setTableSort] = useState<{ key: 'views' | 'likes' | 'saves'; dir: 'asc' | 'desc' }>({
+    key: 'likes',
+    dir: 'desc',
+  })
 
   // 요약 데이터
   useEffect(() => {
@@ -98,18 +103,21 @@ export default function Dashboard() {
   }, [])
 
   // 콘텐츠 데이터
-  const fetchContents = useCallback(() => {
+  useEffect(() => {
+    let cancelled = false
     setLoading(true)
     const params = new URLSearchParams({
-      sort: tab === 'all' ? 'date' : 'perf',
+      sort: tab === 'perf' ? 'perf' : 'date',
       limit: '300',
     })
     if (campaign !== '전체') params.set('campaign', campaign)
     if (location !== '전체') params.set('location', location)
     if (channel  !== '전체') params.set('channel',  channel)
+    if (tab === 'month') params.set('month', selectedMonth)
     fetch(`/api/contents?${params}`)
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => {
+        if (cancelled) return
         if (!ok || d.error) {
           setLoadError(d.error ?? '콘텐츠 데이터를 불러오지 못했습니다.')
           setContents([])
@@ -119,20 +127,23 @@ export default function Dashboard() {
         setLoading(false)
       })
       .catch(() => {
+        if (cancelled) return
         setLoadError('콘텐츠 데이터를 불러오지 못했습니다.')
         setLoading(false)
       })
-  }, [tab, campaign, location, channel])
+    return () => { cancelled = true }
+  }, [tab, campaign, location, channel, selectedMonth])
 
-  useEffect(() => { fetchContents() }, [fetchContents])
-  useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel])
+  useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel, selectedMonth])
 
   const rankTags = channelRankTags(contents)
 
   // 전체 탭용 테이블
-  const tableContents = [...contents].sort((a,b) =>
-    (b.likes ?? 0) + (b.saves ?? 0) - ((a.likes ?? 0) + (a.saves ?? 0))
-  ).slice(0, 100)
+  const tableContents = [...contents].sort((a, b) => {
+    const av = a[tableSort.key] ?? 0
+    const bv = b[tableSort.key] ?? 0
+    return tableSort.dir === 'desc' ? bv - av : av - bv
+  }).slice(0, 100)
 
   return (
     <main className="max-w-[1180px] mx-auto px-5 py-5 pb-24">
@@ -196,7 +207,10 @@ export default function Dashboard() {
         {/* 탭 */}
         <div className="flex gap-1 bg-white/55 border border-white/75 rounded p-0.5 w-fit mb-3">
           {([['perf','성과순'],['month','월별'],['all','전체']] as [Tab,string][]).map(([t,label]) => (
-            <button key={t} onClick={() => setTab(t)}
+            <button key={t} onClick={() => {
+                if (t !== tab) setLoading(true)
+                setTab(t)
+              }}
               className={`text-[12.5px] font-semibold px-4 py-2 rounded transition-all
                 ${tab===t
                   ? 'bg-azure text-white shadow-[0_2px_8px_rgba(24,104,240,.28)]'
@@ -290,36 +304,141 @@ export default function Dashboard() {
 
         {/* ── 월별 ── */}
         {tab === 'month' && (
-          <div className="glass p-5">
-            <span className="num text-[10.5px] text-slate tracking-widest uppercase">월별 업로드 건수</span>
-            <MonthlyBarChart data={monthly} highlightMonth="2026-08" />
-            <p className="text-[12.5px] text-body leading-relaxed pt-4 mt-4 border-t border-mist">
-              <b className="text-azure-deep">8월 {monthly.find(m=>m.month==='2026-08')?.count ?? 0}건.</b>{' '}
-              명동점 오픈(8/11) 122건과 남포점 오픈 47건이 같은 달에 진행됐습니다.
-            </p>
-          </div>
+          <>
+            <div className="glass p-5">
+              <span className="num text-[10.5px] text-slate tracking-widest uppercase">월별 업로드 건수</span>
+              <MonthlyBarChart
+                data={monthly}
+                highlightMonth={selectedMonth}
+                onSelectMonth={m => {
+                  if (m === selectedMonth) return
+                  setLoading(true)
+                  setSelectedMonth(m)
+                }}
+              />
+              <p className="text-[12.5px] text-body leading-relaxed pt-4 mt-4 border-t border-mist">
+                <b className="text-azure-deep">
+                  {Number(selectedMonth.slice(5))}월 {monthly.find(m => m.month === selectedMonth)?.count ?? contents.length}건.
+                </b>
+                {selectedMonth === '2026-08'
+                  ? ' 명동점 오픈(8/11) 122건과 남포점 오픈 47건이 같은 달에 진행됐습니다.'
+                  : ' 아래에서 해당 월 콘텐츠를 볼 수 있습니다.'}
+              </p>
+            </div>
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
+                {[...Array(PERF_PREVIEW_COUNT)].map((_, i) => (
+                  <div key={i} className="glass-solid h-40 animate-pulse" />
+                ))}
+              </div>
+            ) : contents.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
+                  {contents.slice(0, visibleCount).map(c => (
+                    <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
+                  ))}
+                </div>
+                {(contents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
+                  <div className="mt-3 flex items-center justify-between gap-3 px-1">
+                    <p className="text-[12px] text-slate">
+                      {visibleCount}건 표시 중
+                      {contents.length > visibleCount && (
+                        <> · 남은 {contents.length - visibleCount}건</>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      {visibleCount > PERF_PREVIEW_COUNT && (
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount(PERF_PREVIEW_COUNT)}
+                          className="text-[12px] font-semibold text-slate hover:text-azure-deep transition-colors whitespace-nowrap"
+                        >
+                          접기
+                        </button>
+                      )}
+                      {contents.length > visibleCount && (
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
+                          className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
+                        >
+                          {Math.min(PERF_MORE_COUNT, contents.length - visibleCount)}개 더 보기
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="glass px-5 py-10 text-center text-[13px] text-slate mt-4">
+                {Number(selectedMonth.slice(5))}월에 해당하는 콘텐츠가 없습니다.
+              </div>
+            )}
+          </>
         )}
 
         {/* ── 전체 테이블 ── */}
         {tab === 'all' && (
           <div className="glass overflow-hidden">
             <div className="grid grid-cols-6 gap-3 px-4 py-2.5 bg-white/40
-              num text-[10.5px] text-slate uppercase tracking-wider">
+              num text-[10.5px] text-slate uppercase tracking-wider items-center">
               <div>지점</div><div>인플루언서</div><div>채널</div>
-              <div>조회수</div><div>좋아요</div><div>저장</div>
+              {([
+                ['views', '조회수'],
+                ['likes', '좋아요'],
+                ['saves', '저장'],
+              ] as const).map(([key, label]) => {
+                const active = tableSort.key === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setTableSort(s =>
+                      s.key === key
+                        ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' }
+                        : { key, dir: 'desc' }
+                    )}
+                    className={`text-left transition-colors
+                      ${active ? 'text-azure-deep font-semibold' : 'hover:text-azure-deep'}`}
+                    title={`${label} ${active && tableSort.dir === 'asc' ? '오름차순' : '내림차순'} 정렬`}
+                  >
+                    {label}{active ? (tableSort.dir === 'desc' ? ' ↓' : ' ↑') : ''}
+                  </button>
+                )
+              })}
             </div>
-            {tableContents.map(c => (
-              <div key={c.id}
-                className="grid grid-cols-6 gap-3 px-4 py-3 text-[12.5px]
-                  border-t border-mist hover:bg-white/70 transition-colors">
-                <div className="font-bold text-azure-deep">{c.location}</div>
-                <div>{c.influencer_name}</div>
-                <div className="text-slate">{c.channel}</div>
-                <div className="num">{c.views ? c.views.toLocaleString() : '—'}</div>
-                <div className="num">{c.likes?.toLocaleString() ?? '—'}</div>
-                <div className="num">{c.saves?.toLocaleString() ?? '—'}</div>
-              </div>
-            ))}
+            {tableContents.map(c => {
+              const rowClass = `grid grid-cols-6 gap-3 px-4 py-3 text-[12.5px]
+                border-t border-mist transition-colors
+                ${c.upload_url
+                  ? 'hover:bg-white/70 cursor-pointer'
+                  : 'opacity-60 cursor-default'}`
+              const cells = (
+                <>
+                  <div className="font-bold text-azure-deep">{c.location}</div>
+                  <div>{c.influencer_name}</div>
+                  <div className="text-slate">{c.channel}</div>
+                  <div className="num">{c.views ? c.views.toLocaleString() : '—'}</div>
+                  <div className="num">{c.likes?.toLocaleString() ?? '—'}</div>
+                  <div className="num">{c.saves?.toLocaleString() ?? '—'}</div>
+                </>
+              )
+              return c.upload_url ? (
+                <a
+                  key={c.id}
+                  href={c.upload_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={rowClass}
+                >
+                  {cells}
+                </a>
+              ) : (
+                <div key={c.id} className={rowClass} title="링크 없음">
+                  {cells}
+                </div>
+              )
+            })}
           </div>
         )}
           </div>
@@ -411,7 +530,7 @@ export default function Dashboard() {
             <p className="text-[11px] text-slate mb-3">다음에 열릴 기능</p>
             <div className="relative pl-4 border-l border-mist space-y-3">
               {[
-                ['9월 2주','샤오홍슈 추정 조회수 자동 계산'],
+                ['9월 2주','샤오홍슈 추정 조회수 자동 계산 ✓'],
                 ['9월 4주','브랜드별 상세 리포트 · 리드타임 시각화'],
                 ['10월',  '채널 지표 자동 수집 · 기간 비교'],
               ].map(([q, t], i) => (

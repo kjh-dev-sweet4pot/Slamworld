@@ -38,6 +38,8 @@ const CHANNEL_ALIAS: Record<string, SyncChannel> = {
   xhs: '샤오홍슈',
   xiaohongshu: '샤오홍슈',
   rednote: '샤오홍슈',
+  douyin: '도우인',
+  dy: '도우인',
 }
 
 function parseArgs() {
