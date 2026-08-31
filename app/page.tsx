@@ -144,7 +144,7 @@ export default function Dashboard() {
         </span>
         <div className="flex gap-1 ml-auto flex-wrap">
           {([
-            ['콘텐츠 현황', '#s1'],
+            ['방문형 성과', '#s1'],
             ['확정·진행', '#s-brands'],
             ['준비 중', '#s-prep'],
             ['계약 예정', '#s-pipeline'],
@@ -186,8 +186,8 @@ export default function Dashboard() {
 
       {/* ── §1 콘텐츠 현황 ── */}
       <section id="s1" className="mb-10 scroll-mt-20">
-        <SectionHeader no="01" title="콘텐츠 업로드 현황"
-          sub="성과 상위 콘텐츠입니다. 아래에서 더 볼 수 있습니다."
+        <SectionHeader no="01" title="OWM 방문형 콘텐츠 성과"
+          sub="명동·북촌 방문형 캠페인 성과입니다. 아래에서 더 볼 수 있습니다."
           right={tab === 'perf'
             ? `${Math.min(visibleCount, contents.length)}건`
             : `${contents.length}건`}
@@ -393,11 +393,12 @@ export default function Dashboard() {
             <h3 className="font-bold text-[13.5px] mb-1">인플루언서 가이드라인</h3>
             <p className="text-[11px] text-slate mb-3">최종 수정 2026.08.01</p>
             {[
-              ['촬영 가이드 (구도 · 조명)','#'],
-              ['필수 해시태그 · 멘션','#'],
+              ['촬영 가이드 (구도 · 조명)', 'https://slam-pick-three.vercel.app/'],
+              ['필수 해시태그 · 멘션', 'https://slam-pick-three.vercel.app/'],
               ['유료 광고 표기 규정','#'],
             ].map(([label, href]) => (
               <a key={label} href={href}
+                {...(href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                 className="flex items-center gap-2 text-[12.5px] text-body
                   px-2 py-2 rounded transition-colors hover:bg-white/85 hover:text-azure-deep">
                 {label}

@@ -89,7 +89,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
 export const COMMON_TIMELINE: TimelineMilestone[] = [
   {
     date: '~ 8.31 (월)',
-    title: '가이드라인 전달',
+    title: '초기 가이드라인 전달',
     detail: '컨셉 4종 PPL + Rxme 원브랜디드 영상 가이드 제작·전달',
   },
   {
@@ -103,7 +103,7 @@ export const COMMON_TIMELINE: TimelineMilestone[] = [
     detail: '가장 빠른 인플루언서 기준 방문 마케팅 시작',
   },
   {
-    date: '목표',
+    date: '당월 목표',
     title: '발행 54건',
     detail: '명동 80% · 북촌 20%',
   },
@@ -139,13 +139,6 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
 ]
 
 export const GUIDE_PREP: PrepItem[] = [
-  {
-    brand: '해브블루',
-    detail: 'PPL 컨셉 4종 + Rxme 원브랜디드',
-    eta: '8.31 전달',
-    pct: 80,
-    note: '공통 타임라인 · 방문 리스트 동시 전달',
-  },
   {
     brand: '닥터리앤장',
     detail: 'PPL 가이드라인',
@@ -185,14 +178,6 @@ export const GUIDE_PREP: PrepItem[] = [
 
 export const MATCH_PREP: MatchItem[] = [
   {
-    brand: '해브블루',
-    detail: '명동 80% · 북촌 20%',
-    done: 0,
-    total: 54,
-    note: '9/4 영미·중화 2차 리스트 · 9/6 방문 시작',
-    eta: '09.06 첫 방문',
-  },
-  {
     brand: '닥터 리앤장',
     detail: '약사 3 · 메가 6 · 미들 5',
     done: 0,
@@ -214,12 +199,12 @@ export const MATCH_PREP: MatchItem[] = [
 export const REVIEW_BRANDS: PipelineBrand[] = [
   {
     name: '해브블루',
-    desc: '온보딩 진행 · 공통 타임라인(9/6 방문) 연계',
+    desc: '온보딩 진행',
     budget: '2,000–3,000만원',
     tier: 'large',
     stage: 2,
     stageLabel: '가이드·매칭 준비',
-    eta: '9/6 방문 목표',
+    eta: '일정 조율 중',
   },
   {
     name: '달바',
