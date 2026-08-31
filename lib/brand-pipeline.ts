@@ -216,24 +216,6 @@ export const OCTOBER_BRANDS: PipelineBrand[] = [
     stageLabel: '10월 진행 예정',
     eta: '10월 마케팅',
   },
-  {
-    name: '부스티온',
-    desc: '입점 절차 우선 · 마케팅 10월 조정',
-    budget: '미확인',
-    tier: 'small',
-    stage: 2,
-    stageLabel: '10월 진행 예정',
-    eta: '10월 마케팅',
-  },
-  {
-    name: '나인위시스',
-    desc: '입점 절차 우선 · 마케팅 10월 조정',
-    budget: '미확인',
-    tier: 'small',
-    stage: 2,
-    stageLabel: '10월 진행 예정',
-    eta: '10월 마케팅',
-  },
 ]
 
 /** @deprecated REVIEW_BRANDS + OCTOBER_BRANDS 사용 */

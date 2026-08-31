@@ -51,7 +51,7 @@ export default function SideTopCard({
           const acc = RANK_ACCENTS[i] ?? '#94a3b8'
           const locColor = LOC_COLOR[c.location] ?? '#94a3b8'
           const val = metricValue(c, metric)
-          const linkable = metric === 'likes' && !!c.upload_url
+          const linkable = !!c.upload_url
           const row = (
             <div className="owm-b3-row">
               <span className="owm-b3-rank" style={{ background: acc }}>{i + 1}</span>

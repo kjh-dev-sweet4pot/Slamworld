@@ -2,24 +2,18 @@
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import {
+  budgetItemColor,
+  budgetPaymentLabel,
+  budgetStageLabel,
   computeBudgetSummary,
   fmtBudgetManwon,
   monthlyBudgetForChart,
+  partnerCompanyDonut,
+  partnerCompanyTooltipRows,
   type BudgetStage,
   type MonthlyBudgetChartRow,
+  type PartnerTooltipRow,
 } from '@/lib/brand-budget'
-
-const STAGE_COLOR: Record<BudgetStage, string> = {
-  '확정 및 진행': '#1868F0',
-  '계약 예정': '#F59E0B',
-  '10월 예정': '#6366F1',
-}
-
-const STAGE_LABEL: Record<BudgetStage, string> = {
-  '확정 및 진행': '확보 예산',
-  '계약 예정': '계약 예정·검토',
-  '10월 예정': '10월 예정',
-}
 
 const BAR_COLOR = {
   paid: 'linear-gradient(to top, #16A34A, #4ADE80)',
@@ -29,25 +23,13 @@ const BAR_COLOR = {
   plannedOct: 'linear-gradient(to top, #4F46E5, #818CF8)',
 } as const
 
-const PAYMENT_LABEL = {
-  '입금 완료': '입금 완료',
-  '입금 예정': '입금 예정',
-  '미입금': '미입금',
-} as const
-
-const PAYMENT_COLOR: Record<keyof typeof PAYMENT_LABEL, string> = {
-  '입금 완료': '#22C55E',
-  '입금 예정': '#F59E0B',
-  '미입금': '#94A3B8',
-}
-
 function fmtMonthLabel(ym: string) {
   return `${Number(ym.slice(5))}월`
 }
 
 function donutSlices(
   total: number,
-  segments: { key: BudgetStage; value: number }[],
+  segments: { key: string; value: number; color: string; label: string }[],
 ) {
   if (total <= 0) return []
   const r = 68
@@ -61,8 +43,8 @@ function donutSlices(
       const gap = c - dash
       const item = {
         key: s.key,
-        label: STAGE_LABEL[s.key],
-        color: STAGE_COLOR[s.key],
+        label: s.label,
+        color: s.color,
         value: s.value,
         pct: Math.round(ratio * 100),
         dasharray: `${dash} ${gap}`,
@@ -73,54 +55,156 @@ function donutSlices(
     })
 }
 
-function MonthTooltip({ row }: { row: MonthlyBudgetChartRow }) {
-  const confirmed = row.items.filter(i => i.kind === 'confirmed')
-  const planned = row.items.filter(i => i.kind === 'planned')
-  const byPayment = (['입금 완료', '입금 예정', '미입금'] as const).filter(p =>
-    confirmed.some(i => i.payment === p),
+const STAGE_LEGEND: { label: string; color: string }[] = [
+  { label: '확정 · 입금 완료', color: budgetItemColor('확정 및 진행', '입금 완료') },
+  { label: '확정 · 입금 예정', color: budgetItemColor('확정 및 진행', '입금 예정') },
+  { label: '확정 · 미입금', color: budgetItemColor('확정 및 진행', '미입금') },
+  { label: '계약 예정·검토', color: budgetItemColor('계약 예정', '검토 중') },
+  { label: '10월 예정', color: budgetItemColor('10월 예정', '검토 중') },
+]
+
+function BudgetTipRow({
+  brand,
+  stage,
+  payment,
+  amountLabel,
+}: {
+  brand: string
+  stage: BudgetStage | '미정'
+  payment: PartnerTooltipRow['payment']
+  amountLabel: string
+}) {
+  const color = budgetItemColor(stage, payment)
+  return (
+    <div className="owm-budget-tip-row">
+      <span className="flex items-center gap-1.5 min-w-0">
+        <i className="w-2 h-2 rounded-[2px] shrink-0" style={{ background: color }} />
+        <span className="truncate">{brand}</span>
+        <span className="text-[9px] font-semibold shrink-0" style={{ color }}>
+          {budgetStageLabel(stage)}
+        </span>
+        <span className="text-[9px] text-owm-text3 shrink-0">{budgetPaymentLabel(payment)}</span>
+      </span>
+      <span className="num">{amountLabel}</span>
+    </div>
   )
+}
+
+function BudgetCompositionTooltip({ rows }: { rows: PartnerTooltipRow[] }) {
+  return (
+    <div className="owm-budget-tip owm-budget-tip-partner">
+      <div className="owm-budget-tip-title">협업 회사 · 예산순</div>
+      {rows.map(r => (
+        <BudgetTipRow
+          key={r.brand}
+          brand={r.brand}
+          stage={r.stage}
+          payment={r.payment}
+          amountLabel={r.amountLabel}
+        />
+      ))}
+    </div>
+  )
+}
+
+function BudgetCompositionDonut({ pipelineTotal }: { pipelineTotal: number }) {
+  const [hovered, setHovered] = useState(false)
+  const { slices, totalWeight, count } = partnerCompanyDonut()
+  const tooltipRows = partnerCompanyTooltipRows()
+  const arcs = donutSlices(
+    totalWeight,
+    slices.map(s => ({
+      key: s.key,
+      value: s.weight,
+      color: s.color,
+      label: s.label,
+    })),
+  ).sort((a, b) => b.value - a.value)
+
+  if (arcs.length === 0) {
+    return <div className="h-40 grid place-items-center text-[13px] text-slate w-full">데이터 없음</div>
+  }
 
   return (
-    <div className="owm-budget-tip">
+    <div
+      className="relative w-full"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {hovered && (
+        <div className="absolute bottom-full right-0 mb-2 z-30 pointer-events-none hidden lg:block">
+          <BudgetCompositionTooltip rows={tooltipRows} />
+        </div>
+      )}
+      {hovered && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 pointer-events-none lg:hidden w-[min(100vw-2rem,260px)]">
+          <BudgetCompositionTooltip rows={tooltipRows} />
+        </div>
+      )}
+
+      <div className="relative w-[200px] aspect-square max-h-[200px] mx-auto lg:mr-0 lg:ml-auto">
+        <svg viewBox="0 0 176 176" className="w-full h-full -rotate-90 cursor-default">
+          <circle cx="88" cy="88" r="68" fill="none" stroke="#E8F2FF" strokeWidth="22" />
+          {arcs.map(a => (
+            <circle
+              key={a.key}
+              cx="88"
+              cy="88"
+              r="68"
+              fill="none"
+              stroke={a.color}
+              strokeWidth="22"
+              strokeDasharray={a.dasharray}
+              strokeDashoffset={a.dashoffset}
+              strokeLinecap="butt"
+              className={hovered ? 'opacity-95' : undefined}
+            />
+          ))}
+        </svg>
+        <div className="absolute inset-0 grid place-items-center text-center pointer-events-none px-4">
+          <div>
+            <div className="num text-[18px] font-semibold tracking-tight leading-none">
+              {fmtBudgetManwon(pipelineTotal)}
+            </div>
+            <div className="text-[10px] text-slate mt-1">소요 예산 · {count}개사</div>
+          </div>
+        </div>
+      </div>
+
+      <ul className="mt-4 w-full max-w-[280px] space-y-2 lg:ml-auto mx-auto lg:mr-0">
+        {arcs.map(a => (
+          <li key={a.key} className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-[2px] flex-none" style={{ background: a.color }} />
+            <span className="text-[12.5px] font-semibold truncate">{a.label}</span>
+            <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
+              {a.pct}%
+              {a.key === '__unknown__' ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[10px] text-slate text-center lg:text-right mt-2 max-w-[280px] lg:ml-auto mx-auto lg:mr-0">
+        마우스를 올리면 전체 회사 목록
+      </p>
+    </div>
+  )
+}
+
+function MonthTooltip({ row }: { row: MonthlyBudgetChartRow }) {
+  const items = [...row.items].sort((a, b) => b.amount - a.amount)
+
+  return (
+    <div className="owm-budget-tip owm-budget-tip-partner">
       <div className="owm-budget-tip-title">{fmtMonthLabel(row.month)} · {fmtBudgetManwon(row.total)}만</div>
-      {confirmed.length > 0 && (
-        <div className="owm-budget-tip-group">
-          {byPayment.map(p => (
-            <div key={p}>
-              <div className="owm-budget-tip-label" style={{ color: PAYMENT_COLOR[p] }}>{PAYMENT_LABEL[p]}</div>
-              {confirmed.filter(i => i.payment === p).map(i => (
-                <div key={i.brand} className="owm-budget-tip-row">
-                  <span>{i.brand}</span>
-                  <span className="num">{i.amountLabel}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-      {planned.length > 0 && (
-        <div className="owm-budget-tip-group">
-          <div className="owm-budget-tip-label" style={{ color: STAGE_COLOR['계약 예정'] }}>계약 예정·검토</div>
-          {planned.filter(i => i.stage === '계약 예정').map(i => (
-            <div key={i.brand} className="owm-budget-tip-row">
-              <span>{i.brand}</span>
-              <span className="num">{i.amountLabel}</span>
-            </div>
-          ))}
-          {planned.some(i => i.stage === '10월 예정') && (
-            <>
-              <div className="owm-budget-tip-label mt-1" style={{ color: STAGE_COLOR['10월 예정'] }}>10월 예정</div>
-              {planned.filter(i => i.stage === '10월 예정').map(i => (
-                <div key={i.brand} className="owm-budget-tip-row">
-                  <span>{i.brand}</span>
-                  <span className="num">{i.amountLabel}</span>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      )}
-      {row.items.length === 0 && (
+      {items.length > 0 ? items.map(i => (
+        <BudgetTipRow
+          key={i.brand}
+          brand={i.brand}
+          stage={i.stage}
+          payment={i.payment}
+          amountLabel={i.amountLabel}
+        />
+      )) : (
         <div className="text-[11px] text-owm-text3">배정 예산 없음</div>
       )}
     </div>
@@ -131,7 +215,7 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
   const [hovered, setHovered] = useState<string | null>(null)
 
   return (
-    <div className="relative h-[200px] w-full">
+    <div className="relative flex-1 min-h-[240px] w-full">
       {[0.25, 0.5, 0.75, 1].map(ratio => (
         <div
           key={ratio}
@@ -212,13 +296,6 @@ export default function BudgetSnapshot() {
   const monthlyChart = monthlyBudgetForChart()
   const maxMonthly = Math.max(...monthlyChart.map(m => m.total), 1)
 
-  const segments: { key: BudgetStage; value: number }[] = [
-    { key: '확정 및 진행', value: s.byStage['확정 및 진행'].total },
-    { key: '계약 예정', value: s.byStage['계약 예정'].total },
-    { key: '10월 예정', value: s.byStage['10월 예정'].total },
-  ]
-  const arcs = donutSlices(s.pipelineTotal, segments)
-
   const kpis = [
     {
       k: '확보 예산',
@@ -265,95 +342,30 @@ export default function BudgetSnapshot() {
       </div>
 
       <div className="owm-section">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-6 lg:gap-6 items-start">
-          {/* 좌: 월별 확보 — 남는 너비 전부 */}
-          <div className="min-w-0 w-full">
-            <div className="mb-3">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-6 lg:gap-6 items-stretch">
+          {/* 좌: 월별 확보 — 세로 꽉 채움 */}
+          <div className="min-w-0 w-full flex flex-col">
+            <div className="mb-3 shrink-0">
               <h2 className="text-[14px] font-extrabold tracking-tight">월별 확보 예산</h2>
               <p className="text-[11px] text-slate mt-0.5">확보·계약 예정 포함 (만원) · 막대에 마우스를 올려보세요</p>
             </div>
             <MonthlyBudgetBars rows={monthlyChart} maxTotal={maxMonthly} />
-            <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 text-[10px] text-slate">
-              <span className="inline-flex items-center gap-1">
-                <i className="w-2.5 h-2.5 rounded-[2px] bg-[#22C55E]" /> 입금 완료
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <i className="w-2.5 h-2.5 rounded-[2px] bg-[#F59E0B]" /> 입금 예정
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <i className="w-2.5 h-2.5 rounded-[2px] bg-[#94A3B8]" /> 미입금
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <i className="w-2.5 h-2.5 rounded-[2px] bg-[#EA580C]" /> 계약 예정
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <i className="w-2.5 h-2.5 rounded-[2px] bg-[#6366F1]" /> 10월 예정
-              </span>
+            <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 shrink-0 text-[10px] text-slate">
+              {STAGE_LEGEND.map(({ label, color }) => (
+                <span key={label} className="inline-flex items-center gap-1">
+                  <i className="w-2.5 h-2.5 rounded-[2px]" style={{ background: color }} /> {label}
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* 우: 소요 예산 구성 — 고정 폭 */}
+          {/* 우: 소요 예산 구성 (협업 회사별) */}
           <div className="min-w-0 w-full lg:w-[280px] shrink-0 flex flex-col items-center lg:items-end">
             <div className="w-full mb-3 text-center lg:text-right">
               <h2 className="text-[14px] font-extrabold tracking-tight">소요 예산 구성</h2>
-              <p className="text-[11px] text-slate mt-0.5">총액 대비 단계별 비중</p>
+              <p className="text-[11px] text-slate mt-0.5">협업 회사별 예산 비중 · 마우스를 올려보세요</p>
             </div>
-
-            {arcs.length === 0 ? (
-              <div className="h-40 grid place-items-center text-[13px] text-slate w-full">데이터 없음</div>
-            ) : (
-              <>
-                <div className="relative w-[200px] aspect-square max-h-[200px]">
-                  <svg viewBox="0 0 176 176" className="w-full h-full -rotate-90">
-                    <circle cx="88" cy="88" r="68" fill="none" stroke="#E8F2FF" strokeWidth="22" />
-                    {arcs.map(a => (
-                      <circle
-                        key={a.key}
-                        cx="88"
-                        cy="88"
-                        r="68"
-                        fill="none"
-                        stroke={a.color}
-                        strokeWidth="22"
-                        strokeDasharray={a.dasharray}
-                        strokeDashoffset={a.dashoffset}
-                        strokeLinecap="butt"
-                      />
-                    ))}
-                  </svg>
-                  <div className="absolute inset-0 grid place-items-center text-center pointer-events-none px-4">
-                    <div>
-                      <div className="num text-[18px] font-semibold tracking-tight leading-none">
-                        {fmtBudgetManwon(s.pipelineTotal)}
-                      </div>
-                      <div className="text-[10px] text-slate mt-1">소요 예산 (만원)</div>
-                    </div>
-                  </div>
-                </div>
-
-                <ul className="mt-4 w-full max-w-[280px] space-y-2 lg:ml-auto">
-                  {arcs.map(a => (
-                    <li key={a.key} className="flex items-center gap-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-[2px] flex-none"
-                        style={{ background: a.color }}
-                      />
-                      <span className="text-[12.5px] font-semibold">{a.label}</span>
-                      <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
-                        {a.pct}% · {fmtBudgetManwon(a.value)}만
-                      </span>
-                    </li>
-                  ))}
-                  <li className="flex items-center gap-2 pt-2 border-t border-mist">
-                    <span className="w-2.5 h-2.5 rounded-[2px] flex-none bg-mist" />
-                    <span className="text-[12.5px] font-bold text-azure-deep">소요 예산 합계</span>
-                    <span className="num text-[11px] font-semibold text-azure-deep ml-auto">
-                      100% · {fmtBudgetManwon(s.pipelineTotal)}만
-                    </span>
-                  </li>
-                </ul>
-              </>
-            )}
+            <BudgetCompositionDonut pipelineTotal={s.pipelineTotal} />
           </div>
         </div>
       </div>

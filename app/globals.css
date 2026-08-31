@@ -226,6 +226,12 @@ body {
     color: var(--owm-text2);
   }
   .owm-budget-tip-row span:last-child { @apply font-semibold shrink-0; color: var(--owm-text); }
+  .owm-budget-tip-partner {
+    min-width: 200px;
+    max-width: 260px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
 
   .donut-enter { animation: donut-enter 0.45s cubic-bezier(0.4, 0, 0.2, 1) both; }
   .donut-arc {

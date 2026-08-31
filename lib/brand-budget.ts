@@ -24,9 +24,122 @@ export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: '해브블루', amount: 2000, rangeMax: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '온보딩 진행' },
   { brand: '달바', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
   { brand: '스킨스탠다드', amount: 1100, payment: '검토 중', stage: '10월 예정', securedMonth: null, marketingMonth: '2026-10' },
-  { brand: '부스티온', amount: 0, payment: '검토 중', stage: '10월 예정', securedMonth: null, marketingMonth: '2026-10', note: '예산 미확인' },
-  { brand: '나인위시스', amount: 0, payment: '검토 중', stage: '10월 예정', securedMonth: null, marketingMonth: '2026-10', note: '예산 미확인' },
 ]
+
+/** 협업 회사 도넛 — 브랜드별 색 */
+export const PARTNER_BRAND_COLOR: Record<string, string> = {
+  '옵티팜': '#1868F0',
+  '닥터 리앤장': '#0B47B4',
+  '클리어디어': '#22C55E',
+  'Rxme': '#6FBFFF',
+  '해브블루': '#F59E0B',
+  '스킨스탠다드': '#6366F1',
+}
+
+export const PARTNER_UNKNOWN_COLOR = '#94A3B8'
+
+/** 계약 단계 + 송금 상태 → UI 색 (확정은 송금, 미확정은 계약 단계) */
+export function budgetItemColor(
+  stage: BudgetStage | '미정',
+  payment: BrandBudget['payment'],
+): string {
+  if (stage === '미정') return '#94A3B8'
+  if (stage === '확정 및 진행') {
+    if (payment === '입금 완료') return '#22C55E'
+    if (payment === '입금 예정') return '#F59E0B'
+    if (payment === '미입금') return '#64748B'
+  }
+  if (stage === '계약 예정') return '#EA580C'
+  if (stage === '10월 예정') return '#6366F1'
+  return '#94A3B8'
+}
+
+export function budgetStageLabel(stage: BudgetStage | '미정'): string {
+  if (stage === '미정') return '예산 미정'
+  if (stage === '계약 예정') return '계약 예정·검토'
+  return stage
+}
+
+export function budgetPaymentLabel(payment: BrandBudget['payment']): string {
+  return payment === '검토 중' ? '송금 검토' : payment
+}
+
+const STAGE_COLOR_FALLBACK: Record<BudgetStage, string> = {
+  '확정 및 진행': '#1868F0',
+  '계약 예정': '#F59E0B',
+  '10월 예정': '#6366F1',
+}
+
+export interface PartnerDonutSlice {
+  key: string
+  label: string
+  weight: number
+  color: string
+  stage: BudgetStage | '미정'
+  isUnknownGroup?: boolean
+}
+
+export interface PartnerTooltipRow {
+  brand: string
+  amount: number
+  amountLabel: string
+  stage: BudgetStage | '미정'
+  payment: BrandBudget['payment']
+  sortKey: number
+}
+
+/** 도넛 슬라이스 — 예산 확정은 만원, 미정은 건수 가중(ponytail: 0만원은 비중 0이라 시각 구분용) */
+export function partnerCompanyDonut(): { slices: PartnerDonutSlice[]; totalWeight: number; count: number } {
+  const known = BRAND_BUDGETS.filter(b => budgetMid(b) > 0)
+  const unknown = BRAND_BUDGETS.filter(b => budgetMid(b) <= 0)
+
+  const slices: PartnerDonutSlice[] = known.map(b => ({
+    key: b.brand,
+    label: b.brand,
+    weight: budgetMid(b),
+    color: budgetItemColor(b.stage, b.payment),
+    stage: b.stage,
+  }))
+
+  if (unknown.length > 0) {
+    slices.push({
+      key: '__unknown__',
+      label: unknown.length === 1 ? '예산 미정' : `예산 미정 (${unknown.length})`,
+      weight: unknown.length,
+      color: PARTNER_UNKNOWN_COLOR,
+      stage: '미정',
+      isUnknownGroup: true,
+    })
+  }
+
+  const totalWeight = slices.reduce((s, x) => s + x.weight, 0)
+  return { slices, totalWeight, count: BRAND_BUDGETS.length }
+}
+
+/** 호버 툴팁 — 예산순(미정은 맨 아래) */
+export function partnerCompanyTooltipRows(): PartnerTooltipRow[] {
+  const known = BRAND_BUDGETS.filter(b => budgetMid(b) > 0)
+    .map(b => ({
+      brand: b.brand,
+      amount: budgetMid(b),
+      amountLabel: fmtBudgetRange(b).replace('만원', '만'),
+      stage: b.stage as BudgetStage,
+      payment: b.payment,
+      sortKey: budgetMid(b),
+    }))
+    .sort((a, b) => b.sortKey - a.sortKey)
+
+  const unknown = BRAND_BUDGETS.filter(b => budgetMid(b) <= 0).map(b => ({
+    brand: b.brand,
+    amount: 0,
+    amountLabel: '미확인',
+    stage: '미정' as const,
+    payment: b.payment,
+    sortKey: -1,
+  }))
+
+  return [...known, ...unknown]
+}
 
 export function budgetMid(b: BrandBudget): number {
   if (b.amount <= 0) return 0
