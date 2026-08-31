@@ -7,6 +7,8 @@ export interface ContractBrand {
   meta: string
   days: number
   status: string
+  /** 계약 완료일 (YYYY-MM-DD). 없으면 계약서 전달 중 */
+  contractCompletedOn?: string
   segs: [number, number, number, number, number]
 }
 
@@ -54,7 +56,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '옵티팜',
     budget: '4,000만원',
-    meta: '미입금 · 진행 예정 · 가이드 작성 중',
+    meta: '계약서 전달 중 · 미입금',
     days: 16,
     status: '9월 마케팅 목표',
     segs: [5, 2, 5, 2, 2],
@@ -62,15 +64,16 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '닥터 리앤장',
     budget: '3,000만원',
-    meta: '입금 완료 · 8/31 가이드 전달 예정',
+    meta: '8/30 입금 확인 · 가이드 제작 중',
     days: 15,
     status: '9월 마케팅 목표',
+    contractCompletedOn: '2026-08-30',
     segs: [4, 2, 4, 3, 2],
   },
   {
     name: '클리어디어',
     budget: '1,000만원',
-    meta: '입금 예정 · 계획안·견적 진행',
+    meta: '계약서 전달 중 · 입금 예정',
     days: 14,
     status: '9월 마케팅 목표',
     segs: [4, 2, 4, 2, 2],
@@ -78,9 +81,10 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: 'Rxme',
     budget: '1,000만원',
-    meta: '입금 완료 · 8/31 원브랜디드 가이드 예정',
+    meta: '8/31 입금 확인 · 가이드 제작 중',
     days: 14,
     status: '9월 마케팅 목표',
+    contractCompletedOn: '2026-08-31',
     segs: [4, 2, 4, 2, 2],
   },
 ]
@@ -113,22 +117,22 @@ export const COMMON_TIMELINE: TimelineMilestone[] = [
 export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   {
     brand: '닥터 리앤장',
-    status: 'PPL 컨셉안 전달 완료 · 8/31(월) PPL + 원브랜디드 가이드 전달 예정',
+    status: '8/30 입금 확인 · PPL 컨셉안 전달 완료 · 가이드 제작 중',
     pct: 75,
   },
   {
     brand: '옵티팜',
-    status: '마케팅팀과 가이드라인 작성 중',
-    pct: 40,
+    status: '계약서 전달 중',
+    pct: 12,
   },
   {
     brand: '클리어디어',
-    status: '마케팅 계획안 작성 중 · 견적서 전달',
-    pct: 35,
+    status: '계약서 전달 중',
+    pct: 12,
   },
   {
     brand: 'Rxme',
-    status: '8/31까지 원브랜디드 영상 가이드 제작·전달 예정',
+    status: '8/31 입금 확인 · 원브랜디드 영상 가이드 제작 중',
     pct: 55,
   },
 ]
@@ -139,27 +143,27 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: 'PPL + 원브랜디드 가이드',
     eta: '8.31 (월)',
     pct: 75,
-    note: '컨셉안 전달 완료',
+    note: '8/30 입금 확인',
   },
   {
     brand: 'Rxme',
     detail: '원브랜디드 영상 가이드',
-    eta: '8.31',
+    eta: '제작 중',
     pct: 55,
-    note: '1,000만원 · 입금 완료',
+    note: '8/31 입금 확인',
   },
   {
     brand: '옵티팜',
-    detail: '마케팅팀과 가이드라인 작성',
-    eta: '작성 중',
-    pct: 40,
-    note: '4,000만원',
+    detail: '계약서 전달 후 가이드 착수',
+    eta: '계약서 전달 중',
+    pct: 10,
+    note: '4,000만원 · 미입금',
   },
   {
     brand: '클리어디어',
-    detail: '마케팅 계획안 · 견적서',
-    eta: '견적 전달',
-    pct: 35,
+    detail: '계약서 전달 후 계획안 착수',
+    eta: '계약서 전달 중',
+    pct: 10,
     note: '1,000만원 · 입금 예정',
   },
 ]
@@ -178,7 +182,7 @@ export const MATCH_PREP: MatchItem[] = [
     detail: '약사 4 · 메가 1 · 미들 1',
     done: 0,
     total: 6,
-    note: '계획안·견적 확정 후 매칭',
+    note: '계약서 전달·확정 후 매칭',
     eta: '9월 목표',
   },
 ]
@@ -216,30 +220,42 @@ export const OCTOBER_BRANDS: PipelineBrand[] = [
     stageLabel: '10월 진행 예정',
     eta: '10월 마케팅',
   },
-  {
-    name: '부스티온',
-    desc: '입점 절차 우선 · 마케팅 10월 조정',
-    budget: '미확인',
-    tier: 'small',
-    stage: 2,
-    stageLabel: '10월 진행 예정',
-    eta: '10월 마케팅',
-  },
-  {
-    name: '나인위시스',
-    desc: '입점 절차 우선 · 마케팅 10월 조정',
-    budget: '미확인',
-    tier: 'small',
-    stage: 2,
-    stageLabel: '10월 진행 예정',
-    eta: '10월 마케팅',
-  },
 ]
 
 /** @deprecated REVIEW_BRANDS + OCTOBER_BRANDS 사용 */
 export const PIPELINE_BRANDS: PipelineBrand[] = [...REVIEW_BRANDS, ...OCTOBER_BRANDS]
 
 export const LEAD_RANGE = { min: 14, max: 20, typical: 16 }
+
+export type PipelineCatStage = 'delivering' | 'prep'
+
+export function pipelineCatStage(brand: ContractBrand): PipelineCatStage {
+  return brand.contractCompletedOn ? 'prep' : 'delivering'
+}
+
+/** 계약 완료일 00:00 기준 경과 일수 (완료 당일 = 0) */
+export function daysSinceContractComplete(completedOn: string, asOf = new Date()): number {
+  const [y, m, d] = completedOn.split('-').map(Number)
+  const start = new Date(y, m - 1, d)
+  const end = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate())
+  return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86_400_000))
+}
+
+/** 계약 완료 이후 가이드·매칭 구간 진행률 — 경과일 ÷ 예상 소요일 */
+export function contractPrepProgress(
+  completedOn: string,
+  totalDays: number,
+  asOf = new Date(),
+): number {
+  if (totalDays <= 0) return 0
+  const elapsed = daysSinceContractComplete(completedOn, asOf)
+  return Math.min(100, Math.round((elapsed / totalDays) * 100))
+}
+
+export function formatContractDate(iso: string): string {
+  const [, m, d] = iso.split('-')
+  return `${Number(m)}/${Number(d)}`
+}
 
 export const BUDGET_DISCLAIMER =
   '위 예산은 내부 전략 및 논의 과정에 따라 조정될 수 있으며, 가이드라인 확정 및 인플루언서 매칭 단계에서 최종 예산이 집행됩니다.'

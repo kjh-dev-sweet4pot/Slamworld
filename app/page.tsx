@@ -106,18 +106,10 @@ export default function Dashboard() {
   const [loadError, setLoadError] = useState('')
   const [visibleCount, setVisibleCount] = useState(PERF_PREVIEW_COUNT)
   const [selectedMonth, setSelectedMonth] = useState('2026-08')
-  const [sidebarContents, setSidebarContents] = useState<Content[]>([])
   const [tableSort, setTableSort] = useState<{ key: 'views' | 'likes' | 'saves'; dir: 'asc' | 'desc' }>({
     key: 'likes',
     dir: 'desc',
   })
-
-  useEffect(() => {
-    fetch(`/api/contents?sort=perf&limit=300&month=${selectedMonth}`)
-      .then(r => r.json())
-      .then(d => setSidebarContents(d.data ?? []))
-      .catch(() => {})
-  }, [selectedMonth])
 
   // 요약 데이터
   useEffect(() => {
@@ -220,18 +212,18 @@ export default function Dashboard() {
   const sideCards = (
     <>
       <SideTopCard
-        title={`${monthLabel(selectedMonth)} 좋아요 TOP 3`}
+        title={tab === 'month' ? `${monthLabel(selectedMonth)} 좋아요 TOP 3` : '좋아요 TOP 3'}
         emoji="🏆"
-        sub={monthSub(selectedMonth)}
+        sub={tab === 'month' ? monthSub(selectedMonth) : '전체 기간'}
         metric="likes"
-        items={sidebarContents}
+        items={chartContents}
       />
       <SideTopCard
-        title={`${monthLabel(selectedMonth)} 조회수 TOP 3`}
+        title={tab === 'month' ? `${monthLabel(selectedMonth)} 조회수 TOP 3` : '조회수 TOP 3'}
         emoji="👀"
-        sub={`${monthSub(selectedMonth)} · 역산 포함`}
+        sub={tab === 'month' ? `${monthSub(selectedMonth)} · 역산 포함` : '전체 기간 · 역산 포함'}
         metric="views"
-        items={sidebarContents}
+        items={chartContents}
       />
     </>
   )
