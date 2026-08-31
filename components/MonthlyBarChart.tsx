@@ -1,15 +1,12 @@
 'use client'
 
-export interface MonthlyPoint {
-  month: string
-  count: number
-  views: number
-  likes: number
-  saves: number
-}
+import type { MonthlyPoint } from '@/lib/monthly-performance'
+
+export type { MonthlyPoint }
 
 interface Props {
   data: MonthlyPoint[]
+  variant?: 'monthly' | 'cumulative'
   highlightMonth?: string
   onSelectMonth?: (month: string) => void
 }
@@ -52,11 +49,18 @@ function linePoints(
     .join(' ')
 }
 
-export default function MonthlyBarChart({ data, highlightMonth, onSelectMonth }: Props) {
+export default function MonthlyBarChart({
+  data,
+  variant = 'monthly',
+  highlightMonth,
+  onSelectMonth,
+}: Props) {
+  const cumulative = variant === 'cumulative'
+
   if (!data.length) {
     return (
       <div className="h-40 flex items-center justify-center text-[13px] text-slate">
-        월별 데이터가 없습니다.
+        {cumulative ? '누적 데이터가 없습니다.' : '월별 데이터가 없습니다.'}
       </div>
     )
   }
@@ -69,22 +73,25 @@ export default function MonthlyBarChart({ data, highlightMonth, onSelectMonth }:
   }
   const latestMonth = highlightMonth ?? data[data.length - 1]?.month
   const active = data.find(d => d.month === latestMonth)
+  const activeLabel = active ? `${Number(active.month.slice(5))}월` : ''
 
   return (
     <div className="mt-4">
       <div className="flex flex-wrap items-center gap-2 mb-3 px-2.5 py-2 rounded-lg bg-[#f8fafc] border border-mist/90 text-[10.5px]">
         <span className="inline-flex items-center gap-1.5 font-semibold text-body">
           <i className="w-3 h-3 rounded-[3px] bg-gradient-to-b from-[#6FBFFF] to-[#1868F0] shadow-sm" />
-          업로드
+          {cumulative ? '누적 업로드' : '업로드'}
         </span>
         <span className="text-mist hidden sm:inline">|</span>
         {LINES.map(l => (
           <span key={l.key} className="inline-flex items-center gap-1.5 text-slate">
             <i className="w-5 h-[3px] rounded-full" style={{ background: l.color }} />
-            {l.label}
+            {cumulative ? `누적 ${l.label}` : l.label}
           </span>
         ))}
-        <span className="text-[9.5px] text-slate/75 sm:ml-auto">선 · 지표별 월 최대 대비</span>
+        <span className="text-[9.5px] text-slate/75 sm:ml-auto">
+          {cumulative ? '해당 월까지 합산' : '선 · 지표별 월 최대 대비'}
+        </span>
       </div>
 
       <div className="relative h-48 rounded-lg bg-gradient-to-b from-[#f8fbff]/80 to-white px-1 pt-1">
@@ -107,13 +114,13 @@ export default function MonthlyBarChart({ data, highlightMonth, onSelectMonth }:
                 type="button"
                 onClick={() => onSelectMonth?.(month)}
                 aria-pressed={isHighlight}
-                title={`${month}: ${count}건`}
+                title={`${month}: ${count}건${cumulative ? ' (누적)' : ''}`}
                 className="flex-1 h-full flex flex-col items-center min-w-0 group cursor-pointer
                   rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-azure/40 bg-transparent"
               >
                 <span className={`num text-[11px] mb-1.5 shrink-0 transition-colors
                   ${isHighlight ? 'font-bold text-azure-deep' : 'font-semibold text-body'}`}>
-                  {count}
+                  {count >= 1000 ? fmtMetric(count) : count}
                 </span>
 
                 <div className="flex-1 w-full max-w-[52px] mx-auto flex items-end min-h-0">
@@ -194,8 +201,10 @@ export default function MonthlyBarChart({ data, highlightMonth, onSelectMonth }:
       {active && (
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 num text-[10px]">
           <div className="col-span-2 sm:col-span-1 flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-azure/5 border border-mist">
-            <span className="font-bold text-azure-deep text-[12px]">{Number(active.month.slice(5))}월</span>
-            <span className="text-slate">선택</span>
+            <span className="font-bold text-azure-deep text-[12px]">
+              {cumulative ? `${activeLabel}까지` : activeLabel}
+            </span>
+            <span className="text-slate">{cumulative ? '누적' : '선택'}</span>
           </div>
           <div className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-white border border-mist">
             <span className="text-slate">업로드</span>
