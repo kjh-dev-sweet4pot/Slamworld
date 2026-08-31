@@ -5,7 +5,7 @@ import BudgetSnapshot from '@/components/BudgetSnapshot'
 import SideTopCard from '@/components/SideTopCard'
 import SideLiveFeed from '@/components/SideLiveFeed'
 import ContentCard from '@/components/ContentCard'
-import MonthlyBarChart from '@/components/MonthlyBarChart'
+import MonthlyBarChart, { type MonthlyPoint } from '@/components/MonthlyBarChart'
 import ChannelDonut from '@/components/ChannelDonut'
 import RegionDonut from '@/components/RegionDonut'
 import BrandPipeline from '@/components/BrandPipeline'
@@ -94,7 +94,7 @@ function monthSub(ym: string): string {
 export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [locations, setLocations] = useState<LocationSummary[]>([])
-  const [monthly, setMonthly]   = useState<{month:string;count:number}[]>([])
+  const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
   const [contents, setContents] = useState<Content[]>([])
   const [chartContents, setChartContents] = useState<Content[]>([])
   const [chartLoading, setChartLoading] = useState(true)
@@ -413,7 +413,8 @@ export default function Dashboard() {
         {tab === 'month' && (
           <>
             <div className="glass p-5">
-              <span className="num text-[10.5px] text-slate tracking-widest uppercase">월별 업로드 건수</span>
+              <span className="num text-[10.5px] text-slate tracking-widest uppercase">월별 성과</span>
+              <p className="text-[11px] text-slate mt-1">업로드 건수(막대) · 조회·좋아요·저장(선)</p>
               <MonthlyBarChart
                 data={monthly}
                 highlightMonth={selectedMonth}

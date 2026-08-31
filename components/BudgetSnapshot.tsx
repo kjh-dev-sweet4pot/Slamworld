@@ -184,7 +184,8 @@ function BudgetCompositionDonut({ pipelineTotal }: { pipelineTotal: number }) {
         ))}
       </ul>
       <p className="text-[10px] text-slate text-center lg:text-right mt-2 max-w-[280px] lg:ml-auto mx-auto lg:mr-0">
-        마우스를 올리면 전체 회사 목록
+        <span className="hidden lg:inline">마우스를 올리면 전체 회사 목록</span>
+        <span className="lg:hidden">탭해주세요</span>
       </p>
     </div>
   )
@@ -211,11 +212,19 @@ function MonthTooltip({ row }: { row: MonthlyBudgetChartRow }) {
   )
 }
 
+function barTooltipClass(index: number, total: number) {
+  if (index === 0) return 'left-0'
+  if (index === total - 1) return 'right-0'
+  return 'left-1/2 -translate-x-1/2'
+}
+
 function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; maxTotal: number }) {
   const [hovered, setHovered] = useState<string | null>(null)
+  const activeRow = rows.find(r => r.month === hovered)
 
   return (
-    <div className="relative flex-1 min-h-[240px] w-full">
+    <div className="relative flex-1 min-h-[240px] w-full flex flex-col">
+      <div className="relative flex-1 min-h-[200px] w-full">
       {[0.25, 0.5, 0.75, 1].map(ratio => (
         <div
           key={ratio}
@@ -224,7 +233,7 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
         />
       ))}
       <div className="absolute inset-0 flex items-end gap-2 sm:gap-3 px-0.5 pb-0.5 w-full">
-        {rows.map(row => {
+        {rows.map((row, i) => {
           const hasData = row.total > 0
           const barH = hasData ? Math.max((row.total / maxTotal) * 100, 8) : 0
           const pct = (n: number) => (row.total > 0 ? (n / row.total) * 100 : 0)
@@ -241,9 +250,13 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
               className="relative flex-1 h-full flex flex-col items-center min-w-0"
               onMouseEnter={() => setHovered(row.month)}
               onMouseLeave={() => setHovered(null)}
+              onClick={() => setHovered(prev => (prev === row.month ? null : row.month))}
             >
               {isHover && hasData && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 pointer-events-none">
+                <div
+                  className={`absolute bottom-full mb-2 z-20 pointer-events-none hidden lg:block
+                    ${barTooltipClass(i, rows.length)}`}
+                >
                   <MonthTooltip row={row} />
                 </div>
               )}
@@ -287,6 +300,13 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
           )
         })}
       </div>
+      </div>
+
+      {activeRow && activeRow.total > 0 && (
+        <div className="lg:hidden mt-3 w-full [&_.owm-budget-tip]:w-full [&_.owm-budget-tip]:max-w-none">
+          <MonthTooltip row={activeRow} />
+        </div>
+      )}
     </div>
   )
 }
@@ -347,7 +367,11 @@ export default function BudgetSnapshot() {
           <div className="min-w-0 w-full flex flex-col">
             <div className="mb-3 shrink-0">
               <h2 className="text-[14px] font-extrabold tracking-tight">월별 확보 예산</h2>
-              <p className="text-[11px] text-slate mt-0.5">확보·계약 예정 포함 (만원) · 막대에 마우스를 올려보세요</p>
+              <p className="text-[11px] text-slate mt-0.5">
+                확보·계약 예정 포함 (만원) ·
+                <span className="hidden lg:inline"> 막대에 마우스를 올려보세요</span>
+                <span className="lg:hidden"> 막대를 탭해주세요</span>
+              </p>
             </div>
             <MonthlyBudgetBars rows={monthlyChart} maxTotal={maxMonthly} />
             <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 shrink-0 text-[10px] text-slate">
@@ -363,7 +387,11 @@ export default function BudgetSnapshot() {
           <div className="min-w-0 w-full lg:w-[280px] shrink-0 flex flex-col items-center lg:items-end">
             <div className="w-full mb-3 text-center lg:text-right">
               <h2 className="text-[14px] font-extrabold tracking-tight">소요 예산 구성</h2>
-              <p className="text-[11px] text-slate mt-0.5">협업 회사별 예산 비중 · 마우스를 올려보세요</p>
+              <p className="text-[11px] text-slate mt-0.5">
+                협업 회사별 예산 비중 ·
+                <span className="hidden lg:inline"> 마우스를 올려보세요</span>
+                <span className="lg:hidden"> 탭해주세요</span>
+              </p>
             </div>
             <BudgetCompositionDonut pipelineTotal={s.pipelineTotal} />
           </div>
