@@ -16,7 +16,7 @@
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.46.1",
     "apify-client": "^2.25.0",
-    "next": "^15.0.7",
+    "next": "^15.5.24",
     "react": "^18",
     "react-dom": "^18"
   },
