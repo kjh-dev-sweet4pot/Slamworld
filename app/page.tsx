@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import SnapshotBar from '@/components/SnapshotBar'
+import BudgetSnapshot from '@/components/BudgetSnapshot'
 import ContentCard from '@/components/ContentCard'
 import MonthlyBarChart from '@/components/MonthlyBarChart'
 import ChannelDonut from '@/components/ChannelDonut'
@@ -171,6 +172,7 @@ export default function Dashboard() {
         </span>
         <div className="flex gap-1 ml-auto flex-wrap">
           {([
+            ['예산', '#s-budget'],
             ['방문형 성과', '#s1'],
             ['확정·진행', '#s-brands'],
             ['준비 중', '#s-prep'],
@@ -204,6 +206,7 @@ export default function Dashboard() {
           SQL Editor에서 <code className="text-[11px]">supabase/seed.sql</code> 을 실행해 주세요. (329건)
         </div>
       )}
+      <BudgetSnapshot />
       <SnapshotBar summary={summary} />
       <div className="glass px-4 py-2.5 mb-8 text-[11.5px] text-body leading-relaxed">
         <b className="text-azure-deep">수치 기준 —</b> 샤오홍슈 조회수는 좋아요·저장·댓글로 역산했으며
