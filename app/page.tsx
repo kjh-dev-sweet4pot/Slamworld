@@ -145,9 +145,9 @@ export default function Dashboard() {
         <div className="flex gap-1 ml-auto flex-wrap">
           {([
             ['콘텐츠 현황', '#s1'],
-            ['계약 브랜드', '#s-brands'],
+            ['확정·진행', '#s-brands'],
             ['준비 중', '#s-prep'],
-            ['영업 예정', '#s-pipeline'],
+            ['계약 예정', '#s-pipeline'],
             ['지점 현황', '#s2'],
             ['자료', '#s3'],
           ] as const).map(([label, href]) => (
@@ -249,18 +249,34 @@ export default function Dashboard() {
                     <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
                   ))}
                 </div>
-                {contents.length > visibleCount && (
+                {(contents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
                   <div className="mt-3 flex items-center justify-between gap-3 px-1">
                     <p className="text-[12px] text-slate">
-                      {visibleCount}건 표시 중 · 남은 {contents.length - visibleCount}건
+                      {visibleCount}건 표시 중
+                      {contents.length > visibleCount && (
+                        <> · 남은 {contents.length - visibleCount}건</>
+                      )}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
-                      className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
-                    >
-                      {Math.min(PERF_MORE_COUNT, contents.length - visibleCount)}개 더 보기
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {visibleCount > PERF_PREVIEW_COUNT && (
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount(PERF_PREVIEW_COUNT)}
+                          className="text-[12px] font-semibold text-slate hover:text-azure-deep transition-colors whitespace-nowrap"
+                        >
+                          접기
+                        </button>
+                      )}
+                      {contents.length > visibleCount && (
+                        <button
+                          type="button"
+                          onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
+                          className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
+                        >
+                          {Math.min(PERF_MORE_COUNT, contents.length - visibleCount)}개 더 보기
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </>
