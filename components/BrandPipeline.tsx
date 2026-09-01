@@ -123,12 +123,18 @@ export default function BrandPipeline() {
 
             <PipelineCatRunner stage={stage} prepPct={prepPct}>
             <div className="flex gap-0.5 h-7 rounded overflow-hidden bg-mist items-stretch">
-              <div className="flex-none w-[76px] sm:w-[92px] grid place-items-center text-[9px] sm:text-[9.5px] font-semibold bg-[#DCFCE7] text-[#166534] px-1 shrink-0">
+              <div className={`flex-none w-[76px] sm:w-[92px] grid place-items-center text-[9px] sm:text-[9.5px] font-semibold px-1 shrink-0 ${
+                stage === 'delivering'
+                  ? 'bg-azure/15 text-azure-deep'
+                  : 'bg-[#DCFCE7] text-[#166534]'
+              }`}>
                 계약서 전달
               </div>
 
               <div className="flex-none flex flex-col items-center justify-center px-2 bg-white border-x border-mist shrink-0 min-w-[68px]">
-                <span className="text-[9px] text-azure-deep font-bold leading-none tracking-tight">
+                <span className={`text-[9px] font-bold leading-none tracking-tight ${
+                  b.contractCompletedOn ? 'text-azure-deep' : 'text-slate'
+                }`}>
                   ◀ 계약 완료 ▶
                 </span>
                 {b.contractCompletedOn ? (
@@ -137,7 +143,7 @@ export default function BrandPipeline() {
                   </span>
                 ) : (
                   <span className="num text-[8px] text-slate mt-0.5 whitespace-nowrap">
-                    이후 ~{LEAD_RANGE.typical}일
+                    미완료
                   </span>
                 )}
               </div>
@@ -157,11 +163,15 @@ export default function BrandPipeline() {
             </PipelineCatRunner>
 
             <div className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_auto_1fr_auto] gap-x-2 gap-y-0.5 num text-[9.5px] text-slate mt-1.5 items-center">
-              <span>계약서 전달</span>
-              <span className="hidden sm:inline text-azure-deep font-semibold">
+              <span className={stage === 'delivering' ? 'text-azure-deep font-semibold' : undefined}>
+                계약서 전달
+              </span>
+              <span className={`hidden sm:inline font-semibold ${
+                b.contractCompletedOn ? 'text-azure-deep' : 'text-slate'
+              }`}>
                 {b.contractCompletedOn
                   ? `계약 완료 ${formatContractDate(b.contractCompletedOn)}`
-                  : '계약 완료'}
+                  : '계약 미완료'}
               </span>
               <span className="text-center sm:text-left text-body">
                 가이드 · 매칭 · 방문 준비 <span className="text-azure-deep font-semibold">(약 {b.days}일)</span>
