@@ -54,6 +54,15 @@ export interface PipelineBrand {
 /** 입금 완료·예정 — 9월 마케팅 목표 (예산 큰 순) */
 export const CONTRACT_BRANDS: ContractBrand[] = [
   {
+    name: 'TeloAct',
+    budget: '4,000만원',
+    meta: '7월 입금 확인 · 집행 완료',
+    days: 16,
+    status: '7월 마케팅 완료',
+    contractCompletedOn: '2026-07-10',
+    segs: [4, 2, 4, 3, 2],
+  },
+  {
     name: '옵티팜',
     budget: '4,000만원',
     meta: '계약서 전달 중 · 미입금',
@@ -116,6 +125,11 @@ export const COMMON_TIMELINE: TimelineMilestone[] = [
 /** 9월 마케팅 타겟 — 브랜드별 상세 현황 */
 export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   {
+    brand: 'TeloAct',
+    status: '7월 입금 확인 · 명동·남포 캠페인 집행 완료',
+    pct: 85,
+  },
+  {
     brand: '닥터 리앤장',
     status: '8/30 입금 확인 · PPL 컨셉안 전달 완료 · 가이드 제작 중',
     pct: 75,
@@ -138,6 +152,13 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
 ]
 
 export const GUIDE_PREP: PrepItem[] = [
+  {
+    brand: 'TeloAct',
+    detail: '7월 캠페인 · 발행 완료',
+    eta: '완료',
+    pct: 85,
+    note: '7월 입금 확인',
+  },
   {
     brand: '닥터 리앤장',
     detail: 'PPL + 원브랜디드 가이드',

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Content, LocationSummary } from '@/lib/types'
 import { LOC_COLOR, LOC_EMOJI } from '@/lib/feed-items'
@@ -49,7 +49,6 @@ export default function LocationStatus({
   const [visibleCount, setVisibleCount] = useState(LIST_PREVIEW)
   const [chartMonth, setChartMonth] = useState<string | null>(null)
   const [chartLocation, setChartLocation] = useState<string | null>(null)
-  const detailRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!selected) {
@@ -73,11 +72,6 @@ export default function LocationStatus({
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [selected])
-
-  useEffect(() => {
-    if (!selected || !detailRef.current) return
-    detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [selected])
 
   const monthly = useMemo(() => aggregateByMonth(contents), [contents])
@@ -167,7 +161,7 @@ export default function LocationStatus({
       </div>
 
       {selected && (
-        <div ref={detailRef} className="owm-chart-section mt-3">
+        <div className="owm-chart-section mt-3">
           <div className="owm-chart-header">
             <h3>
               <span className="owm-loc-dot" style={{ background: selectedColor }} />

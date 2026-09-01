@@ -17,6 +17,7 @@ export interface BrandBudget {
 }
 
 export const BRAND_BUDGETS: BrandBudget[] = [
+  { brand: 'TeloAct', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-07', marketingMonth: '2026-07', note: '7월 집행 완료' },
   { brand: '옵티팜', amount: 4000, payment: '미입금', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
   { brand: '닥터 리앤장', amount: 3000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/30 입금 확인' },
   { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
@@ -28,6 +29,7 @@ export const BRAND_BUDGETS: BrandBudget[] = [
 
 /** 협업 회사 도넛 — 브랜드별 색 */
 export const PARTNER_BRAND_COLOR: Record<string, string> = {
+  'TeloAct': '#14B8A6',
   '옵티팜': '#1868F0',
   '닥터 리앤장': '#0B47B4',
   '클리어디어': '#22C55E',
@@ -182,6 +184,14 @@ export function fmtBudgetRange(b: BrandBudget): string {
 
 const CONFIRMED_STAGES: BudgetStage[] = ['확정 및 진행']
 
+/** 확정 및 진행 브랜드 — 상단 진행률 표시 */
+export const CONFIRMED_BRAND_PROGRESS = 85
+
+/** 월별 확보 차트에 항상 표시할 월 (데이터 없으면 0) */
+export const BUDGET_CHART_MONTHS = [
+  '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12',
+] as const
+
 export interface BudgetSummary {
   securedTotal: number
   securedPaid: number
@@ -193,11 +203,6 @@ export interface BudgetSummary {
   byPayment: Record<string, number>
   monthlySecured: { month: string; total: number; brands: string[] }[]
 }
-
-/** 월별 확보 차트에 항상 표시할 월 (데이터 없으면 0) */
-export const BUDGET_CHART_MONTHS = [
-  '2026-08', '2026-09', '2026-10', '2026-11', '2026-12',
-] as const
 
 export function monthlySecuredForChart(summary: BudgetSummary) {
   const map = new Map(summary.monthlySecured.map(m => [m.month, m]))
@@ -335,14 +340,15 @@ export function computeBudgetSummary(): BudgetSummary {
 // ponytail: totals drift → 상단 KPI 깨짐
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
-  if (s.securedTotal !== 9000) throw new Error(`securedTotal expected 9000, got ${s.securedTotal}`)
+  if (s.securedTotal !== 13000) throw new Error(`securedTotal expected 13000, got ${s.securedTotal}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
-  if (brands('secured') !== 'Rxme,닥터 리앤장,옵티팜,클리어디어') {
+  if (brands('secured') !== 'Rxme,TeloAct,닥터 리앤장,옵티팜,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
   }
   if (brands('planned') !== '달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
   if (brands('oct') !== '스킨스탠다드') throw new Error(`oct kpi brands: ${brands('oct')}`)
   const chart = monthlyBudgetForChart()
-  if (chart[0]?.cumulative !== 9000) throw new Error(`aug cumulative expected 9000, got ${chart[0]?.cumulative}`)
-  if (chart[2]?.cumulative !== 12600) throw new Error(`oct cumulative expected 12600, got ${chart[2]?.cumulative}`)
+  if (chart[0]?.cumulative !== 4000) throw new Error(`jul cumulative expected 4000, got ${chart[0]?.cumulative}`)
+  if (chart[1]?.cumulative !== 13000) throw new Error(`aug cumulative expected 13000, got ${chart[1]?.cumulative}`)
+  if (chart[3]?.cumulative !== 16600) throw new Error(`oct cumulative expected 16600, got ${chart[3]?.cumulative}`)
 }

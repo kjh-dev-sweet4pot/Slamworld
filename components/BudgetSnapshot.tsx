@@ -1,16 +1,18 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import type { Content } from '@/lib/types'
+import { contentsForBrand } from '@/lib/brand-content'
 import {
   budgetItemColor,
   budgetPaymentLabel,
   budgetStageLabel,
   computeBudgetSummary,
+  CONFIRMED_BRAND_PROGRESS,
   fmtBudgetManwon,
   kpiCompanyRows,
   monthlyBudgetForChart,
   partnerCompanyDonut,
-  partnerCompanyTooltipRows,
   type BudgetKpiKey,
   type BudgetStage,
   type MonthlyBudgetChartRow,
@@ -97,6 +99,42 @@ function BudgetTipRow({
         </span>
       </span>
       <span className="num shrink-0 pl-2">{amountLabel}</span>
+    </div>
+  )
+}
+
+function BudgetBrandContentTooltip({
+  brand,
+  items,
+}: {
+  brand: string
+  items: Content[]
+}) {
+  const preview = items.slice(0, 6)
+  return (
+    <div className="owm-budget-tip owm-budget-tip-partner">
+      <div className="owm-budget-tip-title">
+        {brand} 콘텐츠
+        <span className="block text-[10px] font-semibold text-slate mt-0.5">
+          {items.length}건 · 좋아요순
+        </span>
+      </div>
+      {preview.length > 0 ? preview.map(c => (
+        <div key={c.id} className="owm-budget-tip-row items-center py-1">
+          <span className="min-w-0 flex-1 truncate text-[10.5px] font-medium text-owm-text">
+            {c.influencer_name}
+          </span>
+          <span className="text-[9px] text-slate shrink-0 mx-1.5">{c.location.replace('점', '')}</span>
+          <span className="num text-[10px] font-semibold shrink-0">
+            {(c.likes ?? 0).toLocaleString()}
+          </span>
+        </div>
+      )) : (
+        <div className="text-[11px] text-owm-text3">연결된 콘텐츠 없음</div>
+      )}
+      {items.length > preview.length && (
+        <div className="text-[9.5px] text-slate mt-1">외 {items.length - preview.length}건</div>
+      )}
     </div>
   )
 }
@@ -194,10 +232,15 @@ function BudgetCompositionBar({
   )
 }
 
-function BudgetCompositionDonut({ pipelineTotal }: { pipelineTotal: number }) {
-  const [hovered, setHovered] = useState(false)
+function BudgetCompositionDonut({
+  pipelineTotal,
+  contents,
+}: {
+  pipelineTotal: number
+  contents: Content[]
+}) {
+  const [hoverBrand, setHoverBrand] = useState<string | null>(null)
   const { slices, totalWeight, count } = partnerCompanyDonut()
-  const tooltipRows = partnerCompanyTooltipRows()
   const arcs = donutSlices(
     totalWeight,
     slices.map(s => ({
@@ -208,45 +251,39 @@ function BudgetCompositionDonut({ pipelineTotal }: { pipelineTotal: number }) {
     })),
   ).sort((a, b) => b.value - a.value)
 
+  const brandContents = useMemo(() => {
+    if (!hoverBrand || hoverBrand === '__unknown__') return []
+    return contentsForBrand(contents, hoverBrand)
+  }, [contents, hoverBrand])
+
   if (arcs.length === 0) {
     return <div className="h-40 grid place-items-center text-[13px] text-slate w-full">데이터 없음</div>
   }
 
   return (
-    <div
-      className="relative w-full"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {hovered && (
-        <div className="absolute bottom-full right-0 mb-2 z-30 pointer-events-none hidden lg:block">
-          <BudgetCompositionTooltip rows={tooltipRows} />
-        </div>
-      )}
-      {hovered && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 pointer-events-none lg:hidden w-[min(100vw-2rem,260px)]">
-          <BudgetCompositionTooltip rows={tooltipRows} />
-        </div>
-      )}
-
+    <div className="relative w-full">
       <div className="relative w-[200px] aspect-square max-h-[200px] mx-auto lg:mr-0 lg:ml-auto">
         <svg viewBox="0 0 176 176" className="w-full h-full -rotate-90 cursor-default">
           <circle cx="88" cy="88" r="68" fill="none" stroke="#E8F2FF" strokeWidth="22" />
-          {arcs.map(a => (
-            <circle
-              key={a.key}
-              cx="88"
-              cy="88"
-              r="68"
-              fill="none"
-              stroke={a.color}
-              strokeWidth="22"
-              strokeDasharray={a.dasharray}
-              strokeDashoffset={a.dashoffset}
-              strokeLinecap="butt"
-              className={hovered ? 'opacity-95' : undefined}
-            />
-          ))}
+          {arcs.map(a => {
+            const active = hoverBrand === a.key
+            return (
+              <circle
+                key={a.key}
+                cx="88"
+                cy="88"
+                r="68"
+                fill="none"
+                stroke={a.color}
+                strokeWidth="22"
+                strokeDasharray={a.dasharray}
+                strokeDashoffset={a.dashoffset}
+                strokeLinecap="butt"
+                className="transition-opacity"
+                style={{ opacity: hoverBrand && !active ? 0.35 : 0.95 }}
+              />
+            )
+          })}
         </svg>
         <div className="absolute inset-0 grid place-items-center text-center pointer-events-none px-4">
           <div>
@@ -258,21 +295,43 @@ function BudgetCompositionDonut({ pipelineTotal }: { pipelineTotal: number }) {
         </div>
       </div>
 
-      <ul className="mt-4 w-full max-w-[280px] space-y-2 lg:ml-auto mx-auto lg:mr-0">
-        {arcs.map(a => (
-          <li key={a.key} className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-[2px] flex-none" style={{ background: a.color }} />
-            <span className="text-[12.5px] font-semibold truncate">{a.label}</span>
-            <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
-              {a.pct}%
-              {a.key === '__unknown__' ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
-            </span>
-          </li>
-        ))}
+      <ul className="mt-4 w-full max-w-[280px] space-y-1 lg:ml-auto mx-auto lg:mr-0">
+        {arcs.map(a => {
+          const active = hoverBrand === a.key
+          return (
+            <li key={a.key} className="relative">
+              <button
+                type="button"
+                className={`w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-left transition-colors
+                  ${active ? 'bg-azure/8 ring-1 ring-azure/25' : 'hover:bg-slate/5'}`}
+                onMouseEnter={() => setHoverBrand(a.key)}
+                onMouseLeave={() => setHoverBrand(null)}
+                onClick={() => setHoverBrand(prev => (prev === a.key ? null : a.key))}
+              >
+                <span className="w-2.5 h-2.5 rounded-[2px] flex-none" style={{ background: a.color }} />
+                <span className="text-[12.5px] font-semibold truncate">{a.label}</span>
+                <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
+                  {a.pct}%
+                  {a.key === '__unknown__' ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
+                </span>
+              </button>
+              {active && a.key !== '__unknown__' && (
+                <div className="absolute right-full top-0 mr-2 z-30 pointer-events-none hidden lg:block">
+                  <BudgetBrandContentTooltip brand={a.label} items={brandContents} />
+                </div>
+              )}
+              {active && a.key !== '__unknown__' && (
+                <div className="lg:hidden mt-1 pointer-events-none">
+                  <BudgetBrandContentTooltip brand={a.label} items={brandContents} />
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
       <p className="text-[10px] text-slate text-center lg:text-right mt-2 max-w-[280px] lg:ml-auto mx-auto lg:mr-0">
-        <span className="hidden lg:inline">마우스를 올리면 전체 회사 목록</span>
-        <span className="lg:hidden">탭해주세요</span>
+        <span className="hidden lg:inline">회사명에 마우스를 올리면 콘텐츠 목록</span>
+        <span className="lg:hidden">회사명을 탭하면 콘텐츠 목록</span>
       </p>
     </div>
   )
@@ -490,9 +549,17 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
 }
 
 export default function BudgetSnapshot() {
+  const [contents, setContents] = useState<Content[]>([])
   const s = computeBudgetSummary()
   const monthlyChart = monthlyBudgetForChart()
   const maxMonthly = Math.max(...monthlyChart.map(m => m.total), 1)
+
+  useEffect(() => {
+    fetch('/api/contents?sort=perf&limit=1000')
+      .then(r => r.json())
+      .then(d => setContents(d.data ?? []))
+      .catch(() => setContents([]))
+  }, [])
 
   const partKpis: {
     key: Exclude<BudgetKpiKey, 'pipeline'>
@@ -530,6 +597,22 @@ export default function BudgetSnapshot() {
 
   return (
     <section id="s-budget" className="mb-3 scroll-mt-28">
+      <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 px-3 py-2.5 shadow-[var(--owm-shadow)]">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="text-[12px] font-extrabold tracking-tight text-owm-text">확정 및 진행</span>
+          <span className="num text-[12px] font-bold text-azure-deep">{CONFIRMED_BRAND_PROGRESS}%</span>
+        </div>
+        <div className="h-2 rounded-full bg-[#E8F2FF] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#1868F0] to-[#0B47B4] transition-[width]"
+            style={{ width: `${CONFIRMED_BRAND_PROGRESS}%` }}
+          />
+        </div>
+        <p className="text-[10px] text-slate mt-1.5">
+          TeloAct(7월) 포함 확정 {s.byStage['확정 및 진행'].count}개사 · 가이드·매칭·방문 준비
+        </p>
+      </div>
+
       <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 p-2.5 shadow-[var(--owm-shadow)]">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1.05fr)_auto_minmax(0,2.2fr)] gap-2 items-stretch">
           <BudgetKpiCard
@@ -624,7 +707,7 @@ export default function BudgetSnapshot() {
                 <span className="lg:hidden"> 탭해주세요 · (단위 : 만원)</span>
               </p>
             </div>
-            <BudgetCompositionDonut pipelineTotal={s.pipelineTotal} />
+            <BudgetCompositionDonut pipelineTotal={s.pipelineTotal} contents={contents} />
           </div>
         </div>
       </div>
