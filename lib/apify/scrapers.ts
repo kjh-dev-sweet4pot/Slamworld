@@ -243,9 +243,6 @@ export async function scrapeDouyinBatch(
       index.set(key, original)
     }
   }
-  for (const url of urls) {
-    for (const key of urlMatchKeys(url)) index.set(key, url)
-  }
   const scrapeUrls = [...new Set(resolvedPairs.map(p => p.resolved))]
   const out = new Map<string, ScrapedMetrics>()
 
