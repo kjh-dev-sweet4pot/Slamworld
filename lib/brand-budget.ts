@@ -184,9 +184,6 @@ export function fmtBudgetRange(b: BrandBudget): string {
 
 const CONFIRMED_STAGES: BudgetStage[] = ['확정 및 진행']
 
-/** 확정 및 진행 브랜드 — 상단 진행률 표시 */
-export const CONFIRMED_BRAND_PROGRESS = 85
-
 /** 월별 확보 차트에 항상 표시할 월 (데이터 없으면 0) */
 export const BUDGET_CHART_MONTHS = [
   '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12',

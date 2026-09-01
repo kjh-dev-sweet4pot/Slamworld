@@ -8,7 +8,6 @@ import {
   budgetPaymentLabel,
   budgetStageLabel,
   computeBudgetSummary,
-  CONFIRMED_BRAND_PROGRESS,
   fmtBudgetManwon,
   kpiCompanyRows,
   monthlyBudgetForChart,
@@ -597,22 +596,6 @@ export default function BudgetSnapshot() {
 
   return (
     <section id="s-budget" className="mb-3 scroll-mt-28">
-      <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 px-3 py-2.5 shadow-[var(--owm-shadow)]">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-[12px] font-extrabold tracking-tight text-owm-text">확정 및 진행</span>
-          <span className="num text-[12px] font-bold text-azure-deep">{CONFIRMED_BRAND_PROGRESS}%</span>
-        </div>
-        <div className="h-2 rounded-full bg-[#E8F2FF] overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[#1868F0] to-[#0B47B4] transition-[width]"
-            style={{ width: `${CONFIRMED_BRAND_PROGRESS}%` }}
-          />
-        </div>
-        <p className="text-[10px] text-slate mt-1.5">
-          TeloAct(7월) 포함 확정 {s.byStage['확정 및 진행'].count}개사 · 가이드·매칭·방문 준비
-        </p>
-      </div>
-
       <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 p-2.5 shadow-[var(--owm-shadow)]">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1.05fr)_auto_minmax(0,2.2fr)] gap-2 items-stretch">
           <BudgetKpiCard
