@@ -80,6 +80,10 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
 
       {/* 태그 */}
       <div className="flex gap-1 flex-wrap mb-2.5">
+        <span className="inline-flex items-center gap-0.5 text-[10.5px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-emerald-50 text-emerald-700">
+          <span aria-hidden>✓</span>
+          2차 활용 동의
+        </span>
         <span className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-mist text-azure-deep">
           {c.channel}
         </span>

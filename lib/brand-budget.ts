@@ -57,6 +57,7 @@ export function budgetItemColor(
 export function budgetStageLabel(stage: BudgetStage | '미정'): string {
   if (stage === '미정') return '예산 미정'
   if (stage === '계약 예정') return '계약 예정·검토'
+  if (stage === '10월 예정') return '차후 예산'
   return stage
 }
 
@@ -116,9 +117,8 @@ export function partnerCompanyDonut(): { slices: PartnerDonutSlice[]; totalWeigh
   return { slices, totalWeight, count: BRAND_BUDGETS.length }
 }
 
-/** 호버 툴팁 — 예산순(미정은 맨 아래) */
-export function partnerCompanyTooltipRows(): PartnerTooltipRow[] {
-  const known = BRAND_BUDGETS.filter(b => budgetMid(b) > 0)
+function toTooltipRows(list: BrandBudget[]): PartnerTooltipRow[] {
+  const known = list.filter(b => budgetMid(b) > 0)
     .map(b => ({
       brand: b.brand,
       amount: budgetMid(b),
@@ -129,7 +129,7 @@ export function partnerCompanyTooltipRows(): PartnerTooltipRow[] {
     }))
     .sort((a, b) => b.sortKey - a.sortKey)
 
-  const unknown = BRAND_BUDGETS.filter(b => budgetMid(b) <= 0).map(b => ({
+  const unknown = list.filter(b => budgetMid(b) <= 0).map(b => ({
     brand: b.brand,
     amount: 0,
     amountLabel: '미확인',
@@ -139,6 +139,23 @@ export function partnerCompanyTooltipRows(): PartnerTooltipRow[] {
   }))
 
   return [...known, ...unknown]
+}
+
+/** 호버 툴팁 — 예산순(미정은 맨 아래) */
+export function partnerCompanyTooltipRows(): PartnerTooltipRow[] {
+  return toTooltipRows(BRAND_BUDGETS)
+}
+
+export type BudgetKpiKey = 'secured' | 'pipeline' | 'planned' | 'oct'
+
+/** 상단 KPI 호버 — 해당 집계에 포함된 회사 */
+export function kpiCompanyRows(key: BudgetKpiKey): PartnerTooltipRow[] {
+  const list =
+    key === 'secured' ? BRAND_BUDGETS.filter(b => CONFIRMED_STAGES.includes(b.stage)) :
+    key === 'pipeline' ? BRAND_BUDGETS :
+    key === 'planned' ? BRAND_BUDGETS.filter(b => b.stage === '계약 예정') :
+    BRAND_BUDGETS.filter(b => b.stage === '10월 예정')
+  return toTooltipRows(list)
 }
 
 export function budgetMid(b: BrandBudget): number {
@@ -310,4 +327,10 @@ export function computeBudgetSummary(): BudgetSummary {
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
   if (s.securedTotal !== 9000) throw new Error(`securedTotal expected 9000, got ${s.securedTotal}`)
+  const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
+  if (brands('secured') !== 'Rxme,닥터 리앤장,옵티팜,클리어디어') {
+    throw new Error(`secured kpi brands: ${brands('secured')}`)
+  }
+  if (brands('planned') !== '달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
+  if (brands('oct') !== '스킨스탠다드') throw new Error(`oct kpi brands: ${brands('oct')}`)
 }
