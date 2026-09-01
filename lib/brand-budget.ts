@@ -45,9 +45,9 @@ export function budgetItemColor(
 ): string {
   if (stage === '미정') return '#94A3B8'
   if (stage === '확정 및 진행') {
-    if (payment === '입금 완료') return '#22C55E'
+    if (payment === '입금 완료') return '#1868F0'
     if (payment === '입금 예정') return '#F59E0B'
-    if (payment === '미입금') return '#64748B'
+    if (payment === '미입금') return '#EF4444'
   }
   if (stage === '계약 예정') return '#EA580C'
   if (stage === '10월 예정') return '#6366F1'

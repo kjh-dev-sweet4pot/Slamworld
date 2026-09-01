@@ -18,9 +18,9 @@ import {
 } from '@/lib/brand-budget'
 
 const BAR_COLOR = {
-  paid: 'linear-gradient(to top, #16A34A, #4ADE80)',
+  paid: 'linear-gradient(to top, #0B47B4, #1868F0)',
   payPending: 'linear-gradient(to top, #D97706, #FBBF24)',
-  unpaid: 'linear-gradient(to top, #64748B, #94A3B8)',
+  unpaid: 'linear-gradient(to top, #DC2626, #EF4444)',
   plannedReview: 'linear-gradient(to top, #EA580C, #FB923C)',
   plannedOct: 'linear-gradient(to top, #4F46E5, #818CF8)',
 } as const
@@ -85,16 +85,18 @@ function BudgetTipRow({
 }) {
   const color = budgetItemColor(stage, payment)
   return (
-    <div className="owm-budget-tip-row">
-      <span className="flex items-center gap-1.5 min-w-0">
-        <i className="w-2 h-2 rounded-[2px] shrink-0" style={{ background: color }} />
-        <span className="truncate">{brand}</span>
-        <span className="text-[9px] font-semibold shrink-0" style={{ color }}>
-          {budgetStageLabel(stage)}
+    <div className="owm-budget-tip-row items-start">
+      <span className="flex items-start gap-1.5 min-w-0 flex-1 overflow-hidden">
+        <i className="w-2 h-2 rounded-[2px] shrink-0 mt-1" style={{ background: color }} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium text-owm-text">{brand}</span>
+          <span className="flex flex-wrap gap-x-1.5 text-[9px] font-semibold leading-snug" style={{ color }}>
+            <span>{budgetStageLabel(stage)}</span>
+            <span>{budgetPaymentLabel(payment)}</span>
+          </span>
         </span>
-        <span className="text-[9px] text-owm-text3 shrink-0">{budgetPaymentLabel(payment)}</span>
       </span>
-      <span className="num">{amountLabel}</span>
+      <span className="num shrink-0 pl-2">{amountLabel}</span>
     </div>
   )
 }
