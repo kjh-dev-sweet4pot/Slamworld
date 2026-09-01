@@ -48,11 +48,16 @@ function parseArgs() {
   let limit: number | undefined
   let channels: SyncChannel[] | undefined
   let ids: number[] | undefined
+  let names: string[] | undefined
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i]
     if (a === '--dry-run') dryRun = true
     else if (a === '--limit' && args[i + 1]) limit = parseInt(args[++i], 10)
+    else if (a === '--name' && args[i + 1]) {
+      names = names ?? []
+      names.push(args[++i])
+    }
     else if (a === '--ids' && args[i + 1]) {
       ids = args[++i].split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
     }
@@ -68,7 +73,7 @@ function parseArgs() {
     }
   }
 
-  return { dryRun, limit, channels, ids }
+  return { dryRun, limit, channels, ids, names }
 }
 
 async function main() {
@@ -79,6 +84,7 @@ async function main() {
     dryRun: opts.dryRun,
     limit: opts.limit,
     ids: opts.ids,
+    names: opts.names,
     channels: opts.channels ?? SYNC_CHANNELS,
   })
 
@@ -86,6 +92,7 @@ async function main() {
     dryRun: opts.dryRun,
     limit: opts.limit,
     ids: opts.ids,
+    names: opts.names,
     channels: opts.channels,
   })
 

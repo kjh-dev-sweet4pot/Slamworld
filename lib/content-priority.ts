@@ -1,13 +1,8 @@
-/** 성과순 상단 — 명동 오픈 본시트 + 인스타 핵심 */
+/** 성과순 상단 — 명동 오픈 본시트 */
 export const PERF_PINNED = [
   '娜美Nami',
   '不吃酥饼',
   '予乐',
-  'luna_pro_beauty',
-  'dk_a_life',
-  'erica.scoro',
-  'lolahouques',
-  'ariluxbloom',
 ] as const
 
 /** 8월 월별 상단 — 명동 + 남포 오픈 핵심 */

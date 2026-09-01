@@ -22,6 +22,7 @@ export interface SyncOptions {
   channels?: SyncChannel[]
   limit?: number
   ids?: number[]
+  names?: string[]
   dryRun?: boolean
 }
 
@@ -98,7 +99,11 @@ export async function syncContentMetrics(opts: SyncOptions = {}): Promise<SyncSu
   const { data, error } = await query
   if (error) throw new Error(`Supabase fetch failed: ${error.message}`)
 
-  const rows = (data ?? []) as ContentRow[]
+  let rows = (data ?? []) as ContentRow[]
+  if (opts.names?.length) {
+    const wanted = new Set(opts.names.map(n => n.trim().toLowerCase()))
+    rows = rows.filter(r => wanted.has(r.influencer_name.toLowerCase()))
+  }
   const results: SyncResultItem[] = []
   let updated = 0
   let skipped = 0
