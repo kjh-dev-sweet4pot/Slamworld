@@ -97,6 +97,10 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [locations, setLocations] = useState<LocationSummary[]>([])
   const [monthly, setMonthly] = useState<{ month: string; count: number; views: number; likes: number; saves: number }[]>([])
+  const [locationMonthly, setLocationMonthly] = useState<{
+    months: string[]
+    series: { location: string; points: { month: string; count: number; cumulative: number }[] }[]
+  }>({ months: [], series: [] })
   const [cumulativeMonth, setCumulativeMonth] = useState<string | undefined>()
   const [contents, setContents] = useState<Content[]>([])
   const [chartContents, setChartContents] = useState<Content[]>([])
@@ -126,6 +130,7 @@ export default function Dashboard() {
         setSummary(d.summary)
         setLocations(d.locations ?? [])
         setMonthly(d.monthly ?? [])
+        setLocationMonthly(d.locationMonthly ?? { months: [], series: [] })
       })
       .catch(() => setLoadError('요약 데이터를 불러오지 못했습니다.'))
   }, [])
@@ -608,7 +613,7 @@ export default function Dashboard() {
 
       <BrandPipeline />
 
-      <LocationStatus locations={locations} />
+      <LocationStatus locations={locations} locationMonthly={locationMonthly} />
 
       {/* ── §3 자료 ── */}
       <section id="s3" className="scroll-mt-20">
