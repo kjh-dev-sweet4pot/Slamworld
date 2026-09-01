@@ -105,13 +105,15 @@ function BudgetTipRow({
 function BudgetBrandContentTooltip({
   brand,
   items,
+  onViewContent,
 }: {
   brand: string
   items: Content[]
+  onViewContent?: (brand: string) => void
 }) {
   const preview = items.slice(0, 6)
   return (
-    <div className="owm-budget-tip owm-budget-tip-partner">
+    <div className="owm-budget-tip owm-budget-tip-partner pointer-events-auto">
       <div className="owm-budget-tip-title">
         {brand} 콘텐츠
         <span className="block text-[10px] font-semibold text-slate mt-0.5">
@@ -133,6 +135,16 @@ function BudgetBrandContentTooltip({
       )}
       {items.length > preview.length && (
         <div className="text-[9.5px] text-slate mt-1">외 {items.length - preview.length}건</div>
+      )}
+      {onViewContent && (
+        <button
+          type="button"
+          onClick={() => onViewContent(brand)}
+          className="mt-2 w-full text-[11px] font-bold py-1.5 rounded-md bg-azure text-white
+            hover:bg-azure-deep transition-colors"
+        >
+          콘텐츠 보러 가기
+        </button>
       )}
     </div>
   )
@@ -234,9 +246,11 @@ function BudgetCompositionBar({
 function BudgetCompositionDonut({
   pipelineTotal,
   contents,
+  onViewBrandContent,
 }: {
   pipelineTotal: number
   contents: Content[]
+  onViewBrandContent?: (brand: string) => void
 }) {
   const [hoverBrand, setHoverBrand] = useState<string | null>(null)
   const { slices, totalWeight, count } = partnerCompanyDonut()
@@ -298,13 +312,16 @@ function BudgetCompositionDonut({
         {arcs.map(a => {
           const active = hoverBrand === a.key
           return (
-            <li key={a.key} className="relative">
+            <li
+              key={a.key}
+              className="relative"
+              onMouseEnter={() => setHoverBrand(a.key)}
+              onMouseLeave={() => setHoverBrand(null)}
+            >
               <button
                 type="button"
                 className={`w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-left transition-colors
                   ${active ? 'bg-azure/8 ring-1 ring-azure/25' : 'hover:bg-slate/5'}`}
-                onMouseEnter={() => setHoverBrand(a.key)}
-                onMouseLeave={() => setHoverBrand(null)}
                 onClick={() => setHoverBrand(prev => (prev === a.key ? null : a.key))}
               >
                 <span className="w-2.5 h-2.5 rounded-[2px] flex-none" style={{ background: a.color }} />
@@ -315,13 +332,22 @@ function BudgetCompositionDonut({
                 </span>
               </button>
               {active && a.key !== '__unknown__' && (
-                <div className="absolute right-full top-0 mr-2 z-30 pointer-events-none hidden lg:block">
-                  <BudgetBrandContentTooltip brand={a.label} items={brandContents} />
+                <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch">
+                  <BudgetBrandContentTooltip
+                    brand={a.label}
+                    items={brandContents}
+                    onViewContent={onViewBrandContent}
+                  />
+                  <div className="w-3 shrink-0 self-stretch" aria-hidden />
                 </div>
               )}
               {active && a.key !== '__unknown__' && (
-                <div className="lg:hidden mt-1 pointer-events-none">
-                  <BudgetBrandContentTooltip brand={a.label} items={brandContents} />
+                <div className="lg:hidden mt-1">
+                  <BudgetBrandContentTooltip
+                    brand={a.label}
+                    items={brandContents}
+                    onViewContent={onViewBrandContent}
+                  />
                 </div>
               )}
             </li>
@@ -547,7 +573,11 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
   )
 }
 
-export default function BudgetSnapshot() {
+export default function BudgetSnapshot({
+  onViewBrandContent,
+}: {
+  onViewBrandContent?: (brand: string) => void
+}) {
   const [contents, setContents] = useState<Content[]>([])
   const s = computeBudgetSummary()
   const monthlyChart = monthlyBudgetForChart()
@@ -690,7 +720,11 @@ export default function BudgetSnapshot() {
                 <span className="lg:hidden"> 탭해주세요 · (단위 : 만원)</span>
               </p>
             </div>
-            <BudgetCompositionDonut pipelineTotal={s.pipelineTotal} contents={contents} />
+            <BudgetCompositionDonut
+              pipelineTotal={s.pipelineTotal}
+              contents={contents}
+              onViewBrandContent={onViewBrandContent}
+            />
           </div>
         </div>
       </div>

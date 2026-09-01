@@ -14,6 +14,7 @@ import LocationStatus from '@/components/LocationStatus'
 import type { Content, Summary, LocationSummary } from '@/lib/types'
 import { channelSummaryFromContents } from '@/lib/channel-summary'
 import { contentViews, contentViewsDisplay } from '@/lib/content-views'
+import { contentMatchesBrand } from '@/lib/brand-content'
 import { AUGUST_2026_PINNED, mergePinnedRows, PERF_PINNED } from '@/lib/content-priority'
 
 type Tab = 'perf' | 'month' | 'all'
@@ -109,6 +110,7 @@ export default function Dashboard() {
   const [campaign, setCampaign] = useState('전체')
   const [location, setLocation] = useState('전체')
   const [channel, setChannel]   = useState('전체')
+  const [brandFilter, setBrandFilter] = useState<string | null>(null)
   const [loading, setLoading]   = useState(true)
   const [loadError, setLoadError] = useState('')
   const [visibleCount, setVisibleCount] = useState(PERF_PREVIEW_COUNT)
@@ -191,32 +193,54 @@ export default function Dashboard() {
     return () => { cancelled = true }
   }, [tab, campaign, location, channel, selectedMonth])
 
-  useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel, selectedMonth])
+  useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel, selectedMonth, brandFilter])
+
+  const scopedContents = useMemo(() => {
+    if (!brandFilter) return contents
+    return contents.filter(c => contentMatchesBrand(c.brands, brandFilter))
+  }, [contents, brandFilter])
+
+  const scopedChartContents = useMemo(() => {
+    if (!brandFilter) return chartContents
+    return chartContents.filter(c => contentMatchesBrand(c.brands, brandFilter))
+  }, [chartContents, brandFilter])
+
+  function handleViewBrandContent(brand: string) {
+    setBrandFilter(brand)
+    setTab('perf')
+    setCampaign('전체')
+    setLocation('전체')
+    setChannel('전체')
+    setVisibleCount(PERF_PREVIEW_COUNT)
+    requestAnimationFrame(() => {
+      document.getElementById('s1')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   useEffect(() => {
     if (tab === 'perf' || tab === 'all') setCumulativeMonth(undefined)
   }, [tab, campaign, location, channel, chartContents])
 
-  const chartChannels = useMemo(() => channelSummaryFromContents(chartContents), [chartContents])
-  const filteredMonthly = useMemo(() => aggregateByMonth(chartContents), [chartContents])
+  const chartChannels = useMemo(() => channelSummaryFromContents(scopedChartContents), [scopedChartContents])
+  const filteredMonthly = useMemo(() => aggregateByMonth(scopedChartContents), [scopedChartContents])
   const cumulativeData = useMemo(() => toCumulative(filteredMonthly), [filteredMonthly])
   const chartScopeLabel = tab === 'month' ? `${monthLabel(selectedMonth)} 기준` : '전체 기준'
-  const chartAnimKey = `${tab}-${selectedMonth}-${campaign}-${location}-${channel}`
+  const chartAnimKey = `${tab}-${selectedMonth}-${campaign}-${location}-${channel}-${brandFilter ?? ''}`
 
-  const rankTags = channelRankTags(contents)
+  const rankTags = channelRankTags(scopedContents)
 
   const cardContents = useMemo(() => {
     if (tab === 'perf') {
-      return mergePinnedRows(contents, chartContents, PERF_PINNED)
+      return mergePinnedRows(scopedContents, scopedChartContents, PERF_PINNED)
     }
     if (tab === 'month' && selectedMonth === '2026-08') {
-      return mergePinnedRows(contents, chartContents, AUGUST_2026_PINNED)
+      return mergePinnedRows(scopedContents, scopedChartContents, AUGUST_2026_PINNED)
     }
-    return contents
-  }, [contents, chartContents, tab, selectedMonth])
+    return scopedContents
+  }, [scopedContents, scopedChartContents, tab, selectedMonth])
 
   // 전체 탭용 테이블
-  const tableContents = [...contents].sort((a, b) => {
+  const tableContents = [...scopedContents].sort((a, b) => {
     const av = tableSort.key === 'views' ? viewsForSort(a) : (a[tableSort.key] ?? 0)
     const bv = tableSort.key === 'views' ? viewsForSort(b) : (b[tableSort.key] ?? 0)
     return tableSort.dir === 'desc' ? bv - av : av - bv
@@ -240,14 +264,14 @@ export default function Dashboard() {
         emoji="🏆"
         sub={tab === 'month' ? monthSub(selectedMonth) : '전체 기간'}
         metric="likes"
-        items={chartContents}
+        items={scopedChartContents}
       />
       <SideTopCard
         title={tab === 'month' ? `${monthLabel(selectedMonth)} 조회수 TOP 3` : '조회수 TOP 3'}
         emoji="👀"
         sub={tab === 'month' ? `${monthSub(selectedMonth)} · 역산 포함` : '전체 기간 · 역산 포함'}
         metric="views"
-        items={chartContents}
+        items={scopedChartContents}
       />
     </>
   )
@@ -303,7 +327,7 @@ export default function Dashboard() {
           SQL Editor에서 <code className="text-[11px]">supabase/seed.sql</code> 을 실행해 주세요. (329건)
         </div>
       )}
-      <BudgetSnapshot />
+      <BudgetSnapshot onViewBrandContent={handleViewBrandContent} />
 
       <section id="s-summary" className="scroll-mt-28 mb-3">
         <div className="owm-sec-title">
@@ -330,8 +354,8 @@ export default function Dashboard() {
         <SectionHeader no="01" title="OWM 방문형 콘텐츠 성과"
           sub="명동·북촌 방문형 캠페인 성과입니다. 아래에서 더 볼 수 있습니다."
           right={tab === 'perf'
-            ? `${Math.min(visibleCount, contents.length)}건`
-            : `${contents.length}건`}
+            ? `${Math.min(visibleCount, scopedContents.length)}건`
+            : `${scopedContents.length}건`}
         />
 
         {/* 탭 */}
@@ -366,12 +390,34 @@ export default function Dashboard() {
               </select>
             </div>
           ))}
-          {(campaign !== '전체' || location !== '전체' || channel !== '전체') && (
-            <button onClick={() => { setCampaign('전체'); setLocation('전체'); setChannel('전체') }}
+          {(campaign !== '전체' || location !== '전체' || channel !== '전체' || brandFilter) && (
+            <button onClick={() => {
+              setCampaign('전체')
+              setLocation('전체')
+              setChannel('전체')
+              setBrandFilter(null)
+            }}
               className="text-[11.5px] font-semibold text-slate border border-mist rounded
                 px-2.5 py-1.5 hover:border-sky hover:text-azure-deep transition-colors">
               초기화
             </button>
+          )}
+          {brandFilter && (
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <span className="text-[11px] text-slate font-semibold">회사</span>
+              <span className="inline-flex items-center gap-1.5 text-[12px] bg-azure/10 border border-azure/25
+                text-azure-deep rounded px-2 py-1.5 font-semibold">
+                {brandFilter}
+                <button
+                  type="button"
+                  onClick={() => setBrandFilter(null)}
+                  className="text-slate hover:text-azure-deep transition-colors leading-none"
+                  aria-label="회사 필터 해제"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
           )}
         </div>
 
@@ -405,7 +451,7 @@ export default function Dashboard() {
                   <div key={i} className="glass-solid h-40 animate-pulse" />
                 ))}
               </div>
-            ) : contents.length > 0 ? (
+            ) : scopedContents.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                   {cardContents.slice(0, visibleCount).map(c => (
@@ -469,7 +515,7 @@ export default function Dashboard() {
               />
               <p className="text-[12.5px] text-body leading-relaxed pt-4 mt-4 border-t border-mist">
                 <b className="text-azure-deep">
-                  {Number(selectedMonth.slice(5))}월 {monthly.find(m => m.month === selectedMonth)?.count ?? contents.length}건.
+                  {Number(selectedMonth.slice(5))}월 {monthly.find(m => m.month === selectedMonth)?.count ?? scopedContents.length}건.
                 </b>
                 {selectedMonth === '2026-08'
                   ? ' 명동점 오픈(8/11) 122건과 남포점 오픈 47건이 같은 달에 진행됐습니다.'
@@ -482,7 +528,7 @@ export default function Dashboard() {
                   <div key={i} className="glass-solid h-40 animate-pulse" />
                 ))}
               </div>
-            ) : contents.length > 0 ? (
+            ) : scopedContents.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
                   {cardContents.slice(0, visibleCount).map(c => (
