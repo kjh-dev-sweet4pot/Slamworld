@@ -523,8 +523,8 @@ export default function BudgetSnapshot() {
               <h2 className="text-[14px] font-extrabold tracking-tight">예산 총액 구성</h2>
               <p className="text-[11px] text-slate mt-0.5">
                 협업 회사별 예산 비중 ·
-                <span className="hidden lg:inline"> 마우스를 올려보세요</span>
-                <span className="lg:hidden"> 탭해주세요</span>
+                <span className="hidden lg:inline"> 마우스를 올려보세요 · (단위 : 만원)</span>
+                <span className="lg:hidden"> 탭해주세요 · (단위 : 만원)</span>
               </p>
             </div>
             <BudgetCompositionDonut pipelineTotal={s.pipelineTotal} />

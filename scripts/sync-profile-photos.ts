@@ -47,11 +47,16 @@ function parseArgs() {
   let dryRun = false
   let limit: number | undefined
   let channels: SyncChannel[] | undefined
+  let names: string[] | undefined
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i]
     if (a === '--dry-run') dryRun = true
     else if (a === '--limit' && args[i + 1]) limit = parseInt(args[++i], 10)
+    else if (a === '--name' && args[i + 1]) {
+      names = names ?? []
+      names.push(args[++i])
+    }
     else if (a === '--channel' && args[i + 1]) {
       const raw = args[++i].toLowerCase()
       const ch = CHANNEL_ALIAS[raw] ?? (raw as SyncChannel)
@@ -64,7 +69,7 @@ function parseArgs() {
     }
   }
 
-  return { dryRun, limit, channels }
+  return { dryRun, limit, channels, names }
 }
 
 async function main() {
@@ -74,6 +79,7 @@ async function main() {
     dryRun: opts.dryRun,
     limit: opts.limit,
     channels: opts.channels ?? SYNC_CHANNELS,
+    names: opts.names,
   })
 
   const summary = await syncProfilePhotos(opts)
