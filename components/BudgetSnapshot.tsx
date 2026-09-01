@@ -7,9 +7,11 @@ import {
   budgetStageLabel,
   computeBudgetSummary,
   fmtBudgetManwon,
+  kpiCompanyRows,
   monthlyBudgetForChart,
   partnerCompanyDonut,
   partnerCompanyTooltipRows,
+  type BudgetKpiKey,
   type BudgetStage,
   type MonthlyBudgetChartRow,
   type PartnerTooltipRow,
@@ -60,8 +62,15 @@ const STAGE_LEGEND: { label: string; color: string }[] = [
   { label: '확정 · 입금 예정', color: budgetItemColor('확정 및 진행', '입금 예정') },
   { label: '확정 · 미입금', color: budgetItemColor('확정 및 진행', '미입금') },
   { label: '계약 예정·검토', color: budgetItemColor('계약 예정', '검토 중') },
-  { label: '10월 예정', color: budgetItemColor('10월 예정', '검토 중') },
+  { label: '차후 예산', color: budgetItemColor('10월 예정', '검토 중') },
 ]
+
+const KPI_PART_COLOR = {
+  secured: '#1868F0',
+  planned: '#EA580C',
+  oct: '#6366F1',
+  total: '#0B47B4',
+} as const
 
 function BudgetTipRow({
   brand,
@@ -90,10 +99,16 @@ function BudgetTipRow({
   )
 }
 
-function BudgetCompositionTooltip({ rows }: { rows: PartnerTooltipRow[] }) {
+function BudgetCompositionTooltip({
+  title = '협업 회사 · 예산순',
+  rows,
+}: {
+  title?: string
+  rows: PartnerTooltipRow[]
+}) {
   return (
     <div className="owm-budget-tip owm-budget-tip-partner">
-      <div className="owm-budget-tip-title">협업 회사 · 예산순</div>
+      <div className="owm-budget-tip-title">{title}</div>
       {rows.map(r => (
         <BudgetTipRow
           key={r.brand}
@@ -101,6 +116,76 @@ function BudgetCompositionTooltip({ rows }: { rows: PartnerTooltipRow[] }) {
           stage={r.stage}
           payment={r.payment}
           amountLabel={r.amountLabel}
+        />
+      ))}
+    </div>
+  )
+}
+
+function BudgetKpiCard({
+  k,
+  v,
+  unit,
+  d,
+  rows,
+  color = KPI_PART_COLOR.total,
+  emoji = '💰',
+}: {
+  k: string
+  v: string
+  unit: string
+  d: string
+  rows: PartnerTooltipRow[]
+  color?: string
+  emoji?: string
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div
+      className={`relative h-full ${open ? 'z-30' : ''}`}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <div
+        className="owm-kpi-card cursor-default h-full"
+        style={{ '--bc': color } as CSSProperties}
+        data-emoji={emoji}
+        onClick={() => setOpen(prev => !prev)}
+      >
+        <div className="owm-kpi-header">
+          <span className="owm-kpi-dot" />
+          <span className="owm-kpi-label">{k}</span>
+        </div>
+        <div className="owm-kpi-amount">
+          {v}<small>{unit}</small>
+        </div>
+        <div className="owm-kpi-divider" />
+        <div className="owm-kpi-sub"><span>{d}</span></div>
+      </div>
+      {open && rows.length > 0 && (
+        <div className="absolute top-full left-0 mt-1 z-30 pointer-events-none">
+          <BudgetCompositionTooltip title={`${k} · ${rows.length}개사`} rows={rows} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BudgetCompositionBar({
+  parts,
+}: {
+  parts: { key: string; value: number; color: string; label: string }[]
+}) {
+  const total = parts.reduce((s, p) => s + p.value, 0)
+  if (total <= 0) return null
+  return (
+    <div className="flex h-2 rounded-full overflow-hidden bg-[#E8F2FF]" title="예산 총액 구성">
+      {parts.filter(p => p.value > 0).map(p => (
+        <div
+          key={p.key}
+          className="h-full min-w-[3px] transition-[width]"
+          style={{ width: `${(p.value / total) * 100}%`, background: p.color }}
+          title={`${p.label} ${fmtBudgetManwon(p.value)}만`}
         />
       ))}
     </div>
@@ -166,7 +251,7 @@ function BudgetCompositionDonut({ pipelineTotal }: { pipelineTotal: number }) {
             <div className="num text-[18px] font-semibold tracking-tight leading-none">
               {fmtBudgetManwon(pipelineTotal)}
             </div>
-            <div className="text-[10px] text-slate mt-1">소요 예산 · {count}개사</div>
+            <div className="text-[10px] text-slate mt-1">예산 총액 · {count}개사</div>
           </div>
         </div>
       </div>
@@ -316,49 +401,98 @@ export default function BudgetSnapshot() {
   const monthlyChart = monthlyBudgetForChart()
   const maxMonthly = Math.max(...monthlyChart.map(m => m.total), 1)
 
-  const kpis = [
+  const partKpis: {
+    key: Exclude<BudgetKpiKey, 'pipeline'>
+    k: string
+    v: string
+    d: string
+    color: string
+    amount: number
+  }[] = [
     {
+      key: 'secured',
       k: '확보 예산',
       v: fmtBudgetManwon(s.securedTotal),
-      unit: '만원',
       d: `입금완료 ${fmtBudgetManwon(s.securedPaid)} · 미입금·예정 ${fmtBudgetManwon(s.securedPending)}`,
+      color: KPI_PART_COLOR.secured,
+      amount: s.securedTotal,
     },
     {
-      k: '소요 예산',
-      v: fmtBudgetManwon(s.pipelineTotal),
-      unit: '만원',
-      d: '파이프라인 합계 (확정+예정)',
-    },
-    {
+      key: 'planned',
       k: '계약 예정·검토',
       v: fmtBudgetManwon(s.byStage['계약 예정'].total),
-      unit: '만원',
       d: `${s.byStage['계약 예정'].count}개사`,
+      color: KPI_PART_COLOR.planned,
+      amount: s.byStage['계약 예정'].total,
     },
     {
-      k: '10월 예정',
+      key: 'oct',
+      k: '차후 예산',
       v: fmtBudgetManwon(s.byStage['10월 예정'].total),
-      unit: '만원',
-      d: `${s.byStage['10월 예정'].count}개사`,
+      d: `${s.byStage['10월 예정'].count}개사 · 10월~`,
+      color: KPI_PART_COLOR.oct,
+      amount: s.byStage['10월 예정'].total,
     },
   ]
 
   return (
     <section id="s-budget" className="mb-3 scroll-mt-28">
-      <div className="owm-kpi-grid mb-2">
-        {kpis.map(({ k, v, unit, d }) => (
-          <div key={k} className="owm-kpi-card" style={{ '--bc': '#4f8cff' } as CSSProperties} data-emoji="💰">
-            <div className="owm-kpi-header">
-              <span className="owm-kpi-dot" />
-              <span className="owm-kpi-label">{k}</span>
-            </div>
-            <div className="owm-kpi-amount">
-              {v}<small>{unit}</small>
-            </div>
-            <div className="owm-kpi-divider" />
-            <div className="owm-kpi-sub"><span>{d}</span></div>
+      <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 p-2.5 shadow-[var(--owm-shadow)]">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1.05fr)_auto_minmax(0,2.2fr)] gap-2 items-stretch">
+          <BudgetKpiCard
+            k="예산 총액"
+            v={fmtBudgetManwon(s.pipelineTotal)}
+            unit="만원"
+            d="확보 + 계약 예정·검토 + 차후"
+            rows={kpiCompanyRows('pipeline')}
+            color={KPI_PART_COLOR.total}
+          />
+          <div
+            className="hidden lg:flex items-center justify-center px-0.5 text-[20px] font-bold text-slate/35 select-none"
+            aria-hidden
+          >
+            =
           </div>
-        ))}
+          <div className="min-w-0 flex flex-col gap-2">
+            <BudgetCompositionBar
+              parts={partKpis.map(p => ({
+                key: p.key,
+                value: p.amount,
+                color: p.color,
+                label: p.k,
+              }))}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
+              {partKpis.map((p, i) => (
+                <div key={p.key} className="relative flex min-w-0">
+                  {i > 0 && (
+                    <span
+                      className="hidden sm:flex absolute -left-1.5 top-1/2 -translate-y-1/2 z-10
+                        w-3 h-3 items-center justify-center text-[11px] font-bold text-slate/40 bg-[#f4f7fb] rounded-full"
+                      aria-hidden
+                    >
+                      +
+                    </span>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <BudgetKpiCard
+                      k={p.k}
+                      v={p.v}
+                      unit="만원"
+                      d={p.d}
+                      rows={kpiCompanyRows(p.key)}
+                      color={p.color}
+                      emoji={p.key === 'secured' ? '✅' : p.key === 'planned' ? '📝' : '📅'}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="sm:hidden text-[10px] text-slate text-center">
+              예산 총액 = 확보 + 계약 예정·검토 + 차후
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="owm-section">
@@ -383,10 +517,10 @@ export default function BudgetSnapshot() {
             </div>
           </div>
 
-          {/* 우: 소요 예산 구성 (협업 회사별) */}
+          {/* 우: 예산 총액 구성 (협업 회사별) */}
           <div className="min-w-0 w-full lg:w-[280px] shrink-0 flex flex-col items-center lg:items-end">
             <div className="w-full mb-3 text-center lg:text-right">
-              <h2 className="text-[14px] font-extrabold tracking-tight">소요 예산 구성</h2>
+              <h2 className="text-[14px] font-extrabold tracking-tight">예산 총액 구성</h2>
               <p className="text-[11px] text-slate mt-0.5">
                 협업 회사별 예산 비중 ·
                 <span className="hidden lg:inline"> 마우스를 올려보세요</span>
