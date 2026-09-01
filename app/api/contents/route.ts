@@ -29,14 +29,14 @@ export async function GET(req: NextRequest) {
     query = query.eq('is_press', is_press === 'true')
   }
 
-  // 정렬
+  // 정렬 — perf: 조회수(추정 포함, views_best)
   if (sort === 'perf') {
     query = query
-      .order('likes', { ascending: false, nullsFirst: false })
+      .order('views_best', { ascending: false, nullsFirst: false })
   } else if (sort === 'date') {
     query = query.order('visit_date', { ascending: false, nullsFirst: false })
   } else {
-    query = query.order('location').order('likes', { ascending: false, nullsFirst: false })
+    query = query.order('location').order('views_best', { ascending: false, nullsFirst: false })
   }
 
   query = query.limit(limit)

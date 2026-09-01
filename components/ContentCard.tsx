@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { Content } from '@/lib/types'
 import { contentViewsDisplay } from '@/lib/content-views'
+import { influencerFeeManwon } from '@/lib/influencer-fee'
 
 const PERF_STYLE = {
   high:    { dot: 'bg-azure', label: '상위', text: 'text-azure-deep' },
@@ -46,9 +47,10 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
   const viewsDisplay = displayViews
     ? (viewsEstimated ? `~${fmt(displayViews)}` : fmt(displayViews))
     : '—'
+  const feeManwon = influencerFeeManwon(c.influencer_name)
 
   return (
-    <article className="glass-solid p-3.5 transition-all hover:-translate-y-0.5
+    <article className="glass-solid p-3.5 pb-9 relative transition-all hover:-translate-y-0.5
       hover:border-sky hover:shadow-[0_8px_20px_rgba(12,58,130,.12)] cursor-default">
 
       {/* 브랜드 */}
@@ -80,8 +82,10 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
 
       {/* 태그 */}
       <div className="flex gap-1 flex-wrap mb-2.5">
-        <span className="inline-flex items-center gap-0.5 text-[10.5px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-emerald-50 text-emerald-700">
-          <span aria-hidden>✓</span>
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold
+          px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800
+          ring-1 ring-emerald-200/80">
+          <span aria-hidden className="text-[12px] leading-none">✓</span>
           2차 활용 동의
         </span>
         <span className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-[3px] bg-mist text-azure-deep">
@@ -136,6 +140,16 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
           </span>
         )}
       </div>
+
+      {feeManwon != null && (
+        <div className="absolute bottom-2.5 right-3 pointer-events-none">
+          <span className="num inline-flex items-baseline gap-0.5 rounded-md bg-azure text-white
+            px-2 py-1 text-[13px] font-extrabold tracking-tight shadow-[0_2px_8px_rgba(24,104,240,.28)]">
+            {feeManwon}
+            <span className="text-[10px] font-bold opacity-90">만원</span>
+          </span>
+        </div>
+      )}
     </article>
   )
 }

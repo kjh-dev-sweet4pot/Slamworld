@@ -14,6 +14,7 @@ import LocationStatus from '@/components/LocationStatus'
 import type { Content, Summary, LocationSummary } from '@/lib/types'
 import { channelSummaryFromContents } from '@/lib/channel-summary'
 import { contentViews, contentViewsDisplay } from '@/lib/content-views'
+import { AUGUST_2026_PINNED, mergePinnedRows, PERF_PINNED } from '@/lib/content-priority'
 
 type Tab = 'perf' | 'month' | 'all'
 
@@ -135,7 +136,7 @@ export default function Dashboard() {
     setLoading(true)
     const params = new URLSearchParams({
       sort: tab === 'all' ? 'date' : 'perf',
-      limit: '300',
+      limit: tab === 'all' ? '300' : '1000',
     })
     if (campaign !== '전체') params.set('campaign', campaign)
     if (location !== '전체') params.set('location', location)
@@ -198,6 +199,16 @@ export default function Dashboard() {
   const chartAnimKey = `${tab}-${selectedMonth}-${campaign}-${location}-${channel}`
 
   const rankTags = channelRankTags(contents)
+
+  const cardContents = useMemo(() => {
+    if (tab === 'perf') {
+      return mergePinnedRows(contents, chartContents, PERF_PINNED)
+    }
+    if (tab === 'month' && selectedMonth === '2026-08') {
+      return mergePinnedRows(contents, chartContents, AUGUST_2026_PINNED)
+    }
+    return contents
+  }, [contents, chartContents, tab, selectedMonth])
 
   // 전체 탭용 테이블
   const tableContents = [...contents].sort((a, b) => {
@@ -265,10 +276,9 @@ export default function Dashboard() {
         ))}
       </nav>
 
-      <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-5 lg:px-8 py-4 pb-24">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(240px,280px)_minmax(0,1fr)_minmax(240px,300px)] gap-4 xl:gap-5 items-start">
+      <div className="owm-dashboard-grid max-w-[1920px] mx-auto px-3 sm:px-5 lg:px-8 py-4 pb-24">
           {/* 좌측 사이드 */}
-          <aside className="hidden xl:flex flex-col gap-4 sticky top-28 self-start w-full">
+          <aside className="owm-side-col hidden xl:flex flex-col gap-4 sticky top-28 self-start">
             {sideCards}
           </aside>
 
@@ -393,16 +403,16 @@ export default function Dashboard() {
             ) : contents.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                  {contents.slice(0, visibleCount).map(c => (
+                  {cardContents.slice(0, visibleCount).map(c => (
                     <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
                   ))}
                 </div>
-                {(contents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
+                {(cardContents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
                   <div className="mt-3 flex items-center justify-between gap-3 px-1">
                     <p className="text-[12px] text-slate">
                       {visibleCount}건 표시 중
-                      {contents.length > visibleCount && (
-                        <> · 남은 {contents.length - visibleCount}건</>
+                      {cardContents.length > visibleCount && (
+                        <> · 남은 {cardContents.length - visibleCount}건</>
                       )}
                     </p>
                     <div className="flex items-center gap-3">
@@ -415,13 +425,13 @@ export default function Dashboard() {
                           접기
                         </button>
                       )}
-                      {contents.length > visibleCount && (
+                      {cardContents.length > visibleCount && (
                         <button
                           type="button"
                           onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
                           className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
                         >
-                          {Math.min(PERF_MORE_COUNT, contents.length - visibleCount)}개 더 보기
+                          {Math.min(PERF_MORE_COUNT, cardContents.length - visibleCount)}개 더 보기
                         </button>
                       )}
                     </div>
@@ -470,16 +480,16 @@ export default function Dashboard() {
             ) : contents.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
-                  {contents.slice(0, visibleCount).map(c => (
+                  {cardContents.slice(0, visibleCount).map(c => (
                     <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
                   ))}
                 </div>
-                {(contents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
+                {(cardContents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
                   <div className="mt-3 flex items-center justify-between gap-3 px-1">
                     <p className="text-[12px] text-slate">
                       {visibleCount}건 표시 중
-                      {contents.length > visibleCount && (
-                        <> · 남은 {contents.length - visibleCount}건</>
+                      {cardContents.length > visibleCount && (
+                        <> · 남은 {cardContents.length - visibleCount}건</>
                       )}
                     </p>
                     <div className="flex items-center gap-3">
@@ -492,13 +502,13 @@ export default function Dashboard() {
                           접기
                         </button>
                       )}
-                      {contents.length > visibleCount && (
+                      {cardContents.length > visibleCount && (
                         <button
                           type="button"
                           onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
                           className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
                         >
-                          {Math.min(PERF_MORE_COUNT, contents.length - visibleCount)}개 더 보기
+                          {Math.min(PERF_MORE_COUNT, cardContents.length - visibleCount)}개 더 보기
                         </button>
                       )}
                     </div>
@@ -667,11 +677,10 @@ export default function Dashboard() {
 
           </main>
 
-          <aside className="hidden xl:block sticky top-28 self-start w-full">
+          <aside className="owm-side-col hidden xl:block sticky top-28 self-start">
             <SideLiveFeed />
           </aside>
         </div>
-      </div>
     </>
   )
 }

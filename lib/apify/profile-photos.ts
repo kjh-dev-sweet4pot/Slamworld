@@ -33,6 +33,7 @@ export interface ProfileSyncOptions {
   channels?: SyncChannel[]
   limit?: number
   dryRun?: boolean
+  names?: string[]
 }
 
 export interface ProfileSyncResult {
@@ -500,6 +501,10 @@ export async function syncProfilePhotos(opts: ProfileSyncOptions = {}): Promise<
   if (error) throw new Error(`Supabase fetch failed: ${error.message}`)
 
   let accounts = groupAccounts((data ?? []) as ProfileRow[], channels)
+  if (opts.names?.length) {
+    const wanted = new Set(opts.names.map(n => n.trim().toLowerCase()))
+    accounts = accounts.filter(a => wanted.has(a.name.toLowerCase()))
+  }
   if (opts.limit) accounts = accounts.slice(0, opts.limit)
 
   let uploaded = 0

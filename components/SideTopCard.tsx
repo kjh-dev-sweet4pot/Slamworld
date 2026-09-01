@@ -6,6 +6,14 @@ import { LOC_COLOR, RANK_ACCENTS } from '@/lib/feed-items'
 
 type Metric = 'likes' | 'views'
 
+const CHANNEL_SHORT: Record<string, string> = {
+  '샤오홍슈': '샤오홍슈',
+  '인스타그램': '인스타',
+  '틱톡': '틱톡',
+  '도우인': '도우인',
+  '웨이보': '웨이보',
+}
+
 function metricValue(c: Content, metric: Metric): number {
   if (metric === 'likes') return c.likes ?? 0
   return contentViews(c)
@@ -55,19 +63,21 @@ export default function SideTopCard({
           const row = (
             <div className="owm-b3-row">
               <span className="owm-b3-rank" style={{ background: acc }}>{i + 1}</span>
-              <div className="owm-b3-main min-w-0">
-                <div className="owm-b3-nm">{c.influencer_name}</div>
-                <div className="owm-b3-date flex items-center gap-1.5 flex-wrap mt-1">
+              <div className="owm-b3-main min-w-0 flex-1">
+                <div className="owm-b3-top">
+                  <div className="owm-b3-nm" title={c.influencer_name}>{c.influencer_name}</div>
+                  <div className="owm-b3-amt">
+                    <span className="owm-b3-amt-num">{fmtMetric(val, metric)}</span>
+                    <span className="owm-b3-amt-lbl">{metric === 'likes' ? '좋아요' : '조회'}</span>
+                  </div>
+                </div>
+                <div className="owm-b3-meta">
                   <span className="owm-b3-chip">
                     <i className="owm-b3-cdot" style={{ background: locColor }} />
                     {c.location.replace('점', '')}
                   </span>
-                  <span className="text-[10px] text-[#94a3b8]">{c.channel}</span>
+                  <span className="owm-b3-ch">{CHANNEL_SHORT[c.channel] ?? c.channel}</span>
                 </div>
-              </div>
-              <div className="owm-b3-amt shrink-0">
-                {fmtMetric(val, metric)}
-                <span>{metric === 'likes' ? '좋아요' : '조회'}</span>
               </div>
             </div>
           )
