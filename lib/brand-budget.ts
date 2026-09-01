@@ -228,6 +228,8 @@ export interface MonthlyBudgetChartRow {
   plannedReviewTotal: number
   plannedOctTotal: number
   total: number
+  /** 해당 월까지 누적 총액 */
+  cumulative: number
 }
 
 /** 월별 막대 — 확보(securedMonth) + 미확보 파이프라인(marketingMonth) */
@@ -241,6 +243,7 @@ export function monthlyBudgetForChart(): MonthlyBudgetChartRow[] {
     plannedReviewTotal: 0,
     plannedOctTotal: 0,
     total: 0,
+    cumulative: 0,
   }))
   const byMonth = new Map(rows.map(r => [r.month, r]))
 
@@ -266,6 +269,12 @@ export function monthlyBudgetForChart(): MonthlyBudgetChartRow[] {
       else if (b.stage === '10월 예정') row.plannedOctTotal += amt
       row.total += amt
     }
+  }
+
+  let running = 0
+  for (const row of rows) {
+    running += row.total
+    row.cumulative = running
   }
 
   return rows
@@ -333,4 +342,7 @@ if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   }
   if (brands('planned') !== '달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
   if (brands('oct') !== '스킨스탠다드') throw new Error(`oct kpi brands: ${brands('oct')}`)
+  const chart = monthlyBudgetForChart()
+  if (chart[0]?.cumulative !== 9000) throw new Error(`aug cumulative expected 9000, got ${chart[0]?.cumulative}`)
+  if (chart[2]?.cumulative !== 12600) throw new Error(`oct cumulative expected 12600, got ${chart[2]?.cumulative}`)
 }

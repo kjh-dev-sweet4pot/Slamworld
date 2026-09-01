@@ -278,12 +278,19 @@ function BudgetCompositionDonut({ pipelineTotal }: { pipelineTotal: number }) {
   )
 }
 
+const CUMULATIVE_LINE = '#0B47B4'
+
 function MonthTooltip({ row }: { row: MonthlyBudgetChartRow }) {
   const items = [...row.items].sort((a, b) => b.amount - a.amount)
 
   return (
     <div className="owm-budget-tip owm-budget-tip-partner">
-      <div className="owm-budget-tip-title">{fmtMonthLabel(row.month)} · {fmtBudgetManwon(row.total)}만</div>
+      <div className="owm-budget-tip-title">
+        {fmtMonthLabel(row.month)} · {fmtBudgetManwon(row.total)}만
+        <span className="block text-[10px] font-semibold mt-0.5" style={{ color: CUMULATIVE_LINE }}>
+          누적 {fmtBudgetManwon(row.cumulative)}만
+        </span>
+      </div>
       {items.length > 0 ? items.map(i => (
         <BudgetTipRow
           key={i.brand}
@@ -308,88 +315,172 @@ function barTooltipClass(index: number, total: number) {
 function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; maxTotal: number }) {
   const [hovered, setHovered] = useState<string | null>(null)
   const activeRow = rows.find(r => r.month === hovered)
+  const maxCum = Math.max(...rows.map(r => r.cumulative), 1)
+  const n = rows.length
+  const linePoints = rows
+    .map((row, i) => {
+      const x = ((i + 0.5) / n) * 100
+      const y = 100 - (row.cumulative / maxCum) * 100
+      return `${x},${y}`
+    })
+    .join(' ')
 
   return (
     <div className="relative flex-1 min-h-[240px] w-full flex flex-col">
-      <div className="relative flex-1 min-h-[200px] w-full">
-      {[0.25, 0.5, 0.75, 1].map(ratio => (
-        <div
-          key={ratio}
-          className="absolute left-0 right-0 border-t border-mist/80"
-          style={{ bottom: `${ratio * 100}%` }}
-        />
-      ))}
-      <div className="absolute inset-0 flex items-end gap-2 sm:gap-3 px-0.5 pb-0.5 w-full">
-        {rows.map((row, i) => {
-          const hasData = row.total > 0
-          const barH = hasData ? Math.max((row.total / maxTotal) * 100, 8) : 0
-          const pct = (n: number) => (row.total > 0 ? (n / row.total) * 100 : 0)
-          const paidH = pct(row.paidTotal)
-          const payPendingH = pct(row.payPendingTotal)
-          const unpaidH = pct(row.unpaidTotal)
-          const reviewH = pct(row.plannedReviewTotal)
-          const octH = pct(row.plannedOctTotal)
-          const isHover = hovered === row.month
-
-          return (
+      <div className="relative flex-1 min-h-[200px] w-full flex flex-col">
+        <div className="relative flex-1 min-h-0 pt-4">
+          <div className="absolute inset-x-0 top-4 bottom-0">
+          {[0.25, 0.5, 0.75, 1].map(ratio => (
             <div
-              key={row.month}
-              className="relative flex-1 h-full flex flex-col items-center min-w-0"
-              onMouseEnter={() => setHovered(row.month)}
-              onMouseLeave={() => setHovered(null)}
-              onClick={() => setHovered(prev => (prev === row.month ? null : row.month))}
-            >
-              {isHover && hasData && (
+              key={ratio}
+              className="absolute left-0 right-0 border-t border-mist/80"
+              style={{ bottom: `${ratio * 100}%` }}
+            />
+          ))}
+
+          <div className="absolute inset-0 flex items-end gap-2 sm:gap-3 px-0.5 pb-0.5 w-full z-[1]">
+            {rows.map((row, i) => {
+              const hasData = row.total > 0
+              const barH = hasData ? Math.max((row.total / maxTotal) * 100, 8) : 0
+              const pct = (v: number) => (row.total > 0 ? (v / row.total) * 100 : 0)
+              const paidH = pct(row.paidTotal)
+              const payPendingH = pct(row.payPendingTotal)
+              const unpaidH = pct(row.unpaidTotal)
+              const reviewH = pct(row.plannedReviewTotal)
+              const octH = pct(row.plannedOctTotal)
+              const isHover = hovered === row.month
+
+              return (
                 <div
-                  className={`absolute bottom-full mb-2 z-20 pointer-events-none hidden lg:block
-                    ${barTooltipClass(i, rows.length)}`}
+                  key={row.month}
+                  className="relative flex-1 h-full flex flex-col items-center min-w-0"
+                  onMouseEnter={() => setHovered(row.month)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => setHovered(prev => (prev === row.month ? null : row.month))}
                 >
-                  <MonthTooltip row={row} />
-                </div>
-              )}
-              <span className={`num text-[9px] font-semibold mb-1 shrink-0
-                ${hasData ? 'text-body' : 'text-mist'}`}>
-                {hasData ? `${fmtBudgetManwon(row.total)}만` : '—'}
-              </span>
-              <div className="flex-1 w-full flex items-end min-h-0">
-                {hasData ? (
-                  <div
-                    className={`w-full rounded-t-[4px] overflow-hidden flex flex-col justify-end
-                      shadow-[0_2px_8px_rgba(24,104,240,.15)] transition-opacity
-                      ${isHover ? 'opacity-95' : 'opacity-100'}`}
-                    style={{ height: `${barH}%` }}
-                  >
-                    {row.plannedOctTotal > 0 && (
-                      <div style={{ height: `${octH}%`, background: BAR_COLOR.plannedOct, minHeight: octH > 0 ? 2 : 0 }} />
-                    )}
-                    {row.plannedReviewTotal > 0 && (
-                      <div style={{ height: `${reviewH}%`, background: BAR_COLOR.plannedReview, minHeight: reviewH > 0 ? 2 : 0 }} />
-                    )}
-                    {row.unpaidTotal > 0 && (
-                      <div style={{ height: `${unpaidH}%`, background: BAR_COLOR.unpaid, minHeight: unpaidH > 0 ? 2 : 0 }} />
-                    )}
-                    {row.payPendingTotal > 0 && (
-                      <div style={{ height: `${payPendingH}%`, background: BAR_COLOR.payPending, minHeight: payPendingH > 0 ? 2 : 0 }} />
-                    )}
-                    {row.paidTotal > 0 && (
-                      <div style={{ height: `${paidH}%`, background: BAR_COLOR.paid, minHeight: paidH > 0 ? 2 : 0 }} />
+                  {isHover && (
+                    <div
+                      className={`absolute bottom-full mb-2 z-20 pointer-events-none hidden lg:block
+                        ${barTooltipClass(i, rows.length)}`}
+                    >
+                      <MonthTooltip row={row} />
+                    </div>
+                  )}
+                  <div className="flex-1 w-full flex items-end min-h-0">
+                    {hasData ? (
+                      <div className="relative w-full" style={{ height: `${barH}%` }}>
+                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-0.5 num text-[9px] font-semibold text-body whitespace-nowrap pointer-events-none">
+                          {fmtBudgetManwon(row.total)}만
+                        </span>
+                        <div
+                          className={`w-full h-full rounded-t-[4px] overflow-hidden flex flex-col justify-end
+                            shadow-[0_2px_8px_rgba(24,104,240,.15)] transition-opacity
+                            ${isHover ? 'opacity-95' : 'opacity-100'}`}
+                        >
+                          {row.plannedOctTotal > 0 && (
+                            <div style={{ height: `${octH}%`, background: BAR_COLOR.plannedOct, minHeight: octH > 0 ? 2 : 0 }} />
+                          )}
+                          {row.plannedReviewTotal > 0 && (
+                            <div style={{ height: `${reviewH}%`, background: BAR_COLOR.plannedReview, minHeight: reviewH > 0 ? 2 : 0 }} />
+                          )}
+                          {row.unpaidTotal > 0 && (
+                            <div style={{ height: `${unpaidH}%`, background: BAR_COLOR.unpaid, minHeight: unpaidH > 0 ? 2 : 0 }} />
+                          )}
+                          {row.payPendingTotal > 0 && (
+                            <div style={{ height: `${payPendingH}%`, background: BAR_COLOR.payPending, minHeight: payPendingH > 0 ? 2 : 0 }} />
+                          )}
+                          {row.paidTotal > 0 && (
+                            <div style={{ height: `${paidH}%`, background: BAR_COLOR.paid, minHeight: paidH > 0 ? 2 : 0 }} />
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-[3px] rounded-t-[2px] bg-mist/90" />
                     )}
                   </div>
-                ) : (
-                  <div className="w-full h-[3px] rounded-t-[2px] bg-mist/90" />
+                </div>
+              )
+            })}
+          </div>
+
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none z-[2]"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <polyline
+              fill="none"
+              stroke="#fff"
+              strokeWidth={4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              opacity={0.9}
+              points={linePoints}
+            />
+            <polyline
+              fill="none"
+              stroke={CUMULATIVE_LINE}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              points={linePoints}
+            />
+          </svg>
+
+          {rows.map((row, i) => {
+            const yPct = (row.cumulative / maxCum) * 100
+            const isHover = hovered === row.month
+            const prevCum = i > 0 ? rows[i - 1].cumulative : -1
+            const showCumLabel = row.cumulative > 0 && row.cumulative !== prevCum
+            return (
+              <div
+                key={`dot-${row.month}`}
+                className="absolute z-[3] pointer-events-none flex flex-col items-center"
+                style={{
+                  left: `${((i + 0.5) / n) * 100}%`,
+                  bottom: `${yPct}%`,
+                  transform: 'translate(-50%, 50%)',
+                }}
+              >
+                {showCumLabel && (
+                  <span
+                    className="num text-[9px] font-bold whitespace-nowrap absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+3px)]
+                      px-1 rounded bg-white/85"
+                    style={{ color: CUMULATIVE_LINE }}
+                  >
+                    {fmtBudgetManwon(row.cumulative)}만
+                  </span>
                 )}
+                <span
+                  className={`block rounded-full border-2 border-white shadow-[0_1px_3px_rgba(12,58,130,.25)]
+                    ${isHover ? 'w-2.5 h-2.5' : 'w-2 h-2'}`}
+                  style={{ background: CUMULATIVE_LINE }}
+                />
               </div>
-              <span className={`num text-[9px] font-semibold mt-1 shrink-0
-                ${hasData || isHover ? 'text-azure-deep' : 'text-slate/60'}`}>
-                {fmtMonthLabel(row.month)}
-              </span>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+          </div>
+        </div>
+
+        <div className="flex gap-2 sm:gap-3 px-0.5 mt-1 shrink-0">
+          {rows.map(row => {
+            const isHover = hovered === row.month
+            return (
+              <div key={row.month} className="flex-1 min-w-0 text-center">
+                <span className={`num text-[9px] font-semibold
+                  ${row.total > 0 || isHover ? 'text-azure-deep' : 'text-slate/60'}`}>
+                  {fmtMonthLabel(row.month)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {activeRow && activeRow.total > 0 && (
+      {activeRow && (
         <div className="lg:hidden mt-3 w-full [&_.owm-budget-tip]:w-full [&_.owm-budget-tip]:max-w-none">
           <MonthTooltip row={activeRow} />
         </div>
@@ -504,13 +595,17 @@ export default function BudgetSnapshot() {
             <div className="mb-3 shrink-0">
               <h2 className="text-[14px] font-extrabold tracking-tight">월별 확보 예산</h2>
               <p className="text-[11px] text-slate mt-0.5">
-                확보·계약 예정 포함 (만원) ·
+                막대: 월별 · 선: 누적 (만원) ·
                 <span className="hidden lg:inline"> 막대에 마우스를 올려보세요</span>
                 <span className="lg:hidden"> 막대를 탭해주세요</span>
               </p>
             </div>
             <MonthlyBudgetBars rows={monthlyChart} maxTotal={maxMonthly} />
             <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 shrink-0 text-[10px] text-slate">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-body">
+                <i className="w-4 h-[2.5px] rounded-full" style={{ background: CUMULATIVE_LINE }} />
+                누적 예산
+              </span>
               {STAGE_LEGEND.map(({ label, color }) => (
                 <span key={label} className="inline-flex items-center gap-1">
                   <i className="w-2.5 h-2.5 rounded-[2px]" style={{ background: color }} /> {label}
