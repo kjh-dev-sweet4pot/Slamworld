@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Content, LocationSummary } from '@/lib/types'
 import { LOC_COLOR, LOC_EMOJI } from '@/lib/feed-items'
+import type { LocationMonthSeries } from '@/lib/monthly-performance'
 import { aggregateByMonth } from '@/lib/monthly-performance'
 import MonthlyBarChart from '@/components/MonthlyBarChart'
+import LocationMonthlyLineChart from '@/components/LocationMonthlyLineChart'
 import ContentCard from '@/components/ContentCard'
 
 const LIST_PREVIEW = 9
@@ -33,13 +35,20 @@ function likesPerPost(loc: LocationSummary): number {
   return Math.round(loc.total_likes / loc.uploaded)
 }
 
-export default function LocationStatus({ locations }: { locations: LocationSummary[] }) {
+export default function LocationStatus({
+  locations,
+  locationMonthly,
+}: {
+  locations: LocationSummary[]
+  locationMonthly: { months: string[]; series: LocationMonthSeries[] }
+}) {
   const rows = [...locations].sort((a, b) => b.total_likes - a.total_likes)
   const [selected, setSelected] = useState<string | null>(null)
   const [contents, setContents] = useState<Content[]>([])
   const [loading, setLoading] = useState(false)
   const [visibleCount, setVisibleCount] = useState(LIST_PREVIEW)
   const [chartMonth, setChartMonth] = useState<string | null>(null)
+  const [chartLocation, setChartLocation] = useState<string | null>(null)
   const detailRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -82,6 +91,7 @@ export default function LocationStatus({ locations }: { locations: LocationSumma
 
   function toggleLocation(name: string) {
     setSelected(prev => (prev === name ? null : name))
+    setChartLocation(prev => (prev === name ? null : name))
   }
 
   return (
@@ -95,7 +105,7 @@ export default function LocationStatus({ locations }: { locations: LocationSumma
         카드를 누르면 해당 지점 그래프와 콘텐츠 목록이 펼쳐집니다.
       </p>
 
-      <div className="owm-kpi-grid-br">
+      <div className="owm-kpi-grid-br mb-3">
         {rows.map(loc => {
           const color = LOC_COLOR[loc.location] ?? '#94a3b8'
           const emoji = LOC_EMOJI[loc.location] ?? '📍'
@@ -135,6 +145,25 @@ export default function LocationStatus({ locations }: { locations: LocationSumma
             </button>
           )
         })}
+      </div>
+
+      <div className="owm-chart-section mb-3">
+        <div className="owm-chart-header">
+          <h3>
+            지점별 월별 진행 현황
+            <span className="owm-chart-hint">월별 실제 업로드 · 지점 탭 시 선 강조</span>
+          </h3>
+        </div>
+        <LocationMonthlyLineChart
+          months={locationMonthly.months}
+          series={locationMonthly.series}
+          highlightLocation={chartLocation}
+          onHighlightLocation={loc => {
+            setChartLocation(loc)
+            if (loc) setSelected(loc)
+            else setSelected(null)
+          }}
+        />
       </div>
 
       {selected && (

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { contentViews } from '@/lib/content-views'
+import { buildLocationMonthlySeries } from '@/lib/monthly-performance'
 import { createServerSupabase } from '@/lib/supabase-server'
 
 export async function GET() {
@@ -9,7 +10,7 @@ export async function GET() {
     supabase.from('summary').select('*').single(),
     supabase.from('location_summary').select('*'),
     supabase.from('contents').select(
-      'visit_date, likes, saves, views, views_estimated, channel',
+      'location, visit_date, likes, saves, views, views_estimated, channel',
     ).not('visit_date', 'is', null),
   ])
 
@@ -34,6 +35,13 @@ export async function GET() {
   const monthlyData = Object.entries(monthMap)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, v]) => ({ month, ...v }))
+
+  const locationMonthly = buildLocationMonthlySeries(
+    (monthlyRes.data ?? []).map(row => ({
+      location: row.location as string,
+      visit_date: row.visit_date as string,
+    })),
+  )
 
   const channelMap: Record<string, {
     count: number; likes: number; saves: number; views: number
@@ -67,6 +75,7 @@ export async function GET() {
     summary,
     locations: locationRes.data,
     monthly: monthlyData,
+    locationMonthly,
     channels,
   })
 }
