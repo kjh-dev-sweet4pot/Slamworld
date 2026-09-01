@@ -297,6 +297,10 @@ body {
     overflow-y: auto;
   }
 
+  /* 호버 팝업 ↔ 트리거 사이 dead zone — mouseleave 방지 */
+  .owm-hover-bridge-y { @apply h-3 shrink-0; }
+  .owm-hover-bridge-x { @apply w-3 shrink-0 self-stretch; }
+
   .pipeline-cat-marker-delivering {
     animation: pipeline-cat-enter-delivering 3.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   }

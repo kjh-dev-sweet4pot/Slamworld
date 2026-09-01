@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Content } from '@/lib/types'
 import { contentsForBrand } from '@/lib/brand-content'
+import { useHoverPopover } from '@/lib/use-hover-popover'
 import {
   budgetItemColor,
   budgetPaymentLabel,
@@ -190,12 +191,12 @@ function BudgetKpiCard({
   color?: string
   emoji?: string
 }) {
-  const [open, setOpen] = useState(false)
+  const { active: open, show, hide, setActive: setOpen } = useHoverPopover(false)
   return (
     <div
       className={`relative h-full ${open ? 'z-30' : ''}`}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => show(true)}
+      onMouseLeave={hide}
     >
       <div
         className="owm-kpi-card cursor-default h-full"
@@ -214,7 +215,8 @@ function BudgetKpiCard({
         <div className="owm-kpi-sub"><span>{d}</span></div>
       </div>
       {open && rows.length > 0 && (
-        <div className="absolute top-full left-0 mt-1 z-30 pointer-events-none">
+        <div className="absolute top-full left-0 z-30 flex flex-col items-start pointer-events-auto">
+          <div className="owm-hover-bridge-y w-full min-w-[168px]" aria-hidden />
           <BudgetCompositionTooltip title={`${k} · ${rows.length}개사`} rows={rows} />
         </div>
       )}
@@ -252,7 +254,7 @@ function BudgetCompositionDonut({
   contents: Content[]
   onViewBrandContent?: (brand: string) => void
 }) {
-  const [hoverBrand, setHoverBrand] = useState<string | null>(null)
+  const { active: hoverBrand, show, hide, setActive: setHoverBrand } = useHoverPopover<string | null>(null)
   const { slices, totalWeight, count } = partnerCompanyDonut()
   const arcs = donutSlices(
     totalWeight,
@@ -315,8 +317,8 @@ function BudgetCompositionDonut({
             <li
               key={a.key}
               className="relative"
-              onMouseEnter={() => setHoverBrand(a.key)}
-              onMouseLeave={() => setHoverBrand(null)}
+              onMouseEnter={() => show(a.key)}
+              onMouseLeave={hide}
             >
               <button
                 type="button"
@@ -332,13 +334,13 @@ function BudgetCompositionDonut({
                 </span>
               </button>
               {active && a.key !== '__unknown__' && (
-                <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch">
+                <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch pointer-events-auto">
                   <BudgetBrandContentTooltip
                     brand={a.label}
                     items={brandContents}
                     onViewContent={onViewBrandContent}
                   />
-                  <div className="w-3 shrink-0 self-stretch" aria-hidden />
+                  <div className="owm-hover-bridge-x" aria-hidden />
                 </div>
               )}
               {active && a.key !== '__unknown__' && (
@@ -397,7 +399,7 @@ function barTooltipClass(index: number, total: number) {
 }
 
 function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; maxTotal: number }) {
-  const [hovered, setHovered] = useState<string | null>(null)
+  const { active: hovered, show, hide, setActive: setHovered } = useHoverPopover<string | null>(null)
   const activeRow = rows.find(r => r.month === hovered)
   const maxCum = Math.max(...rows.map(r => r.cumulative), 1)
   const n = rows.length
@@ -438,16 +440,17 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
                 <div
                   key={row.month}
                   className="relative flex-1 h-full flex flex-col items-center min-w-0"
-                  onMouseEnter={() => setHovered(row.month)}
-                  onMouseLeave={() => setHovered(null)}
+                  onMouseEnter={() => show(row.month)}
+                  onMouseLeave={hide}
                   onClick={() => setHovered(prev => (prev === row.month ? null : row.month))}
                 >
                   {isHover && (
                     <div
-                      className={`absolute bottom-full mb-2 z-20 pointer-events-none hidden lg:block
+                      className={`absolute bottom-full z-20 hidden lg:flex flex-col pointer-events-auto
                         ${barTooltipClass(i, rows.length)}`}
                     >
                       <MonthTooltip row={row} />
+                      <div className="owm-hover-bridge-y w-full min-w-[168px]" aria-hidden />
                     </div>
                   )}
                   <div className="flex-1 w-full flex items-end min-h-0">
