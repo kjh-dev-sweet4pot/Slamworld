@@ -1,6 +1,6 @@
 /** 브랜드 마케팅 예산 — 단일 소스 */
 
-export type BudgetPayment = '입금 완료' | '입금 예정' | '미입금'
+export type BudgetPayment = '입금 완료' | '입금 예정' | '송금 대기' | '미입금'
 export type BudgetStage = '확정 및 진행' | '계약 예정' | '10월 예정'
 
 export interface BrandBudget {
@@ -18,12 +18,14 @@ export interface BrandBudget {
 
 export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: 'TeloAct', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-07', marketingMonth: '2026-07', note: '7월 집행 완료' },
-  { brand: '옵티팜', amount: 4000, payment: '미입금', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
+  { brand: '옵티팜', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '9/3 입금 확인' },
   { brand: '닥터 리앤장', amount: 3000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/30 입금 확인' },
   { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
   { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/31 입금 확인' },
-  { brand: '해브블루', amount: 2000, rangeMax: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '온보딩 진행' },
+  { brand: 'Troubleless', amount: 1000, payment: '송금 대기', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '9월 확정 · 송금 대기' },
+  { brand: '해브블루', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
   { brand: '달바', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
+  { brand: 'Re4day', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
   { brand: '스킨스탠다드', amount: 1100, payment: '검토 중', stage: '10월 예정', securedMonth: null, marketingMonth: '2026-10' },
 ]
 
@@ -48,7 +50,7 @@ export function budgetItemColor(
   if (stage === '미정') return '#94A3B8'
   if (stage === '확정 및 진행') {
     if (payment === '입금 완료') return '#1868F0'
-    if (payment === '입금 예정') return '#F59E0B'
+    if (payment === '입금 예정' || payment === '송금 대기') return '#F59E0B'
     if (payment === '미입금') return '#EF4444'
   }
   if (stage === '계약 예정') return '#EA580C'
@@ -57,8 +59,7 @@ export function budgetItemColor(
 }
 
 export function budgetStageLabel(stage: BudgetStage | '미정'): string {
-  if (stage === '미정') return '예산 미정'
-  if (stage === '계약 예정') return '계약 예정·검토'
+  if (stage === '미정' || stage === '계약 예정') return '계약 예정·검토'
   if (stage === '10월 예정') return '차후 예산'
   return stage
 }
@@ -107,7 +108,7 @@ export function partnerCompanyDonut(): { slices: PartnerDonutSlice[]; totalWeigh
   if (unknown.length > 0) {
     slices.push({
       key: '__unknown__',
-      label: unknown.length === 1 ? '예산 미정' : `예산 미정 (${unknown.length})`,
+      label: unknown.length === 1 ? '계약 예정·검토' : `계약 예정·검토 (${unknown.length})`,
       weight: unknown.length,
       color: PARTNER_UNKNOWN_COLOR,
       stage: '미정',
@@ -146,6 +147,18 @@ function toTooltipRows(list: BrandBudget[]): PartnerTooltipRow[] {
 /** 호버 툴팁 — 예산순(미정은 맨 아래) */
 export function partnerCompanyTooltipRows(): PartnerTooltipRow[] {
   return toTooltipRows(BRAND_BUDGETS)
+}
+
+/** 도넛 '계약 예정·검토' 호버 — 금액 미확정 회사 (실제 계약 단계 유지) */
+export function unknownBudgetRows(): PartnerTooltipRow[] {
+  return BRAND_BUDGETS.filter(b => budgetMid(b) <= 0).map(b => ({
+    brand: b.brand,
+    amount: 0,
+    amountLabel: '미확인',
+    stage: b.stage,
+    payment: b.payment,
+    sortKey: -1,
+  }))
 }
 
 export type BudgetKpiKey = 'secured' | 'pipeline' | 'planned' | 'oct'
@@ -258,7 +271,7 @@ export function monthlyBudgetForChart(): MonthlyBudgetChartRow[] {
       const row = byMonth.get(b.securedMonth)!
       row.items.push({ brand: b.brand, amount: amt, amountLabel, stage: b.stage, kind: 'confirmed', payment: b.payment })
       if (b.payment === '입금 완료') row.paidTotal += amt
-      else if (b.payment === '입금 예정') row.payPendingTotal += amt
+      else if (b.payment === '입금 예정' || b.payment === '송금 대기') row.payPendingTotal += amt
       else if (b.payment === '미입금') row.unpaidTotal += amt
       row.total += amt
       continue
@@ -337,15 +350,19 @@ export function computeBudgetSummary(): BudgetSummary {
 // ponytail: totals drift → 상단 KPI 깨짐
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
-  if (s.securedTotal !== 13000) throw new Error(`securedTotal expected 13000, got ${s.securedTotal}`)
+  if (s.securedTotal !== 14000) throw new Error(`securedTotal expected 14000, got ${s.securedTotal}`)
+  if (s.securedPaid !== 12000) throw new Error(`securedPaid expected 12000, got ${s.securedPaid}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
-  if (brands('secured') !== 'Rxme,TeloAct,닥터 리앤장,옵티팜,클리어디어') {
+  if (brands('secured') !== 'Rxme,TeloAct,Troubleless,닥터 리앤장,옵티팜,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
   }
-  if (brands('planned') !== '달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
+  if (brands('planned') !== 'Re4day,달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
   if (brands('oct') !== '스킨스탠다드') throw new Error(`oct kpi brands: ${brands('oct')}`)
+  const unknown = unknownBudgetRows().map(r => r.brand).sort().join(',')
+  if (unknown !== 'Re4day,달바,해브블루') throw new Error(`unknown budget brands: ${unknown}`)
   const chart = monthlyBudgetForChart()
   if (chart[0]?.cumulative !== 4000) throw new Error(`jul cumulative expected 4000, got ${chart[0]?.cumulative}`)
   if (chart[1]?.cumulative !== 13000) throw new Error(`aug cumulative expected 13000, got ${chart[1]?.cumulative}`)
-  if (chart[3]?.cumulative !== 16600) throw new Error(`oct cumulative expected 16600, got ${chart[3]?.cumulative}`)
+  if (chart[2]?.cumulative !== 14000) throw new Error(`sep cumulative expected 14000, got ${chart[2]?.cumulative}`)
+  if (chart[3]?.cumulative !== 15100) throw new Error(`oct cumulative expected 15100, got ${chart[3]?.cumulative}`)
 }

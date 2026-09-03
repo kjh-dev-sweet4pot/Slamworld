@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Content } from '@/lib/types'
 import { contentsForBrand } from '@/lib/brand-content'
+import { useHoverPopover } from '@/lib/use-hover-popover'
 import {
   budgetItemColor,
   budgetPaymentLabel,
@@ -12,6 +13,7 @@ import {
   kpiCompanyRows,
   monthlyBudgetForChart,
   partnerCompanyDonut,
+  unknownBudgetRows,
   type BudgetKpiKey,
   type BudgetStage,
   type MonthlyBudgetChartRow,
@@ -105,13 +107,15 @@ function BudgetTipRow({
 function BudgetBrandContentTooltip({
   brand,
   items,
+  onViewContent,
 }: {
   brand: string
   items: Content[]
+  onViewContent?: (brand: string) => void
 }) {
   const preview = items.slice(0, 6)
   return (
-    <div className="owm-budget-tip owm-budget-tip-partner">
+    <div className="owm-budget-tip owm-budget-tip-partner pointer-events-auto">
       <div className="owm-budget-tip-title">
         {brand} 콘텐츠
         <span className="block text-[10px] font-semibold text-slate mt-0.5">
@@ -133,6 +137,16 @@ function BudgetBrandContentTooltip({
       )}
       {items.length > preview.length && (
         <div className="text-[9.5px] text-slate mt-1">외 {items.length - preview.length}건</div>
+      )}
+      {onViewContent && (
+        <button
+          type="button"
+          onClick={() => onViewContent(brand)}
+          className="mt-2 w-full text-[11px] font-bold py-1.5 rounded-md bg-azure text-white
+            hover:bg-azure-deep transition-colors"
+        >
+          콘텐츠 보러 가기
+        </button>
       )}
     </div>
   )
@@ -178,12 +192,12 @@ function BudgetKpiCard({
   color?: string
   emoji?: string
 }) {
-  const [open, setOpen] = useState(false)
+  const { active: open, show, hide, setActive: setOpen } = useHoverPopover(false)
   return (
     <div
       className={`relative h-full ${open ? 'z-30' : ''}`}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => show(true)}
+      onMouseLeave={hide}
     >
       <div
         className="owm-kpi-card cursor-default h-full"
@@ -202,7 +216,8 @@ function BudgetKpiCard({
         <div className="owm-kpi-sub"><span>{d}</span></div>
       </div>
       {open && rows.length > 0 && (
-        <div className="absolute top-full left-0 mt-1 z-30 pointer-events-none">
+        <div className="absolute top-full left-0 z-30 flex flex-col items-start pointer-events-auto">
+          <div className="owm-hover-bridge-y w-full min-w-[168px]" aria-hidden />
           <BudgetCompositionTooltip title={`${k} · ${rows.length}개사`} rows={rows} />
         </div>
       )}
@@ -234,11 +249,13 @@ function BudgetCompositionBar({
 function BudgetCompositionDonut({
   pipelineTotal,
   contents,
+  onViewBrandContent,
 }: {
   pipelineTotal: number
   contents: Content[]
+  onViewBrandContent?: (brand: string) => void
 }) {
-  const [hoverBrand, setHoverBrand] = useState<string | null>(null)
+  const { active: hoverBrand, show, hide, setActive: setHoverBrand } = useHoverPopover<string | null>(null)
   const { slices, totalWeight, count } = partnerCompanyDonut()
   const arcs = donutSlices(
     totalWeight,
@@ -250,6 +267,7 @@ function BudgetCompositionDonut({
     })),
   ).sort((a, b) => b.value - a.value)
 
+  const unknownRows = unknownBudgetRows()
   const brandContents = useMemo(() => {
     if (!hoverBrand || hoverBrand === '__unknown__') return []
     return contentsForBrand(contents, hoverBrand)
@@ -297,31 +315,61 @@ function BudgetCompositionDonut({
       <ul className="mt-4 w-full max-w-[280px] space-y-1 lg:ml-auto mx-auto lg:mr-0">
         {arcs.map(a => {
           const active = hoverBrand === a.key
+          const isUnknown = a.key === '__unknown__'
           return (
-            <li key={a.key} className="relative">
+            <li
+              key={a.key}
+              className="relative"
+              onMouseEnter={() => show(a.key)}
+              onMouseLeave={hide}
+            >
               <button
                 type="button"
                 className={`w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-left transition-colors
                   ${active ? 'bg-azure/8 ring-1 ring-azure/25' : 'hover:bg-slate/5'}`}
-                onMouseEnter={() => setHoverBrand(a.key)}
-                onMouseLeave={() => setHoverBrand(null)}
                 onClick={() => setHoverBrand(prev => (prev === a.key ? null : a.key))}
               >
                 <span className="w-2.5 h-2.5 rounded-[2px] flex-none" style={{ background: a.color }} />
                 <span className="text-[12.5px] font-semibold truncate">{a.label}</span>
                 <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
                   {a.pct}%
-                  {a.key === '__unknown__' ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
+                  {isUnknown ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
                 </span>
               </button>
-              {active && a.key !== '__unknown__' && (
-                <div className="absolute right-full top-0 mr-2 z-30 pointer-events-none hidden lg:block">
-                  <BudgetBrandContentTooltip brand={a.label} items={brandContents} />
+              {active && !isUnknown && (
+                <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch pointer-events-auto">
+                  <BudgetBrandContentTooltip
+                    brand={a.label}
+                    items={brandContents}
+                    onViewContent={onViewBrandContent}
+                  />
+                  <div className="owm-hover-bridge-x" aria-hidden />
                 </div>
               )}
-              {active && a.key !== '__unknown__' && (
-                <div className="lg:hidden mt-1 pointer-events-none">
-                  <BudgetBrandContentTooltip brand={a.label} items={brandContents} />
+              {active && isUnknown && unknownRows.length > 0 && (
+                <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch pointer-events-auto">
+                  <BudgetCompositionTooltip
+                    title={`계약 예정·검토 · ${unknownRows.length}개사`}
+                    rows={unknownRows}
+                  />
+                  <div className="owm-hover-bridge-x" aria-hidden />
+                </div>
+              )}
+              {active && !isUnknown && (
+                <div className="lg:hidden mt-1">
+                  <BudgetBrandContentTooltip
+                    brand={a.label}
+                    items={brandContents}
+                    onViewContent={onViewBrandContent}
+                  />
+                </div>
+              )}
+              {active && isUnknown && unknownRows.length > 0 && (
+                <div className="lg:hidden mt-1">
+                  <BudgetCompositionTooltip
+                    title={`계약 예정·검토 · ${unknownRows.length}개사`}
+                    rows={unknownRows}
+                  />
                 </div>
               )}
             </li>
@@ -329,8 +377,8 @@ function BudgetCompositionDonut({
         })}
       </ul>
       <p className="text-[10px] text-slate text-center lg:text-right mt-2 max-w-[280px] lg:ml-auto mx-auto lg:mr-0">
-        <span className="hidden lg:inline">회사명에 마우스를 올리면 콘텐츠 목록</span>
-        <span className="lg:hidden">회사명을 탭하면 콘텐츠 목록</span>
+        <span className="hidden lg:inline">회사명에 마우스를 올리면 콘텐츠·검토 회사 목록</span>
+        <span className="lg:hidden">회사명을 탭하면 콘텐츠·검토 회사 목록</span>
       </p>
     </div>
   )
@@ -371,7 +419,7 @@ function barTooltipClass(index: number, total: number) {
 }
 
 function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; maxTotal: number }) {
-  const [hovered, setHovered] = useState<string | null>(null)
+  const { active: hovered, show, hide, setActive: setHovered } = useHoverPopover<string | null>(null)
   const activeRow = rows.find(r => r.month === hovered)
   const maxCum = Math.max(...rows.map(r => r.cumulative), 1)
   const n = rows.length
@@ -412,16 +460,17 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
                 <div
                   key={row.month}
                   className="relative flex-1 h-full flex flex-col items-center min-w-0"
-                  onMouseEnter={() => setHovered(row.month)}
-                  onMouseLeave={() => setHovered(null)}
+                  onMouseEnter={() => show(row.month)}
+                  onMouseLeave={hide}
                   onClick={() => setHovered(prev => (prev === row.month ? null : row.month))}
                 >
                   {isHover && (
                     <div
-                      className={`absolute bottom-full mb-2 z-20 pointer-events-none hidden lg:block
+                      className={`absolute bottom-full z-20 hidden lg:flex flex-col pointer-events-auto
                         ${barTooltipClass(i, rows.length)}`}
                     >
                       <MonthTooltip row={row} />
+                      <div className="owm-hover-bridge-y w-full min-w-[168px]" aria-hidden />
                     </div>
                   )}
                   <div className="flex-1 w-full flex items-end min-h-0">
@@ -547,7 +596,11 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
   )
 }
 
-export default function BudgetSnapshot() {
+export default function BudgetSnapshot({
+  onViewBrandContent,
+}: {
+  onViewBrandContent?: (brand: string) => void
+}) {
   const [contents, setContents] = useState<Content[]>([])
   const s = computeBudgetSummary()
   const monthlyChart = monthlyBudgetForChart()
@@ -690,7 +743,11 @@ export default function BudgetSnapshot() {
                 <span className="lg:hidden"> 탭해주세요 · (단위 : 만원)</span>
               </p>
             </div>
-            <BudgetCompositionDonut pipelineTotal={s.pipelineTotal} contents={contents} />
+            <BudgetCompositionDonut
+              pipelineTotal={s.pipelineTotal}
+              contents={contents}
+              onViewBrandContent={onViewBrandContent}
+            />
           </div>
         </div>
       </div>
