@@ -65,7 +65,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '옵티팜',
     budget: '4,000만원',
-    meta: '9/3 입금 확인 · 계약서 전달 중',
+    meta: '계약서 전달 중 · 미입금',
     days: 16,
     status: '9월 마케팅 목표',
     segs: [5, 2, 5, 2, 2],
@@ -144,7 +144,7 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: '옵티팜',
-    status: '9/3 입금 확인 · 계약서 전달 중',
+    status: '계약서 전달 중',
     pct: 12,
   },
   {
@@ -191,7 +191,7 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: '계약서 전달 후 가이드 착수',
     eta: '계약서 전달 중',
     pct: 10,
-    note: '4,000만원 · 9/3 입금 확인',
+    note: '4,000만원 · 미입금',
   },
   {
     brand: '클리어디어',

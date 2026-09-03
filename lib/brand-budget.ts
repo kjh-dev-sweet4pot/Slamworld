@@ -18,7 +18,7 @@ export interface BrandBudget {
 
 export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: 'TeloAct', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-07', marketingMonth: '2026-07', note: '7월 집행 완료' },
-  { brand: '옵티팜', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '9/3 입금 확인' },
+  { brand: '옵티팜', amount: 4000, payment: '미입금', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
   { brand: '닥터 리앤장', amount: 3000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/30 입금 확인' },
   { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
   { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/31 입금 확인' },
@@ -351,7 +351,7 @@ export function computeBudgetSummary(): BudgetSummary {
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
   if (s.securedTotal !== 14000) throw new Error(`securedTotal expected 14000, got ${s.securedTotal}`)
-  if (s.securedPaid !== 12000) throw new Error(`securedPaid expected 12000, got ${s.securedPaid}`)
+  if (s.securedPaid !== 8000) throw new Error(`securedPaid expected 8000, got ${s.securedPaid}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
   if (brands('secured') !== 'Rxme,TeloAct,Troubleless,닥터 리앤장,옵티팜,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
