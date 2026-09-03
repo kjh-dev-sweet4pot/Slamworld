@@ -10,6 +10,22 @@ export interface FeedItem {
 
 export const LIVE_FEED: FeedItem[] = [
   {
+    time: '9/3 11:00',
+    badge: '입금',
+    badgeClass: 'bg-[#ecfdf5] text-[#16a34a]',
+    headline: '옵티팜 입금 확인',
+    detail: '4,000만원 · 계약서 전달 중',
+    accent: 'up',
+  },
+  {
+    time: '9/3 10:00',
+    badge: '예산',
+    badgeClass: 'bg-[#eef3ff] text-[#4f8cff]',
+    headline: 'Troubleless 9월 확정',
+    detail: '1,000만원 · 송금 대기',
+    accent: 'up',
+  },
+  {
     time: '8/31 14:00',
     badge: '예산',
     badgeClass: 'bg-[#eef3ff] text-[#4f8cff]',
@@ -45,8 +61,8 @@ export const LIVE_FEED: FeedItem[] = [
     time: '8/28 10:00',
     badge: '검토',
     badgeClass: 'bg-[#f0f2f7] text-[#6b728a]',
-    headline: '해브블루 온보딩 진행',
-    detail: '예산 2,000–3,000만원 · 계약 예정 검토 중',
+    headline: '해브블루·Re4day 계약 예정·검토',
+    detail: '온보딩 진행 · 예산 미확인',
     accent: 'neutral',
   },
   {

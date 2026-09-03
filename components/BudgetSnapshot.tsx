@@ -13,6 +13,7 @@ import {
   kpiCompanyRows,
   monthlyBudgetForChart,
   partnerCompanyDonut,
+  unknownBudgetRows,
   type BudgetKpiKey,
   type BudgetStage,
   type MonthlyBudgetChartRow,
@@ -266,6 +267,7 @@ function BudgetCompositionDonut({
     })),
   ).sort((a, b) => b.value - a.value)
 
+  const unknownRows = unknownBudgetRows()
   const brandContents = useMemo(() => {
     if (!hoverBrand || hoverBrand === '__unknown__') return []
     return contentsForBrand(contents, hoverBrand)
@@ -313,6 +315,7 @@ function BudgetCompositionDonut({
       <ul className="mt-4 w-full max-w-[280px] space-y-1 lg:ml-auto mx-auto lg:mr-0">
         {arcs.map(a => {
           const active = hoverBrand === a.key
+          const isUnknown = a.key === '__unknown__'
           return (
             <li
               key={a.key}
@@ -330,10 +333,10 @@ function BudgetCompositionDonut({
                 <span className="text-[12.5px] font-semibold truncate">{a.label}</span>
                 <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
                   {a.pct}%
-                  {a.key === '__unknown__' ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
+                  {isUnknown ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
                 </span>
               </button>
-              {active && a.key !== '__unknown__' && (
+              {active && !isUnknown && (
                 <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch pointer-events-auto">
                   <BudgetBrandContentTooltip
                     brand={a.label}
@@ -343,7 +346,16 @@ function BudgetCompositionDonut({
                   <div className="owm-hover-bridge-x" aria-hidden />
                 </div>
               )}
-              {active && a.key !== '__unknown__' && (
+              {active && isUnknown && unknownRows.length > 0 && (
+                <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch pointer-events-auto">
+                  <BudgetCompositionTooltip
+                    title={`계약 예정·검토 · ${unknownRows.length}개사`}
+                    rows={unknownRows}
+                  />
+                  <div className="owm-hover-bridge-x" aria-hidden />
+                </div>
+              )}
+              {active && !isUnknown && (
                 <div className="lg:hidden mt-1">
                   <BudgetBrandContentTooltip
                     brand={a.label}
@@ -352,13 +364,21 @@ function BudgetCompositionDonut({
                   />
                 </div>
               )}
+              {active && isUnknown && unknownRows.length > 0 && (
+                <div className="lg:hidden mt-1">
+                  <BudgetCompositionTooltip
+                    title={`계약 예정·검토 · ${unknownRows.length}개사`}
+                    rows={unknownRows}
+                  />
+                </div>
+              )}
             </li>
           )
         })}
       </ul>
       <p className="text-[10px] text-slate text-center lg:text-right mt-2 max-w-[280px] lg:ml-auto mx-auto lg:mr-0">
-        <span className="hidden lg:inline">회사명에 마우스를 올리면 콘텐츠 목록</span>
-        <span className="lg:hidden">회사명을 탭하면 콘텐츠 목록</span>
+        <span className="hidden lg:inline">회사명에 마우스를 올리면 콘텐츠·검토 회사 목록</span>
+        <span className="lg:hidden">회사명을 탭하면 콘텐츠·검토 회사 목록</span>
       </p>
     </div>
   )

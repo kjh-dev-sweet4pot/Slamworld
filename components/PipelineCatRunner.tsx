@@ -29,7 +29,7 @@ export default function PipelineCatRunner({
   prepPct?: number
   children: ReactNode
 }) {
-  const prepPos = prepPct <= 0 ? 4 : Math.min(92, Math.max(8, prepPct))
+  const prepPos = prepPct <= 0 ? 4 : Math.min(100, Math.max(8, prepPct))
 
   return (
     <div className="relative pt-[52px]">

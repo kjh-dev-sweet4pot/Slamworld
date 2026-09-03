@@ -289,7 +289,7 @@ export default function Dashboard() {
             </span>
           </h1>
           <div className="text-[11px] text-owm-text2 mt-1 flex flex-wrap gap-1">
-            <span>08.30 기준</span><span className="text-[#bbb]">·</span>
+            <span>09.03 기준</span><span className="text-[#bbb]">·</span>
             <span>수동 수집</span><span className="text-[#bbb]">·</span>
             <span>3월 ~ 8월 누적</span>
           </div>
@@ -339,7 +339,7 @@ export default function Dashboard() {
         <div className="owm-info-box">
           <b className="text-owm-text">수치 기준 —</b> 샤오홍슈·도우인 조회수는 좋아요·저장·댓글로 역산했으며
           상단 누적 조회수에 반영됩니다. 도우인은 실측 조회수가 있으면 실측을 우선합니다.
-          지표는 수동 수집이며 마지막 갱신은 2026.08.30입니다.
+          지표는 수동 수집이며 마지막 갱신은 2026.09.03입니다.
         </div>
       </section>
 

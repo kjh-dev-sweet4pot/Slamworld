@@ -65,7 +65,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '옵티팜',
     budget: '4,000만원',
-    meta: '계약서 전달 중 · 미입금',
+    meta: '9/3 입금 확인 · 계약서 전달 중',
     days: 16,
     status: '9월 마케팅 목표',
     segs: [5, 2, 5, 2, 2],
@@ -94,6 +94,14 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     days: 14,
     status: '9월 마케팅 목표',
     contractCompletedOn: '2026-08-31',
+    segs: [4, 2, 4, 2, 2],
+  },
+  {
+    name: 'Troubleless',
+    budget: '1,000만원',
+    meta: '9월 확정 · 송금 대기',
+    days: 14,
+    status: '9월 마케팅 목표',
     segs: [4, 2, 4, 2, 2],
   },
 ]
@@ -136,7 +144,7 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: '옵티팜',
-    status: '계약서 전달 중',
+    status: '9/3 입금 확인 · 계약서 전달 중',
     pct: 12,
   },
   {
@@ -148,6 +156,11 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
     brand: 'Rxme',
     status: '8/31 입금 확인 · 원브랜디드 영상 가이드 제작 중',
     pct: 55,
+  },
+  {
+    brand: 'Troubleless',
+    status: '9월 확정 · 송금 대기',
+    pct: 12,
   },
 ]
 
@@ -178,7 +191,7 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: '계약서 전달 후 가이드 착수',
     eta: '계약서 전달 중',
     pct: 10,
-    note: '4,000만원 · 미입금',
+    note: '4,000만원 · 9/3 입금 확인',
   },
   {
     brand: '클리어디어',
@@ -186,6 +199,13 @@ export const GUIDE_PREP: PrepItem[] = [
     eta: '계약서 전달 중',
     pct: 10,
     note: '1,000만원 · 입금 예정',
+  },
+  {
+    brand: 'Troubleless',
+    detail: '송금 후 가이드 착수',
+    eta: '송금 대기',
+    pct: 10,
+    note: '1,000만원 · 송금 대기',
   },
 ]
 
@@ -213,14 +233,23 @@ export const REVIEW_BRANDS: PipelineBrand[] = [
   {
     name: '해브블루',
     desc: '온보딩 진행',
-    budget: '2,000–3,000만원',
-    tier: 'large',
-    stage: 2,
-    stageLabel: '가이드·매칭 준비',
+    budget: '미확인',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '온보딩 예정',
     eta: '일정 조율 중',
   },
   {
     name: '달바',
+    desc: '온보딩 예정',
+    budget: '미확인',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '온보딩 예정',
+    eta: '일정 조율 중',
+  },
+  {
+    name: 'Re4day',
     desc: '온보딩 예정',
     budget: '미확인',
     tier: 'small',
