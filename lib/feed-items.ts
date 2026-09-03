@@ -10,14 +10,6 @@ export interface FeedItem {
 
 export const LIVE_FEED: FeedItem[] = [
   {
-    time: '9/3 11:00',
-    badge: '입금',
-    badgeClass: 'bg-[#ecfdf5] text-[#16a34a]',
-    headline: '옵티팜 입금 확인',
-    detail: '4,000만원 · 계약서 전달 중',
-    accent: 'up',
-  },
-  {
     time: '9/3 10:00',
     badge: '예산',
     badgeClass: 'bg-[#eef3ff] text-[#4f8cff]',
