@@ -23,6 +23,7 @@ export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
   { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/31 입금 확인' },
   { brand: 'Troubleless', amount: 1000, payment: '송금 대기', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '9월 확정 · 송금 대기' },
+  { brand: 'UIQ', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '9/3 입금 확인 · 진행 대기' },
   { brand: '해브블루', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
   { brand: '달바', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
   { brand: 'Re4day', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
@@ -60,7 +61,7 @@ export function budgetItemColor(
 
 export function budgetStageLabel(stage: BudgetStage | '미정'): string {
   if (stage === '미정' || stage === '계약 예정') return '계약 예정·검토'
-  if (stage === '10월 예정') return '차후 예산'
+  if (stage === '10월 예정') return '계약 논의중'
   return stage
 }
 
@@ -350,10 +351,10 @@ export function computeBudgetSummary(): BudgetSummary {
 // ponytail: totals drift → 상단 KPI 깨짐
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
-  if (s.securedTotal !== 14000) throw new Error(`securedTotal expected 14000, got ${s.securedTotal}`)
-  if (s.securedPaid !== 8000) throw new Error(`securedPaid expected 8000, got ${s.securedPaid}`)
+  if (s.securedTotal !== 15000) throw new Error(`securedTotal expected 15000, got ${s.securedTotal}`)
+  if (s.securedPaid !== 9000) throw new Error(`securedPaid expected 9000, got ${s.securedPaid}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
-  if (brands('secured') !== 'Rxme,TeloAct,Troubleless,닥터 리앤장,옵티팜,클리어디어') {
+  if (brands('secured') !== 'Rxme,TeloAct,Troubleless,UIQ,닥터 리앤장,옵티팜,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
   }
   if (brands('planned') !== 'Re4day,달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
@@ -363,6 +364,6 @@ if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const chart = monthlyBudgetForChart()
   if (chart[0]?.cumulative !== 4000) throw new Error(`jul cumulative expected 4000, got ${chart[0]?.cumulative}`)
   if (chart[1]?.cumulative !== 13000) throw new Error(`aug cumulative expected 13000, got ${chart[1]?.cumulative}`)
-  if (chart[2]?.cumulative !== 14000) throw new Error(`sep cumulative expected 14000, got ${chart[2]?.cumulative}`)
-  if (chart[3]?.cumulative !== 15100) throw new Error(`oct cumulative expected 15100, got ${chart[3]?.cumulative}`)
+  if (chart[2]?.cumulative !== 15000) throw new Error(`sep cumulative expected 15000, got ${chart[2]?.cumulative}`)
+  if (chart[3]?.cumulative !== 16100) throw new Error(`oct cumulative expected 16100, got ${chart[3]?.cumulative}`)
 }

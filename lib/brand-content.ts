@@ -7,9 +7,14 @@ export const BRAND_CONTENT_ALIASES: Record<string, string[]> = {
   '옵티팜': ['옵티팜'],
   '클리어디어': ['클리어디어', '클리어'],
   'Rxme': ['Rxme', 'rxme'],
+  'Troubleless': ['Troubleless', '트러블리스'],
+  'UIQ': ['UIQ', '유아이큐'],
   '해브블루': ['해브블루', '해브'],
   '스킨스탠다드': ['스킨스탠다드', '스킨'],
 }
+
+/** 콘텐츠 성과 필터용 브랜드 목록 */
+export const CONTENT_FILTER_BRANDS = Object.keys(BRAND_CONTENT_ALIASES)
 
 export function contentMatchesBrand(brands: string | null | undefined, brand: string): boolean {
   if (!brands) return false

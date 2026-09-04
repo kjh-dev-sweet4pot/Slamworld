@@ -11,11 +11,13 @@ import ChannelDonut from '@/components/ChannelDonut'
 import RegionDonut from '@/components/RegionDonut'
 import BrandPipeline from '@/components/BrandPipeline'
 import LocationStatus from '@/components/LocationStatus'
+import LoginGate from '@/components/LoginGate'
 import type { Content, Summary, LocationSummary } from '@/lib/types'
 import { channelSummaryFromContents } from '@/lib/channel-summary'
 import { contentViews, contentViewsDisplay } from '@/lib/content-views'
-import { contentMatchesBrand } from '@/lib/brand-content'
+import { contentMatchesBrand, CONTENT_FILTER_BRANDS } from '@/lib/brand-content'
 import { AUGUST_2026_PINNED, mergePinnedRows, PERF_PINNED } from '@/lib/content-priority'
+import { useAccess } from '@/lib/access-context'
 
 type Tab = 'perf' | 'month' | 'all'
 
@@ -95,6 +97,15 @@ function monthSub(ym: string): string {
 }
 
 export default function Dashboard() {
+  return (
+    <LoginGate>
+      <DashboardInner />
+    </LoginGate>
+  )
+}
+
+function DashboardInner() {
+  const { showSales, logout, level } = useAccess()
   const [summary, setSummary] = useState<Summary | null>(null)
   const [locations, setLocations] = useState<LocationSummary[]>([])
   const [monthly, setMonthly] = useState<{ month: string; count: number; views: number; likes: number; saves: number }[]>([])
@@ -247,15 +258,15 @@ export default function Dashboard() {
   }).slice(0, 100)
 
   const NAV = [
-    ['예산', '#s-budget'],
-    ['누적 성과', '#s-summary'],
-    ['방문형 성과', '#s1'],
-    ['확정·진행', '#s-brands'],
-    ['준비 중', '#s-prep'],
-    ['계약 예정', '#s-pipeline'],
-    ['지점 현황', '#s2'],
-    ['자료', '#s3'],
-  ] as const
+    ...(showSales ? [['예산', '#s-budget'] as const] : []),
+    ['누적 성과', '#s-summary'] as const,
+    ['방문형 성과', '#s1'] as const,
+    ['확정·진행', '#s-brands'] as const,
+    ['준비 중', '#s-prep'] as const,
+    ['계약 예정', '#s-pipeline'] as const,
+    ['지점 현황', '#s2'] as const,
+    ['자료', '#s3'] as const,
+  ]
 
   const sideCards = (
     <>
@@ -294,9 +305,23 @@ export default function Dashboard() {
             <span>3월 ~ 8월 누적</span>
           </div>
         </div>
-        <span className="text-xs text-owm-text2 bg-[#f0f2f7] px-3.5 py-1.5 rounded-2xl border border-owm-border">
-          8개 지점
-        </span>
+        <div className="flex items-center gap-2">
+          {level === 'meeting' && (
+            <span className="text-[10.5px] font-semibold text-owm-text2 bg-[#f0f2f7] px-2.5 py-1 rounded-2xl border border-owm-border">
+              미팅 보기
+            </span>
+          )}
+          <span className="text-xs text-owm-text2 bg-[#f0f2f7] px-3.5 py-1.5 rounded-2xl border border-owm-border">
+            8개 지점
+          </span>
+          <button
+            type="button"
+            onClick={logout}
+            className="text-[11px] font-semibold text-owm-text2 hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white"
+          >
+            로그아웃
+          </button>
+        </div>
       </header>
 
       <nav className="owm-tab-bar">
@@ -327,7 +352,7 @@ export default function Dashboard() {
           SQL Editor에서 <code className="text-[11px]">supabase/seed.sql</code> 을 실행해 주세요. (329건)
         </div>
       )}
-      <BudgetSnapshot onViewBrandContent={handleViewBrandContent} />
+      {showSales && <BudgetSnapshot onViewBrandContent={handleViewBrandContent} />}
 
       <section id="s-summary" className="scroll-mt-28 mb-3">
         <div className="owm-sec-title">
@@ -352,7 +377,7 @@ export default function Dashboard() {
       {/* ── §1 콘텐츠 현황 ── */}
       <section id="s1" className="mb-10 scroll-mt-20">
         <SectionHeader no="01" title="OWM 방문형 콘텐츠 성과"
-          sub="명동·북촌 방문형 캠페인 성과입니다. 아래에서 더 볼 수 있습니다."
+          sub="브랜드·캠페인·지점·채널로 필터해 성과를 확인할 수 있습니다."
           right={tab === 'perf'
             ? `${Math.min(visibleCount, scopedContents.length)}건`
             : `${scopedContents.length}건`}
@@ -376,6 +401,20 @@ export default function Dashboard() {
 
         {/* 필터 */}
         <div className="flex gap-2 flex-wrap mb-4">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-slate font-semibold">브랜드</span>
+            <select
+              value={brandFilter ?? '전체'}
+              onChange={e => setBrandFilter(e.target.value === '전체' ? null : e.target.value)}
+              className="text-[12px] bg-white/70 border border-mist rounded px-2 py-1.5
+                text-ink focus:outline-none focus:border-azure"
+            >
+              <option>전체</option>
+              {CONTENT_FILTER_BRANDS.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
           {([
             ['캠페인', CAMPAIGNS, campaign, setCampaign],
             ['지점',   LOCATIONS, location, setLocation],
@@ -401,23 +440,6 @@ export default function Dashboard() {
                 px-2.5 py-1.5 hover:border-sky hover:text-azure-deep transition-colors">
               초기화
             </button>
-          )}
-          {brandFilter && (
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              <span className="text-[11px] text-slate font-semibold">회사</span>
-              <span className="inline-flex items-center gap-1.5 text-[12px] bg-azure/10 border border-azure/25
-                text-azure-deep rounded px-2 py-1.5 font-semibold">
-                {brandFilter}
-                <button
-                  type="button"
-                  onClick={() => setBrandFilter(null)}
-                  className="text-slate hover:text-azure-deep transition-colors leading-none"
-                  aria-label="회사 필터 해제"
-                >
-                  ×
-                </button>
-              </span>
-            </div>
           )}
         </div>
 
@@ -657,7 +679,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <BrandPipeline />
+      <BrandPipeline onViewBrandContent={handleViewBrandContent} />
 
       <LocationStatus locations={locations} locationMonthly={locationMonthly} />
 
