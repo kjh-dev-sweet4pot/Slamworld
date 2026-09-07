@@ -104,6 +104,14 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     status: '9월 마케팅 목표',
     segs: [4, 2, 4, 2, 2],
   },
+  {
+    name: 'UIQ',
+    budget: '1,000만원',
+    meta: '9/3 입금 확인 · 진행 대기',
+    days: 14,
+    status: '진행 대기',
+    segs: [4, 2, 4, 2, 2],
+  },
 ]
 
 /** 8월 말 가이드 확정 → 9월 초 방문 시작 */
@@ -162,6 +170,11 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
     status: '9월 확정 · 송금 대기',
     pct: 12,
   },
+  {
+    brand: 'UIQ',
+    status: '9/3 입금 확인 · 진행 대기',
+    pct: 0,
+  },
 ]
 
 export const GUIDE_PREP: PrepItem[] = [
@@ -206,6 +219,13 @@ export const GUIDE_PREP: PrepItem[] = [
     eta: '송금 대기',
     pct: 10,
     note: '1,000만원 · 송금 대기',
+  },
+  {
+    brand: 'UIQ',
+    detail: '진행 대기',
+    eta: '대기',
+    pct: 0,
+    note: '1,000만원 · 입금 완료',
   },
 ]
 

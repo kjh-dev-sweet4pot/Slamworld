@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Content } from '@/lib/types'
 import { contentViewsDisplay } from '@/lib/content-views'
 import { influencerFeeManwon } from '@/lib/influencer-fee'
+import { useShowSales } from '@/lib/access-context'
 
 const PERF_STYLE = {
   high:    { dot: 'bg-azure', label: '상위', text: 'text-azure-deep' },
@@ -39,6 +40,7 @@ function Avatar({ src, initial }: { src: string; initial: string }) {
 }
 
 export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }) {
+  const showSales = useShowSales()
   const perf = PERF_STYLE[c.performance ?? 'no_data']
   const initial = c.influencer_name.slice(0, 2).toUpperCase()
   const photo = c.profile_image_url
@@ -47,7 +49,7 @@ export default function ContentCard({ c, tags }: { c: Content; tags?: string[] }
   const viewsDisplay = displayViews
     ? (viewsEstimated ? `~${fmt(displayViews)}` : fmt(displayViews))
     : '—'
-  const feeManwon = influencerFeeManwon(c.influencer_name)
+  const feeManwon = showSales ? influencerFeeManwon(c.influencer_name) : null
 
   return (
     <article className="glass-solid p-3.5 pb-9 relative transition-all hover:-translate-y-0.5

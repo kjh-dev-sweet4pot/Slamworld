@@ -10,6 +10,14 @@ export interface FeedItem {
 
 export const LIVE_FEED: FeedItem[] = [
   {
+    time: '9/3 16:00',
+    badge: '입금',
+    badgeClass: 'bg-[#ecfdf5] text-[#16a34a]',
+    headline: 'UIQ 입금 확인',
+    detail: '1,000만원 · 진행 대기',
+    accent: 'up',
+  },
+  {
     time: '9/3 10:00',
     badge: '예산',
     badgeClass: 'bg-[#eef3ff] text-[#4f8cff]',

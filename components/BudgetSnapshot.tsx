@@ -64,8 +64,8 @@ const STAGE_LEGEND: { label: string; color: string }[] = [
   { label: '확정 · 입금 완료', color: budgetItemColor('확정 및 진행', '입금 완료') },
   { label: '확정 · 입금 예정', color: budgetItemColor('확정 및 진행', '입금 예정') },
   { label: '확정 · 미입금', color: budgetItemColor('확정 및 진행', '미입금') },
+  { label: '계약 논의중', color: budgetItemColor('10월 예정', '검토 중') },
   { label: '계약 예정·검토', color: budgetItemColor('계약 예정', '검토 중') },
-  { label: '차후 예산', color: budgetItemColor('10월 예정', '검토 중') },
 ]
 
 const KPI_PART_COLOR = {
@@ -630,20 +630,20 @@ export default function BudgetSnapshot({
       amount: s.securedTotal,
     },
     {
+      key: 'oct',
+      k: '계약 논의중',
+      v: fmtBudgetManwon(s.byStage['10월 예정'].total),
+      d: `${s.byStage['10월 예정'].count}개사 · 10월~`,
+      color: KPI_PART_COLOR.oct,
+      amount: s.byStage['10월 예정'].total,
+    },
+    {
       key: 'planned',
       k: '계약 예정·검토',
       v: fmtBudgetManwon(s.byStage['계약 예정'].total),
       d: `${s.byStage['계약 예정'].count}개사`,
       color: KPI_PART_COLOR.planned,
       amount: s.byStage['계약 예정'].total,
-    },
-    {
-      key: 'oct',
-      k: '차후 예산',
-      v: fmtBudgetManwon(s.byStage['10월 예정'].total),
-      d: `${s.byStage['10월 예정'].count}개사 · 10월~`,
-      color: KPI_PART_COLOR.oct,
-      amount: s.byStage['10월 예정'].total,
     },
   ]
 
@@ -655,7 +655,7 @@ export default function BudgetSnapshot({
             k="예산 총액"
             v={fmtBudgetManwon(s.pipelineTotal)}
             unit="만원"
-            d="확보 + 계약 예정·검토 + 차후"
+            d="확보 + 계약 논의 + 계약 예정·검토"
             rows={kpiCompanyRows('pipeline')}
             color={KPI_PART_COLOR.total}
           />
@@ -701,7 +701,7 @@ export default function BudgetSnapshot({
               ))}
             </div>
             <p className="sm:hidden text-[10px] text-slate text-center">
-              예산 총액 = 확보 + 계약 예정·검토 + 차후
+              예산 총액 = 확보 + 계약 논의 + 계약 예정·검토
             </p>
           </div>
         </div>

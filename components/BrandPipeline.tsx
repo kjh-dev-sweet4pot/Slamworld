@@ -1,3 +1,4 @@
+'use client'
 import {
   CONTRACT_BRANDS,
   COMMON_TIMELINE,
@@ -15,6 +16,7 @@ import {
   type BrandTier,
 } from '@/lib/brand-pipeline'
 import PipelineCatRunner from '@/components/PipelineCatRunner'
+import { useShowSales } from '@/lib/access-context'
 
 const SEG_CLASS = [
   'bg-[#9ED2FF] text-azure-deep',
@@ -51,18 +53,38 @@ function SectionHeader({ no, title, sub, right }: {
   )
 }
 
-function PipelineRow({ p, rank }: { p: typeof REVIEW_BRANDS[0]; rank: number }) {
+function PipelineRow({
+  p,
+  rank,
+  showSales,
+  onViewBrandContent,
+}: {
+  p: typeof REVIEW_BRANDS[0]
+  rank: number
+  showSales: boolean
+  onViewBrandContent?: (brand: string) => void
+}) {
   return (
     <div className="glass px-5 py-3.5 mb-2 flex items-center gap-4 flex-wrap hover:border-sky transition-colors">
       <span className={`num text-[19px] font-semibold w-7 flex-none tracking-tight ${rank === 1 ? 'text-azure' : 'text-mist'}`}>
         {String(rank).padStart(2, '0')}
       </span>
       <div className="flex-1 min-w-[170px]">
-        <div className="text-[15px] font-extrabold tracking-tight">{p.name}</div>
+        {onViewBrandContent ? (
+          <button
+            type="button"
+            onClick={() => onViewBrandContent(p.name)}
+            className="text-[15px] font-extrabold tracking-tight text-left hover:text-azure transition-colors"
+          >
+            {p.name}
+          </button>
+        ) : (
+          <div className="text-[15px] font-extrabold tracking-tight">{p.name}</div>
+        )}
         <div className="text-[11.5px] text-body mt-0.5">{p.desc}</div>
       </div>
       <span className={`text-[11px] font-bold px-2.5 py-1 rounded-[3px] ${TIER_STYLE[p.tier]}`}>
-        {TIER_LABEL[p.tier]} · {p.budget}
+        {showSales ? `${TIER_LABEL[p.tier]} · ${p.budget}` : TIER_LABEL[p.tier]}
       </span>
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4].map(s => (
@@ -75,7 +97,13 @@ function PipelineRow({ p, rank }: { p: typeof REVIEW_BRANDS[0]; rank: number }) 
   )
 }
 
-export default function BrandPipeline() {
+export default function BrandPipeline({
+  onViewBrandContent,
+}: {
+  onViewBrandContent?: (brand: string) => void
+}) {
+  const showSales = useShowSales()
+
   return (
     <>
       {/* ── 확정 및 진행 ── */}
@@ -83,8 +111,10 @@ export default function BrandPipeline() {
         <SectionHeader
           no="02"
           title="확정 및 진행 브랜드"
-          sub="입금 완료 및 예정 브랜드입니다. 8월 말 가이드 확정 후 9월 초 방문 마케팅을 목표로 합니다."
-          right={`${CONTRACT_BRANDS.length}개사 · 예산 규모순`}
+          sub={showSales
+            ? '입금 완료 및 예정 브랜드입니다. 브랜드명을 누르면 콘텐츠 성과로 이동합니다.'
+            : '확정·진행 중인 브랜드입니다. 브랜드명을 누르면 콘텐츠 성과로 이동합니다.'}
+          right={showSales ? `${CONTRACT_BRANDS.length}개사 · 예산 규모순` : `${CONTRACT_BRANDS.length}개사`}
         />
 
         <div className="glass flex flex-wrap items-center gap-6 px-6 py-5 mb-2.5">
@@ -111,13 +141,32 @@ export default function BrandPipeline() {
           return (
           <div key={b.name} className="glass px-5 py-4 mb-2">
             <div className="flex items-baseline gap-2.5 flex-wrap mb-2.5">
-              <span className="text-[15px] font-extrabold tracking-tight">{b.name}</span>
+              {onViewBrandContent ? (
+                <button
+                  type="button"
+                  onClick={() => onViewBrandContent(b.name)}
+                  className="text-[15px] font-extrabold tracking-tight hover:text-azure transition-colors"
+                >
+                  {b.name}
+                </button>
+              ) : (
+                <span className="text-[15px] font-extrabold tracking-tight">{b.name}</span>
+              )}
               <span className="num text-[10.5px] text-slate">{b.meta}</span>
               <span className="num text-[13px] font-semibold text-azure-deep ml-auto">
-                {b.budget}
-                <small className="text-[10px] text-slate font-normal ml-1.5">
-                  계약 완료 후 약 {b.days}일
-                </small>
+                {showSales && (
+                  <>
+                    {b.budget}
+                    <small className="text-[10px] text-slate font-normal ml-1.5">
+                      계약 완료 후 약 {b.days}일
+                    </small>
+                  </>
+                )}
+                {!showSales && (
+                  <small className="text-[10px] text-slate font-normal">
+                    계약 완료 후 약 {b.days}일
+                  </small>
+                )}
               </span>
             </div>
 
@@ -181,7 +230,9 @@ export default function BrandPipeline() {
           </div>
           )
         })}
-        <p className="mt-3 px-1 text-[11.5px] text-slate leading-relaxed">{BUDGET_DISCLAIMER}</p>
+        {showSales && (
+          <p className="mt-3 px-1 text-[11.5px] text-slate leading-relaxed">{BUDGET_DISCLAIMER}</p>
+        )}
       </section>
 
       {/* ── 준비 중 ── */}
@@ -218,7 +269,17 @@ export default function BrandPipeline() {
             {SEPTEMBER_BRAND_STATUS.map(s => (
               <div key={s.brand} className="py-2 border-b border-mist last:border-0 last:pb-0">
                 <div className="flex items-baseline gap-2 mb-1.5">
-                  <span className="text-[13px] font-bold min-w-[5.5rem]">{s.brand}</span>
+                  {onViewBrandContent ? (
+                    <button
+                      type="button"
+                      onClick={() => onViewBrandContent(s.brand)}
+                      className="text-[13px] font-bold min-w-[5.5rem] text-left hover:text-azure transition-colors"
+                    >
+                      {s.brand}
+                    </button>
+                  ) : (
+                    <span className="text-[13px] font-bold min-w-[5.5rem]">{s.brand}</span>
+                  )}
                   <span className="text-[11.5px] text-body flex-1">{s.status}</span>
                   <span className="num text-[10px] text-slate">{s.pct}%</span>
                 </div>
@@ -240,7 +301,17 @@ export default function BrandPipeline() {
             {GUIDE_PREP.map(g => (
               <div key={g.brand} className="py-3 border-b border-mist last:border-0 last:pb-0">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-[13px] font-bold">{g.brand}</span>
+                  {onViewBrandContent ? (
+                    <button
+                      type="button"
+                      onClick={() => onViewBrandContent(g.brand)}
+                      className="text-[13px] font-bold text-left hover:text-azure transition-colors"
+                    >
+                      {g.brand}
+                    </button>
+                  ) : (
+                    <span className="text-[13px] font-bold">{g.brand}</span>
+                  )}
                   <span className="text-[11.5px] text-body truncate">{g.detail}</span>
                   <span className="num text-[10.5px] text-slate ml-auto whitespace-nowrap">{g.eta}</span>
                 </div>
@@ -251,7 +322,7 @@ export default function BrandPipeline() {
                   }} />
                 </div>
                 <div className="flex justify-between num text-[10px] text-slate mt-1">
-                  <span>{g.note}</span>
+                  <span>{showSales ? g.note : ''}</span>
                   <span>{g.pct}%</span>
                 </div>
               </div>
@@ -264,7 +335,17 @@ export default function BrandPipeline() {
             {MATCH_PREP.map(m => (
               <div key={m.brand} className="py-3 border-b border-mist last:border-0 last:pb-0">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-[13px] font-bold">{m.brand}</span>
+                  {onViewBrandContent ? (
+                    <button
+                      type="button"
+                      onClick={() => onViewBrandContent(m.brand)}
+                      className="text-[13px] font-bold text-left hover:text-azure transition-colors"
+                    >
+                      {m.brand}
+                    </button>
+                  ) : (
+                    <span className="text-[13px] font-bold">{m.brand}</span>
+                  )}
                   <span className="text-[11.5px] text-body">{m.detail}</span>
                   <span className="num text-[10.5px] text-slate ml-auto whitespace-nowrap">
                     {m.total > 0 ? `${m.done} / ${m.total}건` : '—'}
@@ -286,7 +367,9 @@ export default function BrandPipeline() {
           </div>
         </div>
 
-        <p className="mt-3 px-1 text-[11.5px] text-slate leading-relaxed">{MARKETING_NOTE}</p>
+        {showSales && (
+          <p className="mt-3 px-1 text-[11.5px] text-slate leading-relaxed">{MARKETING_NOTE}</p>
+        )}
       </section>
 
       {/* ── 계약 예정 및 검토 ── */}
@@ -299,7 +382,7 @@ export default function BrandPipeline() {
         />
 
         {REVIEW_BRANDS.map((p, i) => (
-          <PipelineRow key={p.name} p={p} rank={i + 1} />
+          <PipelineRow key={p.name} p={p} rank={i + 1} showSales={showSales} onViewBrandContent={onViewBrandContent} />
         ))}
 
         <div className="mt-6 mb-3">
@@ -308,7 +391,7 @@ export default function BrandPipeline() {
         </div>
 
         {OCTOBER_BRANDS.map((p, i) => (
-          <PipelineRow key={p.name} p={p} rank={i + 1} />
+          <PipelineRow key={p.name} p={p} rank={i + 1} showSales={showSales} onViewBrandContent={onViewBrandContent} />
         ))}
       </section>
     </>
