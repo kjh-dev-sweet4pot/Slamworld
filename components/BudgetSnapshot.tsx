@@ -8,8 +8,13 @@ import {
   budgetItemColor,
   budgetPaymentLabel,
   budgetStageLabel,
+  budgetMid,
+  budgetRowKey,
+  budgetRowLabel,
+  budgetsForBrand,
   computeBudgetSummary,
   fmtBudgetManwon,
+  fmtBudgetRange,
   kpiCompanyRows,
   monthlyBudgetForChart,
   partnerCompanyDonut,
@@ -270,7 +275,8 @@ function BudgetCompositionDonut({
   const unknownRows = unknownBudgetRows()
   const brandContents = useMemo(() => {
     if (!hoverBrand || hoverBrand === '__unknown__') return []
-    return contentsForBrand(contents, hoverBrand)
+    const brand = hoverBrand.includes('::') ? hoverBrand.split('::')[0]! : hoverBrand
+    return contentsForBrand(contents, brand)
   }, [contents, hoverBrand])
 
   if (arcs.length === 0) {
@@ -339,7 +345,7 @@ function BudgetCompositionDonut({
               {active && !isUnknown && (
                 <div className="absolute right-full top-0 z-30 hidden lg:flex items-stretch pointer-events-auto">
                   <BudgetBrandContentTooltip
-                    brand={a.label}
+                    brand={a.key.includes('::') ? a.key.split('::')[0]! : a.label}
                     items={brandContents}
                     onViewContent={onViewBrandContent}
                   />
@@ -358,7 +364,7 @@ function BudgetCompositionDonut({
               {active && !isUnknown && (
                 <div className="lg:hidden mt-1">
                   <BudgetBrandContentTooltip
-                    brand={a.label}
+                    brand={a.key.includes('::') ? a.key.split('::')[0]! : a.label}
                     items={brandContents}
                     onViewContent={onViewBrandContent}
                   />
@@ -754,3 +760,123 @@ export default function BudgetSnapshot({
     </section>
   )
 }
+
+/** 회원사 로그인용 — 본인 예산만 */
+export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
+  const rows = budgetsForBrand(brand)
+  const total = rows.reduce((s, b) => s + budgetMid(b), 0)
+  const spent = rows.filter(b => b.useStatus === '기 소진').reduce((s, b) => s + budgetMid(b), 0)
+  const planned = rows.filter(b => b.useStatus === '사용 예정').reduce((s, b) => s + budgetMid(b), 0)
+  const other = total - spent - planned
+
+  return (
+    <section id="s-budget" className="mb-3 scroll-mt-28">
+      <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 p-2.5 shadow-[var(--owm-shadow)]">
+        <div className="owm-sec-title mb-2.5 px-0.5">
+          <span className="owm-sec-no">예산</span>
+          {brand} 예산
+          <span className="text-xs font-normal text-owm-text2">회원사 전용</span>
+        </div>
+        <div className={`grid gap-2 ${rows.length > 1 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
+          <div
+            className="owm-kpi-card"
+            style={{ '--bc': KPI_PART_COLOR.total } as CSSProperties}
+            data-emoji="💰"
+          >
+            <div className="owm-kpi-header">
+              <span className="owm-kpi-dot" />
+              <span className="owm-kpi-label">예산 총액</span>
+            </div>
+            <div className="owm-kpi-amount">
+              {fmtBudgetManwon(total)}<small>만원</small>
+            </div>
+            <div className="owm-kpi-divider" />
+            <div className="owm-kpi-sub">
+              <span>{rows.length > 1 ? `캠페인 ${rows.length}건` : budgetPaymentLabel(rows[0]?.payment ?? '검토 중')}</span>
+            </div>
+          </div>
+
+          {spent > 0 && (
+            <div
+              className="owm-kpi-card"
+              style={{ '--bc': '#64748B' } as CSSProperties}
+              data-emoji="✓"
+            >
+              <div className="owm-kpi-header">
+                <span className="owm-kpi-dot" />
+                <span className="owm-kpi-label">기 소진</span>
+              </div>
+              <div className="owm-kpi-amount">
+                {fmtBudgetManwon(spent)}<small>만원</small>
+              </div>
+              <div className="owm-kpi-divider" />
+              <div className="owm-kpi-sub"><span>집행 완료 예산</span></div>
+            </div>
+          )}
+
+          {planned > 0 && (
+            <div
+              className="owm-kpi-card"
+              style={{ '--bc': KPI_PART_COLOR.secured } as CSSProperties}
+              data-emoji="→"
+            >
+              <div className="owm-kpi-header">
+                <span className="owm-kpi-dot" />
+                <span className="owm-kpi-label">사용 예정</span>
+              </div>
+              <div className="owm-kpi-amount">
+                {fmtBudgetManwon(planned)}<small>만원</small>
+              </div>
+              <div className="owm-kpi-divider" />
+              <div className="owm-kpi-sub"><span>추가 캠페인 예산</span></div>
+            </div>
+          )}
+
+          {spent <= 0 && planned <= 0 && other > 0 && (
+            <div
+              className="owm-kpi-card"
+              style={{ '--bc': KPI_PART_COLOR.secured } as CSSProperties}
+              data-emoji="📌"
+            >
+              <div className="owm-kpi-header">
+                <span className="owm-kpi-dot" />
+                <span className="owm-kpi-label">확보 예산</span>
+              </div>
+              <div className="owm-kpi-amount">
+                {fmtBudgetManwon(other)}<small>만원</small>
+              </div>
+              <div className="owm-kpi-divider" />
+              <div className="owm-kpi-sub">
+                <span>{budgetStageLabel(rows[0]?.stage ?? '미정')} · {budgetPaymentLabel(rows[0]?.payment ?? '검토 중')}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {rows.length > 0 && (
+          <ul className="mt-2.5 space-y-1.5 px-0.5">
+            {rows.map(b => (
+              <li
+                key={budgetRowKey(b)}
+                className="flex items-baseline gap-2 text-[12.5px] py-1.5 border-b border-[var(--owm-border)] last:border-0"
+              >
+                <span
+                  className="w-2 h-2 rounded-[2px] shrink-0"
+                  style={{ background: budgetItemColor(b.stage, b.payment) }}
+                />
+                <span className="font-semibold text-owm-text min-w-0 truncate">
+                  {budgetRowLabel(b)}
+                  {b.useStatus ? ` · ${b.useStatus}` : ''}
+                </span>
+                <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
+                  {fmtBudgetRange(b)} · {budgetPaymentLabel(b.payment)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  )
+}
+

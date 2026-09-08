@@ -54,12 +54,20 @@ export interface PipelineBrand {
 /** 입금 완료·예정 — 9월 마케팅 목표 (예산 큰 순) */
 export const CONTRACT_BRANDS: ContractBrand[] = [
   {
-    name: 'TeloAct',
+    name: 'TeloAct 1차',
     budget: '4,000만원',
-    meta: '7월 입금 확인 · 집행 완료',
+    meta: '기 소진 · 7월 집행 완료',
     days: 16,
-    status: '7월 마케팅 완료',
+    status: '1차 마케팅 완료',
     contractCompletedOn: '2026-07-10',
+    segs: [4, 2, 4, 3, 2],
+  },
+  {
+    name: 'TeloAct 2차',
+    budget: '6,000만원',
+    meta: '사용 예정 · 2차 캠페인',
+    days: 16,
+    status: '2차 준비',
     segs: [4, 2, 4, 3, 2],
   },
   {
@@ -141,9 +149,14 @@ export const COMMON_TIMELINE: TimelineMilestone[] = [
 /** 9월 마케팅 타겟 — 브랜드별 상세 현황 */
 export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   {
-    brand: 'TeloAct',
-    status: '7월 입금 확인 · 명동·남포 캠페인 집행 완료',
-    pct: 85,
+    brand: 'TeloAct 1차',
+    status: '기 소진 · 명동·남포 캠페인 집행 완료',
+    pct: 100,
+  },
+  {
+    brand: 'TeloAct 2차',
+    status: '사용 예정 · 6,000만 · 가이드 대기',
+    pct: 0,
   },
   {
     brand: '닥터 리앤장',
@@ -179,11 +192,18 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
 
 export const GUIDE_PREP: PrepItem[] = [
   {
-    brand: 'TeloAct',
-    detail: '7월 캠페인 · 발행 완료',
+    brand: 'TeloAct 1차',
+    detail: '1차 캠페인 · 발행 완료',
     eta: '완료',
-    pct: 85,
-    note: '7월 입금 확인',
+    pct: 100,
+    note: '기 소진 4,000만원',
+  },
+  {
+    brand: 'TeloAct 2차',
+    detail: '2차 가이드 대기',
+    eta: '사용 예정',
+    pct: 0,
+    note: '사용 예정 6,000만원',
   },
   {
     brand: '닥터 리앤장',
@@ -325,6 +345,15 @@ export function contractPrepProgress(
 export function formatContractDate(iso: string): string {
   const [, m, d] = iso.split('-')
   return `${Number(m)}/${Number(d)}`
+}
+
+/** "TeloAct 1차" → "TeloAct" — 콘텐츠 필터·회원사 매칭용 */
+export function pipelineContentBrand(label: string): string {
+  return label.replace(/\s+\d+차$/, '').trim()
+}
+
+export function matchesPartnerBrand(label: string, partnerBrand: string): boolean {
+  return label === partnerBrand || pipelineContentBrand(label) === partnerBrand
 }
 
 export const BUDGET_DISCLAIMER =

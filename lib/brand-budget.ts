@@ -2,9 +2,15 @@
 
 export type BudgetPayment = '입금 완료' | '입금 예정' | '송금 대기' | '미입금'
 export type BudgetStage = '확정 및 진행' | '계약 예정' | '10월 예정'
+/** 캠페인 집행 상태 (동일 브랜드 복수 캠페인용) */
+export type BudgetUseStatus = '기 소진' | '사용 예정'
 
 export interface BrandBudget {
   brand: string
+  /** 동일 브랜드 복수 캠페인 구분 (1차, 2차 …) */
+  campaign?: string
+  /** 기 소진 / 사용 예정 */
+  useStatus?: BudgetUseStatus
   /** 만원 단위. rangeMax 있으면 구간 */
   amount: number
   rangeMax?: number
@@ -17,7 +23,8 @@ export interface BrandBudget {
 }
 
 export const BRAND_BUDGETS: BrandBudget[] = [
-  { brand: 'TeloAct', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-07', marketingMonth: '2026-07', note: '7월 집행 완료' },
+  { brand: 'TeloAct', campaign: '1차', useStatus: '기 소진', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-07', marketingMonth: '2026-07', note: '1차 캠페인 · 기 소진' },
+  { brand: 'TeloAct', campaign: '2차', useStatus: '사용 예정', amount: 6000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '2차 캠페인 · 사용 예정' },
   { brand: '옵티팜', amount: 4000, payment: '미입금', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
   { brand: '닥터 리앤장', amount: 3000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/30 입금 확인' },
   { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
@@ -29,6 +36,18 @@ export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: 'Re4day', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
   { brand: '스킨스탠다드', amount: 1100, payment: '검토 중', stage: '10월 예정', securedMonth: null, marketingMonth: '2026-10' },
 ]
+
+export function budgetRowKey(b: BrandBudget): string {
+  return b.campaign ? `${b.brand}::${b.campaign}` : b.brand
+}
+
+export function budgetRowLabel(b: BrandBudget): string {
+  return b.campaign ? `${b.brand} · ${b.campaign}` : b.brand
+}
+
+export function budgetsForBrand(brand: string): BrandBudget[] {
+  return BRAND_BUDGETS.filter(b => b.brand === brand)
+}
 
 /** 협업 회사 도넛 — 브랜드별 색 */
 export const PARTNER_BRAND_COLOR: Record<string, string> = {
@@ -99,8 +118,8 @@ export function partnerCompanyDonut(): { slices: PartnerDonutSlice[]; totalWeigh
   const unknown = BRAND_BUDGETS.filter(b => budgetMid(b) <= 0)
 
   const slices: PartnerDonutSlice[] = known.map(b => ({
-    key: b.brand,
-    label: b.brand,
+    key: budgetRowKey(b),
+    label: budgetRowLabel(b),
     weight: budgetMid(b),
     color: budgetItemColor(b.stage, b.payment),
     stage: b.stage,
@@ -118,15 +137,19 @@ export function partnerCompanyDonut(): { slices: PartnerDonutSlice[]; totalWeigh
   }
 
   const totalWeight = slices.reduce((s, x) => s + x.weight, 0)
-  return { slices, totalWeight, count: BRAND_BUDGETS.length }
+  const companyCount = new Set(BRAND_BUDGETS.map(b => b.brand)).size
+  return { slices, totalWeight, count: companyCount }
 }
 
 function toTooltipRows(list: BrandBudget[]): PartnerTooltipRow[] {
   const known = list.filter(b => budgetMid(b) > 0)
     .map(b => ({
-      brand: b.brand,
+      brand: budgetRowLabel(b),
       amount: budgetMid(b),
-      amountLabel: fmtBudgetRange(b).replace('만원', '만'),
+      amountLabel: [
+        b.useStatus,
+        fmtBudgetRange(b).replace('만원', '만'),
+      ].filter(Boolean).join(' · '),
       stage: b.stage as BudgetStage,
       payment: b.payment,
       sortKey: budgetMid(b),
@@ -134,7 +157,7 @@ function toTooltipRows(list: BrandBudget[]): PartnerTooltipRow[] {
     .sort((a, b) => b.sortKey - a.sortKey)
 
   const unknown = list.filter(b => budgetMid(b) <= 0).map(b => ({
-    brand: b.brand,
+    brand: budgetRowLabel(b),
     amount: 0,
     amountLabel: '미확인',
     stage: '미정' as const,
@@ -270,7 +293,14 @@ export function monthlyBudgetForChart(): MonthlyBudgetChartRow[] {
 
     if (b.securedMonth && byMonth.has(b.securedMonth)) {
       const row = byMonth.get(b.securedMonth)!
-      row.items.push({ brand: b.brand, amount: amt, amountLabel, stage: b.stage, kind: 'confirmed', payment: b.payment })
+      row.items.push({
+        brand: budgetRowLabel(b),
+        amount: amt,
+        amountLabel: [b.useStatus, fmtBudgetRange(b).replace('만원', '만')].filter(Boolean).join(' · '),
+        stage: b.stage,
+        kind: 'confirmed',
+        payment: b.payment,
+      })
       if (b.payment === '입금 완료') row.paidTotal += amt
       else if (b.payment === '입금 예정' || b.payment === '송금 대기') row.payPendingTotal += amt
       else if (b.payment === '미입금') row.unpaidTotal += amt
@@ -280,7 +310,14 @@ export function monthlyBudgetForChart(): MonthlyBudgetChartRow[] {
 
     if (!b.securedMonth && byMonth.has(b.marketingMonth)) {
       const row = byMonth.get(b.marketingMonth)!
-      row.items.push({ brand: b.brand, amount: amt, amountLabel, stage: b.stage, kind: 'planned', payment: b.payment })
+      row.items.push({
+        brand: budgetRowLabel(b),
+        amount: amt,
+        amountLabel,
+        stage: b.stage,
+        kind: 'planned',
+        payment: b.payment,
+      })
       if (b.stage === '계약 예정') row.plannedReviewTotal += amt
       else if (b.stage === '10월 예정') row.plannedOctTotal += amt
       row.total += amt
@@ -351,10 +388,10 @@ export function computeBudgetSummary(): BudgetSummary {
 // ponytail: totals drift → 상단 KPI 깨짐
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
-  if (s.securedTotal !== 15000) throw new Error(`securedTotal expected 15000, got ${s.securedTotal}`)
-  if (s.securedPaid !== 9000) throw new Error(`securedPaid expected 9000, got ${s.securedPaid}`)
+  if (s.securedTotal !== 21000) throw new Error(`securedTotal expected 21000, got ${s.securedTotal}`)
+  if (s.securedPaid !== 15000) throw new Error(`securedPaid expected 15000, got ${s.securedPaid}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
-  if (brands('secured') !== 'Rxme,TeloAct,Troubleless,UIQ,닥터 리앤장,옵티팜,클리어디어') {
+  if (brands('secured') !== 'Rxme,TeloAct · 1차,TeloAct · 2차,Troubleless,UIQ,닥터 리앤장,옵티팜,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
   }
   if (brands('planned') !== 'Re4day,달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
@@ -364,6 +401,6 @@ if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const chart = monthlyBudgetForChart()
   if (chart[0]?.cumulative !== 4000) throw new Error(`jul cumulative expected 4000, got ${chart[0]?.cumulative}`)
   if (chart[1]?.cumulative !== 13000) throw new Error(`aug cumulative expected 13000, got ${chart[1]?.cumulative}`)
-  if (chart[2]?.cumulative !== 15000) throw new Error(`sep cumulative expected 15000, got ${chart[2]?.cumulative}`)
-  if (chart[3]?.cumulative !== 16100) throw new Error(`oct cumulative expected 16100, got ${chart[3]?.cumulative}`)
+  if (chart[2]?.cumulative !== 21000) throw new Error(`sep cumulative expected 21000, got ${chart[2]?.cumulative}`)
+  if (chart[3]?.cumulative !== 22100) throw new Error(`oct cumulative expected 22100, got ${chart[3]?.cumulative}`)
 }

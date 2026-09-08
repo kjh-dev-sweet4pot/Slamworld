@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import SnapshotBar from '@/components/SnapshotBar'
-import BudgetSnapshot from '@/components/BudgetSnapshot'
+import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
 import SideTopCard from '@/components/SideTopCard'
 import SideLiveFeed from '@/components/SideLiveFeed'
 import ContentCard from '@/components/ContentCard'
@@ -105,7 +105,7 @@ export default function Dashboard() {
 }
 
 function DashboardInner() {
-  const { showSales, logout, level } = useAccess()
+  const { showSales, logout, level, partnerBrand } = useAccess()
   const [summary, setSummary] = useState<Summary | null>(null)
   const [locations, setLocations] = useState<LocationSummary[]>([])
   const [monthly, setMonthly] = useState<{ month: string; count: number; views: number; likes: number; saves: number }[]>([])
@@ -206,6 +206,11 @@ function DashboardInner() {
 
   useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel, selectedMonth, brandFilter])
 
+  // 회원사 로그인 — 해당 브랜드로 고정
+  useEffect(() => {
+    if (partnerBrand) setBrandFilter(partnerBrand)
+  }, [partnerBrand])
+
   const scopedContents = useMemo(() => {
     if (!brandFilter) return contents
     return contents.filter(c => contentMatchesBrand(c.brands, brandFilter))
@@ -216,7 +221,23 @@ function DashboardInner() {
     return chartContents.filter(c => contentMatchesBrand(c.brands, brandFilter))
   }, [chartContents, brandFilter])
 
+  const displaySummary = useMemo((): Summary | null => {
+    if (!partnerBrand) return summary
+    const rows = scopedChartContents.length ? scopedChartContents : scopedContents
+    const names = new Set(rows.map(r => r.influencer_name))
+    return {
+      total_rows: rows.length,
+      total_influencers: names.size,
+      uploaded: rows.filter(r => r.upload_url).length,
+      total_views: rows.reduce((s, c) => s + contentViews(c), 0),
+      total_likes: rows.reduce((s, c) => s + (c.likes ?? 0), 0),
+      total_saves: rows.reduce((s, c) => s + (c.saves ?? 0), 0),
+      total_comments: rows.reduce((s, c) => s + (c.comments ?? 0), 0),
+    }
+  }, [partnerBrand, summary, scopedChartContents, scopedContents])
+
   function handleViewBrandContent(brand: string) {
+    if (partnerBrand && brand !== partnerBrand) return
     setBrandFilter(brand)
     setTab('perf')
     setCampaign('전체')
@@ -257,16 +278,23 @@ function DashboardInner() {
     return tableSort.dir === 'desc' ? bv - av : av - bv
   }).slice(0, 100)
 
-  const NAV = [
-    ...(showSales ? [['예산', '#s-budget'] as const] : []),
-    ['누적 성과', '#s-summary'] as const,
-    ['방문형 성과', '#s1'] as const,
-    ['확정·진행', '#s-brands'] as const,
-    ['준비 중', '#s-prep'] as const,
-    ['계약 예정', '#s-pipeline'] as const,
-    ['지점 현황', '#s2'] as const,
-    ['자료', '#s3'] as const,
-  ]
+  const NAV = partnerBrand
+    ? ([
+        ['예산', '#s-budget'] as const,
+        ['누적 성과', '#s-summary'] as const,
+        ['콘텐츠 성과', '#s1'] as const,
+        ['진행 현황', '#s-brands'] as const,
+      ])
+    : ([
+        ...(showSales ? [['예산', '#s-budget'] as const] : []),
+        ['누적 성과', '#s-summary'] as const,
+        ['방문형 성과', '#s1'] as const,
+        ['확정·진행', '#s-brands'] as const,
+        ['준비 중', '#s-prep'] as const,
+        ['계약 예정', '#s-pipeline'] as const,
+        ['지점 현황', '#s2'] as const,
+        ['자료', '#s3'] as const,
+      ])
 
   const sideCards = (
     <>
@@ -294,7 +322,7 @@ function DashboardInner() {
           <h1 className="text-lg md:text-xl font-semibold tracking-tight">
             <b className="text-[#2f1c13]">OWM</b>
             <i className="not-italic text-owm-text3 font-normal mx-1">×</i>
-            브랜드슬램 인플루언서 리포트
+            {partnerBrand ? `${partnerBrand} 리포트` : '브랜드슬램 인플루언서 리포트'}
             <span className="align-middle text-[11px] text-owm-blue bg-[#eef3ff] px-2.5 py-0.5 rounded-[10px] ml-2 font-semibold">
               v0.9
             </span>
@@ -302,7 +330,7 @@ function DashboardInner() {
           <div className="text-[11px] text-owm-text2 mt-1 flex flex-wrap gap-1">
             <span>09.03 기준</span><span className="text-[#bbb]">·</span>
             <span>수동 수집</span><span className="text-[#bbb]">·</span>
-            <span>3월 ~ 8월 누적</span>
+            <span>{partnerBrand ? `${partnerBrand} 전용` : '3월 ~ 8월 누적'}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -311,9 +339,16 @@ function DashboardInner() {
               미팅 보기
             </span>
           )}
-          <span className="text-xs text-owm-text2 bg-[#f0f2f7] px-3.5 py-1.5 rounded-2xl border border-owm-border">
-            8개 지점
-          </span>
+          {partnerBrand && (
+            <span className="text-[10.5px] font-semibold text-azure-deep bg-[#eef3ff] px-2.5 py-1 rounded-2xl border border-azure/20">
+              회원사 · {partnerBrand}
+            </span>
+          )}
+          {!partnerBrand && (
+            <span className="text-xs text-owm-text2 bg-[#f0f2f7] px-3.5 py-1.5 rounded-2xl border border-owm-border">
+              8개 지점
+            </span>
+          )}
           <button
             type="button"
             onClick={logout}
@@ -353,14 +388,17 @@ function DashboardInner() {
         </div>
       )}
       {showSales && <BudgetSnapshot onViewBrandContent={handleViewBrandContent} />}
+      {partnerBrand && <PartnerBudgetSnapshot brand={partnerBrand} />}
 
       <section id="s-summary" className="scroll-mt-28 mb-3">
         <div className="owm-sec-title">
           <span className="owm-sec-no">00</span>
-          누적 성과
-          <span className="text-xs font-normal text-owm-text2">8개 지점 · 2026.03 ~ 08</span>
+          {partnerBrand ? `${partnerBrand} 누적 성과` : '누적 성과'}
+          <span className="text-xs font-normal text-owm-text2">
+            {partnerBrand ? '회원사 콘텐츠 기준' : '8개 지점 · 2026.03 ~ 08'}
+          </span>
         </div>
-        <SnapshotBar summary={summary} />
+        <SnapshotBar summary={displaySummary} />
         <div className="owm-info-box">
           <b className="text-owm-text">수치 기준 —</b> 샤오홍슈·도우인 조회수는 좋아요·저장·댓글로 역산했으며
           상단 누적 조회수에 반영됩니다. 도우인은 실측 조회수가 있으면 실측을 우선합니다.
@@ -376,8 +414,10 @@ function DashboardInner() {
 
       {/* ── §1 콘텐츠 현황 ── */}
       <section id="s1" className="mb-10 scroll-mt-20">
-        <SectionHeader no="01" title="OWM 방문형 콘텐츠 성과"
-          sub="브랜드·캠페인·지점·채널로 필터해 성과를 확인할 수 있습니다."
+        <SectionHeader no="01" title={partnerBrand ? `${partnerBrand} 콘텐츠 성과` : 'OWM 방문형 콘텐츠 성과'}
+          sub={partnerBrand
+            ? '해당 회원사 콘텐츠만 표시됩니다.'
+            : '브랜드·캠페인·지점·채널로 필터해 성과를 확인할 수 있습니다.'}
           right={tab === 'perf'
             ? `${Math.min(visibleCount, scopedContents.length)}건`
             : `${scopedContents.length}건`}
@@ -401,6 +441,7 @@ function DashboardInner() {
 
         {/* 필터 */}
         <div className="flex gap-2 flex-wrap mb-4">
+          {!partnerBrand && (
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-slate font-semibold">브랜드</span>
             <select
@@ -415,6 +456,7 @@ function DashboardInner() {
               ))}
             </select>
           </div>
+          )}
           {([
             ['캠페인', CAMPAIGNS, campaign, setCampaign],
             ['지점',   LOCATIONS, location, setLocation],
@@ -429,12 +471,12 @@ function DashboardInner() {
               </select>
             </div>
           ))}
-          {(campaign !== '전체' || location !== '전체' || channel !== '전체' || brandFilter) && (
+          {(campaign !== '전체' || location !== '전체' || channel !== '전체' || (!partnerBrand && brandFilter)) && (
             <button onClick={() => {
               setCampaign('전체')
               setLocation('전체')
               setChannel('전체')
-              setBrandFilter(null)
+              if (!partnerBrand) setBrandFilter(null)
             }}
               className="text-[11.5px] font-semibold text-slate border border-mist rounded
                 px-2.5 py-1.5 hover:border-sky hover:text-azure-deep transition-colors">
@@ -681,9 +723,12 @@ function DashboardInner() {
 
       <BrandPipeline onViewBrandContent={handleViewBrandContent} />
 
-      <LocationStatus locations={locations} locationMonthly={locationMonthly} />
+      {!partnerBrand && (
+        <LocationStatus locations={locations} locationMonthly={locationMonthly} />
+      )}
 
       {/* ── §3 자료 ── */}
+      {!partnerBrand && (
       <section id="s3" className="scroll-mt-20">
         <SectionHeader no="07" title="자료 및 향후 개선"/>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
@@ -747,6 +792,7 @@ function DashboardInner() {
           <b className="text-azure-deep">실제 노출과 차이가 있을 수 있습니다.</b>
         </div>
       </section>
+      )}
 
           </main>
 
