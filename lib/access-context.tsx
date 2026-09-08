@@ -1,27 +1,40 @@
 'use client'
 import { createContext, useContext } from 'react'
-import type { AccessLevel } from '@/lib/access'
-import { canSeeSales } from '@/lib/access'
+import {
+  canSeeSales,
+  partnerBrandOf,
+  type AccessSession,
+} from '@/lib/access'
 
 export interface AccessValue {
-  level: AccessLevel
+  session: AccessSession
+  level: AccessSession['kind']
   showSales: boolean
+  partnerBrand: string | null
   logout: () => void
 }
 
 const AccessContext = createContext<AccessValue | null>(null)
 
 export function AccessProvider({
-  level,
+  session,
   logout,
   children,
 }: {
-  level: AccessLevel
+  session: AccessSession
   logout: () => void
   children: React.ReactNode
 }) {
   return (
-    <AccessContext.Provider value={{ level, showSales: canSeeSales(level), logout }}>
+    <AccessContext.Provider
+      value={{
+        session,
+        level: session.kind,
+        showSales: canSeeSales(session),
+        partnerBrand: partnerBrandOf(session),
+        logout,
+      }}
+    >
       {children}
     </AccessContext.Provider>
   )
@@ -33,8 +46,13 @@ export function useAccess(): AccessValue {
   return ctx
 }
 
-/** 로그인 전·테스트용 — Provider 밖이면 매출 노출(기본) */
+/** Provider 밖이면 매출 노출(기본) */
 export function useShowSales(): boolean {
   const ctx = useContext(AccessContext)
   return ctx?.showSales ?? true
+}
+
+export function usePartnerBrand(): string | null {
+  const ctx = useContext(AccessContext)
+  return ctx?.partnerBrand ?? null
 }

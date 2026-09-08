@@ -13,10 +13,12 @@ import {
   contractPrepProgress,
   formatContractDate,
   pipelineCatStage,
+  pipelineContentBrand,
+  matchesPartnerBrand,
   type BrandTier,
 } from '@/lib/brand-pipeline'
 import PipelineCatRunner from '@/components/PipelineCatRunner'
-import { useShowSales } from '@/lib/access-context'
+import { usePartnerBrand, useShowSales } from '@/lib/access-context'
 
 const SEG_CLASS = [
   'bg-[#9ED2FF] text-azure-deep',
@@ -73,7 +75,7 @@ function PipelineRow({
         {onViewBrandContent ? (
           <button
             type="button"
-            onClick={() => onViewBrandContent(p.name)}
+            onClick={() => onViewBrandContent(pipelineContentBrand(p.name))}
             className="text-[15px] font-extrabold tracking-tight text-left hover:text-azure transition-colors"
           >
             {p.name}
@@ -103,20 +105,42 @@ export default function BrandPipeline({
   onViewBrandContent?: (brand: string) => void
 }) {
   const showSales = useShowSales()
+  const partnerBrand = usePartnerBrand()
+  const showBudget = showSales || !!partnerBrand
+  const byBrand = <T extends { name?: string; brand?: string }>(rows: T[]) =>
+    partnerBrand
+      ? rows.filter(r => matchesPartnerBrand(r.name ?? r.brand ?? '', partnerBrand))
+      : rows
+
+  const contracts = byBrand(CONTRACT_BRANDS)
+  const september = byBrand(SEPTEMBER_BRAND_STATUS)
+  const guides = byBrand(GUIDE_PREP)
+  const matches = byBrand(MATCH_PREP)
+  const reviews = byBrand(REVIEW_BRANDS)
+  const october = byBrand(OCTOBER_BRANDS)
+  const hasConfirmed = contracts.length > 0
+  const hasPrep = september.length > 0 || guides.length > 0 || matches.length > 0
+  const hasPipeline = reviews.length > 0 || october.length > 0
 
   return (
     <>
       {/* ── 확정 및 진행 ── */}
+      {hasConfirmed && (
       <section id="s-brands" className="mb-10 scroll-mt-20">
         <SectionHeader
           no="02"
-          title="확정 및 진행 브랜드"
-          sub={showSales
-            ? '입금 완료 및 예정 브랜드입니다. 브랜드명을 누르면 콘텐츠 성과로 이동합니다.'
-            : '확정·진행 중인 브랜드입니다. 브랜드명을 누르면 콘텐츠 성과로 이동합니다.'}
-          right={showSales ? `${CONTRACT_BRANDS.length}개사 · 예산 규모순` : `${CONTRACT_BRANDS.length}개사`}
+          title={partnerBrand ? `${partnerBrand} 진행 현황` : '확정 및 진행 브랜드'}
+          sub={partnerBrand
+            ? '회원사 전용 진행·리드타임 정보입니다.'
+            : showSales
+              ? '입금 완료 및 예정 브랜드입니다. 브랜드명을 누르면 콘텐츠 성과로 이동합니다.'
+              : '확정·진행 중인 브랜드입니다. 브랜드명을 누르면 콘텐츠 성과로 이동합니다.'}
+          right={partnerBrand
+            ? undefined
+            : showSales ? `${contracts.length}개사 · 예산 규모순` : `${contracts.length}개사`}
         />
 
+        {!partnerBrand && (
         <div className="glass flex flex-wrap items-center gap-6 px-6 py-5 mb-2.5">
           <div>
             <span className="num text-[10.5px] text-slate tracking-widest uppercase">평균 리드타임</span>
@@ -131,8 +155,9 @@ export default function BrandPipeline({
             8월 말까지 가이드라인을 확정하고, 9월 초부터 본격적인 방문·발행을 진행합니다.
           </p>
         </div>
+        )}
 
-        {CONTRACT_BRANDS.map(b => {
+        {contracts.map(b => {
           const stage = pipelineCatStage(b)
           const prepPct = b.contractCompletedOn
             ? contractPrepProgress(b.contractCompletedOn, b.days)
@@ -141,10 +166,10 @@ export default function BrandPipeline({
           return (
           <div key={b.name} className="glass px-5 py-4 mb-2">
             <div className="flex items-baseline gap-2.5 flex-wrap mb-2.5">
-              {onViewBrandContent ? (
+              {onViewBrandContent && !partnerBrand ? (
                 <button
                   type="button"
-                  onClick={() => onViewBrandContent(b.name)}
+                  onClick={() => onViewBrandContent(pipelineContentBrand(b.name))}
                   className="text-[15px] font-extrabold tracking-tight hover:text-azure transition-colors"
                 >
                   {b.name}
@@ -154,7 +179,7 @@ export default function BrandPipeline({
               )}
               <span className="num text-[10.5px] text-slate">{b.meta}</span>
               <span className="num text-[13px] font-semibold text-azure-deep ml-auto">
-                {showSales && (
+                {showBudget && (
                   <>
                     {b.budget}
                     <small className="text-[10px] text-slate font-normal ml-1.5">
@@ -162,7 +187,7 @@ export default function BrandPipeline({
                     </small>
                   </>
                 )}
-                {!showSales && (
+                {!showBudget && (
                   <small className="text-[10px] text-slate font-normal">
                     계약 완료 후 약 {b.days}일
                   </small>
@@ -230,21 +255,24 @@ export default function BrandPipeline({
           </div>
           )
         })}
-        {showSales && (
+        {showBudget && (
           <p className="mt-3 px-1 text-[11.5px] text-slate leading-relaxed">{BUDGET_DISCLAIMER}</p>
         )}
       </section>
+      )}
 
       {/* ── 준비 중 ── */}
-      <section id="s-prep" className="mb-10 scroll-mt-20">
+      {hasPrep && (
+      <section id={hasConfirmed ? 's-prep' : 's-brands'} className="mb-10 scroll-mt-20">
         <SectionHeader
           no="03"
           title="준비 중 · 진행 일정"
-          sub="공통 타임라인과 브랜드별 가이드·매칭 현황입니다."
-          right={`가이드 ${GUIDE_PREP.length}건 · 매칭 ${MATCH_PREP.length}건`}
+          sub={partnerBrand ? `${partnerBrand} 가이드·매칭 현황입니다.` : '공통 타임라인과 브랜드별 가이드·매칭 현황입니다.'}
+          right={`가이드 ${guides.length}건 · 매칭 ${matches.length}건`}
         />
 
         {/* 공통 타임라인 */}
+        {!partnerBrand && (
         <div className="glass p-5 mb-3">
           <h3 className="font-extrabold text-[14px] tracking-tight mb-1">전체 공통 타임라인</h3>
           <p className="text-[11.5px] text-slate mb-4">8월 말 가이드 확정 → 9월 초 방문·발행</p>
@@ -260,19 +288,23 @@ export default function BrandPipeline({
             ))}
           </div>
         </div>
+        )}
 
         {/* 9월 브랜드별 현황 */}
+        {september.length > 0 && (
         <div className="glass p-5 mb-3">
-          <h3 className="font-extrabold text-[14px] tracking-tight mb-1">9월 마케팅 타겟 · 브랜드별 현황</h3>
+          <h3 className="font-extrabold text-[14px] tracking-tight mb-1">
+            {partnerBrand ? '마케팅 타겟 · 현황' : '9월 마케팅 타겟 · 브랜드별 현황'}
+          </h3>
           <p className="text-[11.5px] text-slate mb-4">가이드라인 및 계획안 진행 상태</p>
           <div className="space-y-3">
-            {SEPTEMBER_BRAND_STATUS.map(s => (
+            {september.map(s => (
               <div key={s.brand} className="py-2 border-b border-mist last:border-0 last:pb-0">
                 <div className="flex items-baseline gap-2 mb-1.5">
-                  {onViewBrandContent ? (
+                  {onViewBrandContent && !partnerBrand ? (
                     <button
                       type="button"
-                      onClick={() => onViewBrandContent(s.brand)}
+                      onClick={() => onViewBrandContent(pipelineContentBrand(s.brand))}
                       className="text-[13px] font-bold min-w-[5.5rem] text-left hover:text-azure transition-colors"
                     >
                       {s.brand}
@@ -293,18 +325,21 @@ export default function BrandPipeline({
             ))}
           </div>
         </div>
+        )}
 
+        {(guides.length > 0 || matches.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {guides.length > 0 && (
           <div className="glass p-5">
             <h3 className="font-extrabold text-[14px] tracking-tight">콘텐츠 가이드 제작</h3>
             <p className="text-[11.5px] text-slate mt-0.5 mb-4">브랜드 톤 · 촬영 구도 · 필수 문구</p>
-            {GUIDE_PREP.map(g => (
+            {guides.map(g => (
               <div key={g.brand} className="py-3 border-b border-mist last:border-0 last:pb-0">
                 <div className="flex items-baseline gap-2 mb-2">
-                  {onViewBrandContent ? (
+                  {onViewBrandContent && !partnerBrand ? (
                     <button
                       type="button"
-                      onClick={() => onViewBrandContent(g.brand)}
+                      onClick={() => onViewBrandContent(pipelineContentBrand(g.brand))}
                       className="text-[13px] font-bold text-left hover:text-azure transition-colors"
                     >
                       {g.brand}
@@ -322,23 +357,25 @@ export default function BrandPipeline({
                   }} />
                 </div>
                 <div className="flex justify-between num text-[10px] text-slate mt-1">
-                  <span>{showSales ? g.note : ''}</span>
+                  <span>{showBudget ? g.note : ''}</span>
                   <span>{g.pct}%</span>
                 </div>
               </div>
             ))}
           </div>
+          )}
 
+          {matches.length > 0 && (
           <div className="glass p-5">
             <h3 className="font-extrabold text-[14px] tracking-tight">인플루언서 매칭</h3>
             <p className="text-[11.5px] text-slate mt-0.5 mb-4">섭외 · 일정 조율 · 방문</p>
-            {MATCH_PREP.map(m => (
+            {matches.map(m => (
               <div key={m.brand} className="py-3 border-b border-mist last:border-0 last:pb-0">
                 <div className="flex items-baseline gap-2 mb-2">
-                  {onViewBrandContent ? (
+                  {onViewBrandContent && !partnerBrand ? (
                     <button
                       type="button"
-                      onClick={() => onViewBrandContent(m.brand)}
+                      onClick={() => onViewBrandContent(pipelineContentBrand(m.brand))}
                       className="text-[13px] font-bold text-left hover:text-azure transition-colors"
                     >
                       {m.brand}
@@ -365,35 +402,58 @@ export default function BrandPipeline({
               </div>
             ))}
           </div>
+          )}
         </div>
+        )}
 
-        {showSales && (
+        {showBudget && !partnerBrand && (
           <p className="mt-3 px-1 text-[11.5px] text-slate leading-relaxed">{MARKETING_NOTE}</p>
         )}
       </section>
+      )}
 
       {/* ── 계약 예정 및 검토 ── */}
-      <section id="s-pipeline" className="mb-10 scroll-mt-20">
-        <SectionHeader
-          no="04"
-          title="계약 예정 및 검토"
-          sub="온보딩·계약 검토 중인 브랜드입니다."
-          right={`${REVIEW_BRANDS.length}개사`}
-        />
+      {hasPipeline && (
+      <section id={hasConfirmed || hasPrep ? 's-pipeline' : 's-brands'} className="mb-10 scroll-mt-20">
+        {reviews.length > 0 && (
+          <>
+            <SectionHeader
+              no="04"
+              title="계약 예정 및 검토"
+              sub={partnerBrand ? `${partnerBrand} 온보딩·계약 검토 현황입니다.` : '온보딩·계약 검토 중인 브랜드입니다.'}
+              right={partnerBrand ? undefined : `${reviews.length}개사`}
+            />
+            {reviews.map((p, i) => (
+              <PipelineRow
+                key={p.name}
+                p={p}
+                rank={i + 1}
+                showSales={showBudget}
+                onViewBrandContent={partnerBrand ? undefined : onViewBrandContent}
+              />
+            ))}
+          </>
+        )}
 
-        {REVIEW_BRANDS.map((p, i) => (
-          <PipelineRow key={p.name} p={p} rank={i + 1} showSales={showSales} onViewBrandContent={onViewBrandContent} />
-        ))}
-
-        <div className="mt-6 mb-3">
-          <h3 className="text-[15px] font-extrabold tracking-tight px-0.5">10월 마케팅 예정</h3>
-          <p className="text-[12px] text-body mt-1 px-0.5">입점 9월 중 · 마케팅은 10월로 순차 진행</p>
-        </div>
-
-        {OCTOBER_BRANDS.map((p, i) => (
-          <PipelineRow key={p.name} p={p} rank={i + 1} showSales={showSales} onViewBrandContent={onViewBrandContent} />
-        ))}
+        {october.length > 0 && (
+          <>
+            <div className="mt-6 mb-3">
+              <h3 className="text-[15px] font-extrabold tracking-tight px-0.5">10월 마케팅 예정</h3>
+              <p className="text-[12px] text-body mt-1 px-0.5">입점 9월 중 · 마케팅은 10월로 순차 진행</p>
+            </div>
+            {october.map((p, i) => (
+              <PipelineRow
+                key={p.name}
+                p={p}
+                rank={i + 1}
+                showSales={showBudget}
+                onViewBrandContent={partnerBrand ? undefined : onViewBrandContent}
+              />
+            ))}
+          </>
+        )}
       </section>
+      )}
     </>
   )
 }

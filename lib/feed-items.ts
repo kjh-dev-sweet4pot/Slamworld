@@ -10,6 +10,14 @@ export interface FeedItem {
 
 export const LIVE_FEED: FeedItem[] = [
   {
+    time: '9/8 08:00',
+    badge: '예산',
+    badgeClass: 'bg-[#eef3ff] text-[#4f8cff]',
+    headline: 'TeloAct 2차 예산 추가',
+    detail: '6,000만원 · 사용 예정 (1차 4,000만 기 소진)',
+    accent: 'up',
+  },
+  {
     time: '9/3 16:00',
     badge: '입금',
     badgeClass: 'bg-[#ecfdf5] text-[#16a34a]',

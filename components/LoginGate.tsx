@@ -5,37 +5,37 @@ import {
   clearStoredAccess,
   loadStoredAccess,
   storeAccess,
-  type AccessLevel,
+  type AccessSession,
 } from '@/lib/access'
 import { AccessProvider } from '@/lib/access-context'
 
 export default function LoginGate({ children }: { children: React.ReactNode }) {
-  const [level, setLevel] = useState<AccessLevel | null>(null)
+  const [session, setSession] = useState<AccessSession | null>(null)
   const [ready, setReady] = useState(false)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setLevel(loadStoredAccess())
+    setSession(loadStoredAccess())
     setReady(true)
   }, [])
 
   function logout() {
     clearStoredAccess()
-    setLevel(null)
+    setSession(null)
     setPassword('')
     setError('')
   }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    const next = accessFromPassword(password.trim())
+    const next = accessFromPassword(password)
     if (!next) {
       setError('비밀번호가 올바르지 않습니다.')
       return
     }
     storeAccess(next)
-    setLevel(next)
+    setSession(next)
     setError('')
     setPassword('')
   }
@@ -48,7 +48,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!level) {
+  if (!session) {
     return (
       <div className="min-h-screen grid place-items-center bg-owm-bg px-4">
         <form
@@ -62,7 +62,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
             리포트 로그인
           </h1>
           <p className="mt-1.5 text-[12.5px] text-owm-text2 leading-relaxed">
-            비밀번호를 입력하면 대시보드를 볼 수 있습니다.
+            관리자·미팅·회원사 비밀번호로 입장할 수 있습니다.
           </p>
 
           <label className="mt-6 block">
@@ -99,7 +99,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AccessProvider level={level} logout={logout}>
+    <AccessProvider session={session} logout={logout}>
       {children}
     </AccessProvider>
   )
