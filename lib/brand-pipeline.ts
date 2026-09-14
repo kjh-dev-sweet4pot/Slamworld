@@ -73,7 +73,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '옵티팜',
     budget: '4,000만원',
-    meta: '입금 확인 · 가이드 대기',
+    meta: '8월 2,000 사용 · 9월 2,000 가용',
     days: 16,
     status: '9월 마케팅 목표',
     segs: [5, 2, 5, 2, 2],
@@ -81,7 +81,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '닥터 리앤장',
     budget: '3,000만원',
-    meta: '8/30 입금 확인 · 가이드 제작 중',
+    meta: '8월 1,000 사용 · 9월 2,000 가용',
     days: 15,
     status: '9월 마케팅 목표',
     contractCompletedOn: '2026-08-30',
@@ -98,7 +98,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: 'Rxme',
     budget: '1,000만원',
-    meta: '8/31 입금 확인 · 가이드 제작 중',
+    meta: '1,000만원 · 9월 가용',
     days: 14,
     status: '9월 마케팅 목표',
     contractCompletedOn: '2026-08-31',
@@ -160,12 +160,12 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: '닥터 리앤장',
-    status: '8/30 입금 확인 · PPL 컨셉안 전달 완료 · 가이드 제작 중',
+    status: '8월 1,000 사용 · 9월 2,000 가용',
     pct: 75,
   },
   {
     brand: '옵티팜',
-    status: '입금 확인 · 가이드 대기',
+    status: '8월 2,000 사용 · 9월 2,000 가용',
     pct: 12,
   },
   {
@@ -175,7 +175,7 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: 'Rxme',
-    status: '8/31 입금 확인 · 원브랜디드 영상 가이드 제작 중',
+    status: '1,000만원 · 9월 가용',
     pct: 55,
   },
   {
@@ -210,21 +210,21 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: 'PPL + 원브랜디드 가이드',
     eta: '8.31 (월)',
     pct: 75,
-    note: '8/30 입금 확인',
+    note: '8월 1,000 사용 · 9월 2,000 가용',
   },
   {
     brand: 'Rxme',
     detail: '원브랜디드 영상 가이드',
     eta: '제작 중',
     pct: 55,
-    note: '8/31 입금 확인',
+    note: '1,000만원 · 9월 가용',
   },
   {
     brand: '옵티팜',
     detail: '가이드 착수',
     eta: '가이드 대기',
     pct: 10,
-    note: '4,000만원 · 입금 확인',
+    note: '8월 2,000 사용 · 9월 2,000 가용',
   },
   {
     brand: '클리어디어',
