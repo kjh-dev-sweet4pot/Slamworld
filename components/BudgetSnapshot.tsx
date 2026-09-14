@@ -553,7 +553,9 @@ function UnreceivedList({ rows }: { rows: PartnerTooltipRow[] }) {
             className="flex items-center gap-2 rounded-md border border-[#FECACA] bg-[#FEF2F2] px-2.5 py-1.5 text-[12px]"
           >
             <span className="font-semibold truncate">{r.brand}</span>
-            <span className="num shrink-0 font-semibold text-[#B91C1C]">{fmtBudgetManwon(r.amount)}만</span>
+            <span className={`shrink-0 font-semibold ${r.amount > 0 ? 'num text-[#B91C1C]' : 'text-[11px] text-slate'}`}>
+              {r.amount > 0 ? `${fmtBudgetManwon(r.amount)}만` : '예산 협의중'}
+            </span>
           </li>
         ))}
       </ul>
@@ -865,11 +867,16 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
             >
               <div className="owm-kpi-header">
                 <span className="owm-kpi-dot" />
-                <span className="owm-kpi-label">{budgetPaymentLabel(rows[0]?.payment ?? '검토 중')}</span>
-              </div>
-              <div className="owm-kpi-amount">
-                {fmtBudgetManwon(rows.reduce((n, b) => n + budgetMid(b), 0))}<small>만원</small>
-              </div>
+              <span className="owm-kpi-label">
+                {rows.every(b => budgetMid(b) <= 0) ? '예산 협의중' : budgetPaymentLabel(rows[0]?.payment ?? '검토 중')}
+              </span>
+            </div>
+            <div className="owm-kpi-amount">
+              {rows.every(b => budgetMid(b) <= 0)
+                ? '—'
+                : fmtBudgetManwon(rows.reduce((n, b) => n + budgetMid(b), 0))}
+              {!rows.every(b => budgetMid(b) <= 0) && <small>만원</small>}
+            </div>
               <div className="owm-kpi-divider" />
               <div className="owm-kpi-sub">
                 <span>{budgetStageLabel(rows[0]?.stage ?? '미정')} · 가용 제외</span>
@@ -901,9 +908,9 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
                     <span className="mt-0.5 block rounded border border-[#EF4444] bg-[#FEF2F2] px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
                       {LATE_UPLOAD_NOTE}
                     </span>
-                  ) : (
+                  ) : b.amount > 0 ? (
                     <> · {budgetPaymentLabel(b.payment)}</>
-                  )}
+                  ) : null}
                 </span>
               </li>
             ))}

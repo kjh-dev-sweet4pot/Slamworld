@@ -24,20 +24,20 @@ export interface BrandBudget {
 
 export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: 'TeloAct', campaign: '1차', useStatus: '기 소진', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-07', marketingMonth: '2026-07', note: '1차 캠페인 · 기 소진' },
-  { brand: 'TeloAct', campaign: '2차', useStatus: '사용 예정', amount: 6000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '2차 캠페인 · 입금 지연' },
+  { brand: 'TeloAct', campaign: '2차', useStatus: '사용 예정', amount: 6500, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '2차 캠페인 · 입금 지연' },
   { brand: '옵티팜', campaign: '8월', useStatus: '기 소진', amount: 2000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-08', note: '8월 활용' },
   { brand: '옵티팜', campaign: '9월', amount: 2000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '9월 가용' },
   { brand: '닥터 리앤장', campaign: '8월', useStatus: '기 소진', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-08', note: '8월 사용' },
   { brand: '닥터 리앤장', campaign: '9월', amount: 2000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '9월 가용' },
-  { brand: '클리어디어', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '입금 지연' },
+  { brand: '클리어디어', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '입금 확인 · 9월 가용' },
   { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '입금 확인 · 9월 가용' },
-  { brand: 'Troubleless', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '입금 지연' },
-  { brand: 'UIQ', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '입금 지연' },
-  { brand: '해브블루', amount: 2000, rangeMax: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '2,000–3,000만원 예상' },
+  { brand: 'Troubleless', amount: 0, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 협의중' },
+  { brand: 'UIQ', amount: 0, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 협의중' },
+  { brand: '해브블루', amount: 0, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 협의중' },
   { brand: '달바', amount: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '3,000만원 예상 중' },
-  { brand: '리포데이', amount: 1000, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '매월 1,000만원 · 협의중' },
+  { brand: '리포데이', amount: 0, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 협의중' },
   { brand: '스킨스탠다드', amount: 1100, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-10', note: '1,100만원 · 협의중' },
-  { brand: '토코보', amount: 0, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '협의중' },
+  { brand: '토코보', amount: 0, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 협의중' },
 ]
 
 export function budgetRowKey(b: BrandBudget): string {
@@ -175,7 +175,7 @@ function toTooltipRows(list: BrandBudget[]): PartnerTooltipRow[] {
   const unknown = list.filter(b => budgetMid(b) <= 0).map(b => ({
     brand: budgetRowLabel(b),
     amount: 0,
-    amountLabel: '미확인',
+    amountLabel: '예산 협의중',
     stage: '미정' as const,
     payment: b.payment,
     sortKey: -1,
@@ -194,7 +194,7 @@ export function unknownBudgetRows(): PartnerTooltipRow[] {
   return BRAND_BUDGETS.filter(b => budgetMid(b) <= 0).map(b => ({
     brand: b.brand,
     amount: 0,
-    amountLabel: '미확인',
+    amountLabel: '예산 협의중',
     stage: b.stage,
     payment: b.payment,
     sortKey: -1,
@@ -255,7 +255,7 @@ export function fmtBudgetManwon(n: number, opts?: { compact?: boolean }): string
 }
 
 export function fmtBudgetRange(b: BrandBudget): string {
-  if (b.amount <= 0) return '미확인'
+  if (b.amount <= 0) return '예산 협의중'
   if (b.rangeMax) return `${b.amount.toLocaleString()}–${b.rangeMax.toLocaleString()}만원`
   return `${b.amount.toLocaleString()}만원`
 }
@@ -440,28 +440,28 @@ export function computeBudgetSummary(): BudgetSummary {
 // ponytail: totals drift → 상단 KPI 깨짐
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
-  if (s.securedTotal !== 21000) throw new Error(`securedTotal expected 21000, got ${s.securedTotal}`)
-  if (s.securedPaid !== 12000) throw new Error(`securedPaid expected 12000, got ${s.securedPaid}`)
+  if (s.securedTotal !== 19500) throw new Error(`securedTotal expected 19500, got ${s.securedTotal}`)
+  if (s.securedPaid !== 13000) throw new Error(`securedPaid expected 13000, got ${s.securedPaid}`)
   if (s.usedTotal !== 7000) throw new Error(`usedTotal expected 7000, got ${s.usedTotal}`)
-  if (s.availableTotal !== 5000) throw new Error(`availableTotal expected 5000, got ${s.availableTotal}`)
-  if (s.sepAvailable !== 5000) throw new Error(`sepAvailable expected 5000, got ${s.sepAvailable}`)
+  if (s.availableTotal !== 6000) throw new Error(`availableTotal expected 6000, got ${s.availableTotal}`)
+  if (s.sepAvailable !== 6000) throw new Error(`sepAvailable expected 6000, got ${s.sepAvailable}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
-  if (brands('secured') !== 'Rxme,TeloAct · 1차,TeloAct · 2차,Troubleless,UIQ,닥터 리앤장 · 8월,닥터 리앤장 · 9월,옵티팜 · 8월,옵티팜 · 9월,클리어디어') {
+  if (brands('secured') !== 'Rxme,TeloAct · 1차,TeloAct · 2차,닥터 리앤장 · 8월,닥터 리앤장 · 9월,옵티팜 · 8월,옵티팜 · 9월,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
   }
-  if (brands('planned') !== '달바,리포데이,스킨스탠다드,토코보,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
+  if (brands('planned') !== 'Troubleless,UIQ,달바,리포데이,스킨스탠다드,토코보,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
   if (brands('oct') !== '') throw new Error(`oct kpi brands: ${brands('oct')}`)
   const unknown = unknownBudgetRows().map(r => r.brand).sort().join(',')
-  if (unknown !== '토코보') throw new Error(`unknown budget brands: ${unknown}`)
-  if (s.byStage['계약 예정'].total !== 7600) throw new Error(`planned total expected 7600, got ${s.byStage['계약 예정'].total}`)
+  if (unknown !== 'Troubleless,UIQ,리포데이,토코보,해브블루') throw new Error(`unknown budget brands: ${unknown}`)
+  if (s.byStage['계약 예정'].total !== 4100) throw new Error(`planned total expected 4100, got ${s.byStage['계약 예정'].total}`)
   const deposit = monthlyDepositChart()
   if (deposit[0]?.used !== 4000 || deposit[0]?.available !== 0) throw new Error(`jul deposit ${deposit[0]?.used}/${deposit[0]?.available}`)
-  if (deposit[1]?.used !== 3000 || deposit[1]?.available !== 5000) throw new Error(`aug deposit ${deposit[1]?.used}/${deposit[1]?.available}`)
+  if (deposit[1]?.used !== 3000 || deposit[1]?.available !== 6000) throw new Error(`aug deposit ${deposit[1]?.used}/${deposit[1]?.available}`)
   if (deposit[2]?.total !== 0) throw new Error(`sep deposit should be 0, got ${deposit[2]?.total}`)
   const unpaid = monthlyUnpaidChart()
-  if (unpaid[1]?.total !== 1000) throw new Error(`aug unpaid expected 1000, got ${unpaid[1]?.total}`)
-  if (unpaid[2]?.total !== 8000) throw new Error(`sep unpaid expected 8000, got ${unpaid[2]?.total}`)
+  if (unpaid[1]?.total !== 0) throw new Error(`aug unpaid expected 0, got ${unpaid[1]?.total}`)
+  if (unpaid[2]?.total !== 6500) throw new Error(`sep unpaid expected 6500, got ${unpaid[2]?.total}`)
   const plannedInChart = [...deposit, ...unpaid].some(r => r.items.some(i => i.stage === '계약 예정'))
   if (plannedInChart) throw new Error('contract-planned must stay out of monthly charts')
-  if (unreceivedBudgetRows().reduce((n, r) => n + r.amount, 0) !== 9000) throw new Error('unreceived list total')
+  if (unreceivedBudgetRows().reduce((n, r) => n + r.amount, 0) !== 6500) throw new Error('unreceived list total')
 }

@@ -181,19 +181,10 @@ export default function BrandPipeline({
               )}
               <span className="num text-[10.5px] text-slate">{b.meta}</span>
               <span className="num text-[13px] font-semibold text-azure-deep ml-auto">
-                {showBudget && (
-                  <>
-                    {b.budget}
-                    <small className="text-[10px] text-slate font-normal ml-1.5">
-                      계약 완료 후 약 {b.days}일
-                    </small>
-                  </>
-                )}
-                {!showBudget && (
-                  <small className="text-[10px] text-slate font-normal">
-                    계약 완료 후 약 {b.days}일
-                  </small>
-                )}
+                {showBudget && b.budget && <>{b.budget}</>}
+                <small className="text-[10px] text-slate font-normal ml-1.5">
+                  계약 완료 후 약 {b.days}일
+                </small>
               </span>
             </div>
 

@@ -64,7 +64,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   },
   {
     name: 'TeloAct 2차',
-    budget: '6,000만원',
+    budget: '6,500만원',
     meta: '사용 예정 · 입금 지연',
     days: 16,
     status: '2차 준비',
@@ -90,7 +90,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
   {
     name: '클리어디어',
     budget: '1,000만원',
-    meta: '입금 지연',
+    meta: '입금 확인 · 9월 가용',
     days: 14,
     status: '9월 마케팅 목표',
     segs: [4, 2, 4, 2, 2],
@@ -102,22 +102,6 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     days: 14,
     status: '9월 마케팅 목표',
     contractCompletedOn: '2026-08-31',
-    segs: [4, 2, 4, 2, 2],
-  },
-  {
-    name: 'Troubleless',
-    budget: '1,000만원',
-    meta: '입금 지연',
-    days: 14,
-    status: '9월 마케팅 목표',
-    segs: [4, 2, 4, 2, 2],
-  },
-  {
-    name: 'UIQ',
-    budget: '1,000만원',
-    meta: '입금 지연',
-    days: 14,
-    status: '진행 대기',
     segs: [4, 2, 4, 2, 2],
   },
 ]
@@ -155,7 +139,7 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: 'TeloAct 2차',
-    status: '사용 예정 · 6,000만 · 입금 지연',
+    status: '사용 예정 · 6,500만 · 입금 지연',
     pct: 0,
   },
   {
@@ -170,23 +154,13 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: '클리어디어',
-    status: '입금 지연',
+    status: '입금 확인 · 9월 가용',
     pct: 12,
   },
   {
     brand: 'Rxme',
     status: '1,000만원 · 9월 가용',
     pct: 55,
-  },
-  {
-    brand: 'Troubleless',
-    status: '입금 지연',
-    pct: 12,
-  },
-  {
-    brand: 'UIQ',
-    status: '입금 지연',
-    pct: 0,
   },
 ]
 
@@ -203,7 +177,7 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: '2차 가이드 대기',
     eta: '사용 예정',
     pct: 0,
-    note: '6,000만원 · 입금 지연',
+    note: '6,500만원 · 입금 지연',
   },
   {
     brand: '닥터 리앤장',
@@ -229,23 +203,9 @@ export const GUIDE_PREP: PrepItem[] = [
   {
     brand: '클리어디어',
     detail: '계획안 착수',
-    eta: '입금 지연',
+    eta: '가이드 대기',
     pct: 10,
-    note: '1,000만원 · 입금 지연',
-  },
-  {
-    brand: 'Troubleless',
-    detail: '가이드 착수',
-    eta: '입금 지연',
-    pct: 10,
-    note: '1,000만원 · 입금 지연',
-  },
-  {
-    brand: 'UIQ',
-    detail: '진행 대기',
-    eta: '대기',
-    pct: 0,
-    note: '1,000만원 · 입금 지연',
+    note: '입금 확인 · 9월 가용',
   },
 ]
 
@@ -271,13 +231,31 @@ export const MATCH_PREP: MatchItem[] = [
 /** 온보딩·계약 검토 중 */
 export const REVIEW_BRANDS: PipelineBrand[] = [
   {
+    name: 'UIQ',
+    desc: '유이크',
+    budget: '예산 협의중',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '예산 협의중',
+    eta: '예산 협의중',
+  },
+  {
+    name: 'Troubleless',
+    desc: '트러블레스',
+    budget: '예산 협의중',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '예산 협의중',
+    eta: '예산 협의중',
+  },
+  {
     name: '해브블루',
     desc: '온보딩 진행',
-    budget: '2,000–3,000만원 예상',
+    budget: '예산 협의중',
     tier: 'mid',
     stage: 1,
-    stageLabel: '온보딩 예정',
-    eta: '일정 조율 중',
+    stageLabel: '예산 협의중',
+    eta: '예산 협의중',
   },
   {
     name: '달바',
@@ -290,12 +268,12 @@ export const REVIEW_BRANDS: PipelineBrand[] = [
   },
   {
     name: '리포데이',
-    desc: '매월 1,000만원',
-    budget: '1,000만원/월',
+    desc: '협의중',
+    budget: '예산 협의중',
     tier: 'small',
     stage: 1,
-    stageLabel: '협의중',
-    eta: '협의중',
+    stageLabel: '예산 협의중',
+    eta: '예산 협의중',
   },
   {
     name: '스킨스탠다드',
@@ -309,11 +287,11 @@ export const REVIEW_BRANDS: PipelineBrand[] = [
   {
     name: '토코보',
     desc: 'Tocobo',
-    budget: '협의중',
+    budget: '예산 협의중',
     tier: 'small',
     stage: 1,
-    stageLabel: '협의중',
-    eta: '협의중',
+    stageLabel: '예산 협의중',
+    eta: '예산 협의중',
   },
 ]
 
