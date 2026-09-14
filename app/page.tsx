@@ -7,7 +7,7 @@ import SideLiveFeed from '@/components/SideLiveFeed'
 import ContentCard from '@/components/ContentCard'
 import MonthlyBarChart from '@/components/MonthlyBarChart'
 import { aggregateByMonth, toCumulative } from '@/lib/monthly-performance'
-import { goalForNow, type MonthlyGoal } from '@/lib/monthly-goal'
+import { goalForNow, goalMonthKey, type MonthlyGoal, type PlannedUpload } from '@/lib/monthly-goal'
 import ChannelDonut from '@/components/ChannelDonut'
 import RegionDonut from '@/components/RegionDonut'
 import BrandPipeline from '@/components/BrandPipeline'
@@ -118,6 +118,7 @@ function DashboardInner() {
   const [locations, setLocations] = useState<LocationSummary[]>([])
   const [monthly, setMonthly] = useState<{ month: string; count: number; views: number; likes: number; saves: number }[]>([])
   const [monthlyGoals, setMonthlyGoals] = useState<MonthlyGoal[]>([])
+  const [plannedUploads, setPlannedUploads] = useState<PlannedUpload[]>([])
   const [locationMonthly, setLocationMonthly] = useState<{
     months: string[]
     series: { location: string; points: { month: string; count: number; cumulative: number }[] }[]
@@ -153,6 +154,7 @@ function DashboardInner() {
         setLocations(d.locations ?? [])
         setMonthly(d.monthly ?? [])
         setMonthlyGoals(d.monthlyGoals ?? [])
+        setPlannedUploads(d.plannedUploads ?? [])
         setLocationMonthly(d.locationMonthly ?? { months: [], series: [] })
       })
       .catch(() => setLoadError('요약 데이터를 불러오지 못했습니다.'))
@@ -245,6 +247,16 @@ function DashboardInner() {
       total_comments: rows.reduce((s, c) => s + (c.comments ?? 0), 0),
     }
   }, [partnerBrand, summary, scopedChartContents, scopedContents])
+
+  const monthGoal = goalForNow(monthlyGoals)
+  const visiblePlanned = useMemo(() => {
+    const month = monthGoal?.month ?? goalMonthKey()
+    return plannedUploads.filter(p => {
+      if (!p.visitDate.startsWith(month)) return false
+      if (brandFilter && !contentMatchesBrand(p.brands, brandFilter)) return false
+      return true
+    })
+  }, [plannedUploads, monthGoal, brandFilter])
 
   function handleViewBrandContent(brand: string) {
     if (partnerBrand && brand !== partnerBrand) return
@@ -339,7 +351,7 @@ function DashboardInner() {
             </span>
           </h1>
           <div className="text-[11px] text-owm-text2 mt-1 flex flex-wrap gap-1">
-            <span>09.03 기준</span><span className="text-[#bbb]">·</span>
+            <span>09.14 기준</span><span className="text-[#bbb]">·</span>
             <span>수동 수집</span><span className="text-[#bbb]">·</span>
             <span>{partnerBrand ? `${partnerBrand} 전용` : '3월 ~ 8월 누적'}</span>
           </div>
@@ -426,7 +438,11 @@ function DashboardInner() {
             {partnerBrand ? '회원사 콘텐츠 기준' : '8개 지점 · 2026.03 ~ 08'}
           </span>
         </div>
-        <SnapshotBar summary={displaySummary} monthGoal={partnerBrand ? null : goalForNow(monthlyGoals)} />
+        <SnapshotBar
+          summary={displaySummary}
+          monthGoal={partnerBrand ? null : goalForNow(monthlyGoals)}
+          plannedUploads={visiblePlanned}
+        />
         <div className="owm-info-box">
           <b className="text-owm-text">수치 기준 —</b> 샤오홍슈·도우인 조회수는 좋아요·저장·댓글로 역산했으며
           상단 누적 조회수에 반영됩니다. 도우인은 실측 조회수가 있으면 실측을 우선합니다.
@@ -853,7 +869,8 @@ function DashboardInner() {
       monthly={filteredMonthly}
       channels={chartChannels}
       rows={scopedChartContents}
-      monthGoal={partnerBrand ? null : goalForNow(monthlyGoals)}
+      monthGoal={partnerBrand ? null : monthGoal}
+      plannedUploads={visiblePlanned}
     />
     </>
   )

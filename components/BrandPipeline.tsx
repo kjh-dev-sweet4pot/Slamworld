@@ -18,6 +18,7 @@ import {
   type BrandTier,
 } from '@/lib/brand-pipeline'
 import PipelineCatRunner from '@/components/PipelineCatRunner'
+import { LATE_UPLOAD_NOTE } from '@/lib/brand-budget'
 import { usePartnerBrand, useShowSales } from '@/lib/access-context'
 
 const SEG_CLASS = [
@@ -163,8 +164,9 @@ export default function BrandPipeline({
             ? contractPrepProgress(b.contractCompletedOn, b.days)
             : 0
 
+          const late = b.meta.includes('입금 지연') || b.status.includes('입금 지연')
           return (
-          <div key={b.name} className="glass px-5 py-4 mb-2">
+          <div key={b.name} className={`glass px-5 py-4 mb-2 ${late ? 'ring-1 ring-[#EF4444] ring-inset shadow-[inset_-3px_0_0_#EF4444]' : ''}`}>
             <div className="flex items-baseline gap-2.5 flex-wrap mb-2.5">
               {onViewBrandContent && !partnerBrand ? (
                 <button
@@ -250,7 +252,13 @@ export default function BrandPipeline({
               <span className="text-center sm:text-left text-body">
                 가이드 · 매칭 · 방문 준비 <span className="text-azure-deep font-semibold">(약 {b.days}일)</span>
               </span>
-              <span className="text-right">{b.status}</span>
+              <span className="text-right">
+                {late ? (
+                  <span className="inline-block rounded border border-[#EF4444] bg-[#FEF2F2] px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
+                    {LATE_UPLOAD_NOTE}
+                  </span>
+                ) : b.status}
+              </span>
             </div>
           </div>
           )
@@ -299,7 +307,9 @@ export default function BrandPipeline({
           <p className="text-[11.5px] text-slate mb-4">가이드라인 및 계획안 진행 상태</p>
           <div className="space-y-3">
             {september.map(s => (
-              <div key={s.brand} className="py-2 border-b border-mist last:border-0 last:pb-0">
+              <div key={s.brand} className={`py-2 border-b border-mist last:border-0 last:pb-0 ${
+                s.status.includes('입금 지연') ? 'border-r-2 border-r-[#EF4444] pr-2' : ''
+              }`}>
                 <div className="flex items-baseline gap-2 mb-1.5">
                   {onViewBrandContent && !partnerBrand ? (
                     <button
@@ -312,7 +322,13 @@ export default function BrandPipeline({
                   ) : (
                     <span className="text-[13px] font-bold min-w-[5.5rem]">{s.brand}</span>
                   )}
-                  <span className="text-[11.5px] text-body flex-1">{s.status}</span>
+                  {s.status.includes('입금 지연') ? (
+                    <span className="ml-auto inline-block rounded border border-[#EF4444] bg-[#FEF2F2] px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
+                      {LATE_UPLOAD_NOTE}
+                    </span>
+                  ) : (
+                    <span className="text-[11.5px] text-body flex-1">{s.status}</span>
+                  )}
                   <span className="num text-[10px] text-slate">{s.pct}%</span>
                 </div>
                 <div className="h-[4px] rounded-full bg-mist overflow-hidden">
@@ -348,7 +364,13 @@ export default function BrandPipeline({
                     <span className="text-[13px] font-bold">{g.brand}</span>
                   )}
                   <span className="text-[11.5px] text-body truncate">{g.detail}</span>
-                  <span className="num text-[10.5px] text-slate ml-auto whitespace-nowrap">{g.eta}</span>
+                  {g.eta.includes('입금 지연') || g.note.includes('입금 지연') ? (
+                    <span className="ml-auto inline-block rounded border border-[#EF4444] bg-[#FEF2F2] px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
+                      {LATE_UPLOAD_NOTE}
+                    </span>
+                  ) : (
+                    <span className="num text-[10.5px] text-slate ml-auto whitespace-nowrap">{g.eta}</span>
+                  )}
                 </div>
                 <div className="h-[5px] rounded-full bg-mist overflow-hidden">
                   <div className="h-full rounded-full" style={{
@@ -384,9 +406,15 @@ export default function BrandPipeline({
                     <span className="text-[13px] font-bold">{m.brand}</span>
                   )}
                   <span className="text-[11.5px] text-body">{m.detail}</span>
-                  <span className="num text-[10.5px] text-slate ml-auto whitespace-nowrap">
-                    {m.total > 0 ? `${m.done} / ${m.total}건` : '—'}
-                  </span>
+                  {m.note.includes('입금 지연') || m.eta.includes('입금 지연') ? (
+                    <span className="ml-auto inline-block rounded border border-[#EF4444] bg-[#FEF2F2] px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
+                      {LATE_UPLOAD_NOTE}
+                    </span>
+                  ) : (
+                    <span className="num text-[10.5px] text-slate ml-auto whitespace-nowrap">
+                      {m.total > 0 ? `${m.done} / ${m.total}건` : '—'}
+                    </span>
+                  )}
                 </div>
                 {m.total > 0 && (
                   <div className="flex gap-0.5">

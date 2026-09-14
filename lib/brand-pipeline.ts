@@ -120,22 +120,6 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     status: '진행 대기',
     segs: [4, 2, 4, 2, 2],
   },
-  {
-    name: '리포데이',
-    budget: '1,000만원/월',
-    meta: '매월 1,000만원 · 입금 지연',
-    days: 14,
-    status: '9월 마케팅 목표',
-    segs: [4, 2, 4, 2, 2],
-  },
-  {
-    name: '스킨스탠다드',
-    budget: '1,100만원',
-    meta: '1,100만원 · 입금 지연',
-    days: 14,
-    status: '10월 마케팅',
-    segs: [4, 2, 4, 2, 2],
-  },
 ]
 
 /** 8월 말 가이드 확정 → 9월 초 방문 시작 */
@@ -202,16 +186,6 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   {
     brand: 'UIQ',
     status: '입금 지연',
-    pct: 0,
-  },
-  {
-    brand: '리포데이',
-    status: '매월 1,000만원 · 입금 지연',
-    pct: 0,
-  },
-  {
-    brand: '스킨스탠다드',
-    status: '1,100만원 · 입금 지연',
     pct: 0,
   },
 ]
@@ -313,6 +287,33 @@ export const REVIEW_BRANDS: PipelineBrand[] = [
     stage: 1,
     stageLabel: '온보딩 예정',
     eta: '일정 조율 중',
+  },
+  {
+    name: '리포데이',
+    desc: '매월 1,000만원',
+    budget: '1,000만원/월',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '협의중',
+    eta: '협의중',
+  },
+  {
+    name: '스킨스탠다드',
+    desc: '10월 마케팅 논의',
+    budget: '1,100만원',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '협의중',
+    eta: '협의중',
+  },
+  {
+    name: '토코보',
+    desc: 'Tocobo',
+    budget: '협의중',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '협의중',
+    eta: '협의중',
   },
 ]
 

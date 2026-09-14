@@ -1,6 +1,6 @@
 /** 브랜드 마케팅 예산 — 단일 소스 */
 
-export type BudgetPayment = '입금 완료' | '입금 예정' | '송금 대기' | '미입금' | '입금 지연'
+export type BudgetPayment = '입금 완료' | '입금 예정' | '송금 대기' | '미입금' | '입금 지연' | '협의중'
 export type BudgetStage = '확정 및 진행' | '계약 예정' | '10월 예정'
 /** 캠페인 집행 상태 (동일 브랜드 복수 캠페인용) */
 export type BudgetUseStatus = '기 소진' | '사용 예정'
@@ -31,10 +31,11 @@ export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/31 입금 확인' },
   { brand: 'Troubleless', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '입금 지연' },
   { brand: 'UIQ', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '입금 지연' },
-  { brand: '리포데이', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '매월 1,000만원 · 입금 지연' },
-  { brand: '스킨스탠다드', amount: 1100, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-10', note: '1,100만원 · 입금 지연' },
   { brand: '해브블루', amount: 2000, rangeMax: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '2,000–3,000만원 예상' },
   { brand: '달바', amount: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '3,000만원 예상 중' },
+  { brand: '리포데이', amount: 1000, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '매월 1,000만원 · 협의중' },
+  { brand: '스킨스탠다드', amount: 1100, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-10', note: '1,100만원 · 협의중' },
+  { brand: '토코보', amount: 0, payment: '협의중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '협의중' },
 ]
 
 export function budgetRowKey(b: BrandBudget): string {
@@ -60,6 +61,7 @@ export const PARTNER_BRAND_COLOR: Record<string, string> = {
   '달바': '#E11D48',
   '리포데이': '#14B8A6',
   '스킨스탠다드': '#6366F1',
+  '토코보': '#7C3AED',
 }
 
 export const PARTNER_UNKNOWN_COLOR = '#94A3B8'
@@ -90,6 +92,12 @@ export function budgetPaymentLabel(payment: BrandBudget['payment']): string {
   return payment === '검토 중' ? '송금 검토' : payment
 }
 
+export const LATE_UPLOAD_NOTE = '입금 지연 → 컨텐츠 업로드 불가'
+
+export function isLatePayment(payment?: string): boolean {
+  return payment === '입금 지연'
+}
+
 const STAGE_COLOR_FALLBACK: Record<BudgetStage, string> = {
   '확정 및 진행': '#1868F0',
   '계약 예정': '#F59E0B',
@@ -102,6 +110,7 @@ export interface PartnerDonutSlice {
   weight: number
   color: string
   stage: BudgetStage | '미정'
+  payment?: BrandBudget['payment']
   isUnknownGroup?: boolean
 }
 
@@ -125,6 +134,7 @@ export function partnerCompanyDonut(): { slices: PartnerDonutSlice[]; totalWeigh
     weight: budgetMid(b),
     color: budgetItemColor(b.stage, b.payment),
     stage: b.stage,
+    payment: b.payment,
   }))
 
   if (unknown.length > 0) {
@@ -390,20 +400,20 @@ export function computeBudgetSummary(): BudgetSummary {
 // ponytail: totals drift → 상단 KPI 깨짐
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
-  if (s.securedTotal !== 23100) throw new Error(`securedTotal expected 23100, got ${s.securedTotal}`)
+  if (s.securedTotal !== 21000) throw new Error(`securedTotal expected 21000, got ${s.securedTotal}`)
   if (s.securedPaid !== 12000) throw new Error(`securedPaid expected 12000, got ${s.securedPaid}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
-  if (brands('secured') !== 'Rxme,TeloAct · 1차,TeloAct · 2차,Troubleless,UIQ,닥터 리앤장,리포데이,스킨스탠다드,옵티팜,클리어디어') {
+  if (brands('secured') !== 'Rxme,TeloAct · 1차,TeloAct · 2차,Troubleless,UIQ,닥터 리앤장,옵티팜,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
   }
-  if (brands('planned') !== '달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
+  if (brands('planned') !== '달바,리포데이,스킨스탠다드,토코보,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
   if (brands('oct') !== '') throw new Error(`oct kpi brands: ${brands('oct')}`)
   const unknown = unknownBudgetRows().map(r => r.brand).sort().join(',')
-  if (unknown !== '') throw new Error(`unknown budget brands: ${unknown}`)
-  if (s.byStage['계약 예정'].total !== 5500) throw new Error(`planned total expected 5500, got ${s.byStage['계약 예정'].total}`)
+  if (unknown !== '토코보') throw new Error(`unknown budget brands: ${unknown}`)
+  if (s.byStage['계약 예정'].total !== 7600) throw new Error(`planned total expected 7600, got ${s.byStage['계약 예정'].total}`)
   const chart = monthlyBudgetForChart()
   if (chart[0]?.cumulative !== 4000) throw new Error(`jul cumulative expected 4000, got ${chart[0]?.cumulative}`)
   if (chart[1]?.cumulative !== 13000) throw new Error(`aug cumulative expected 13000, got ${chart[1]?.cumulative}`)
-  if (chart[2]?.cumulative !== 28600) throw new Error(`sep cumulative expected 28600, got ${chart[2]?.cumulative}`)
+  if (chart[2]?.cumulative !== 27500) throw new Error(`sep cumulative expected 27500, got ${chart[2]?.cumulative}`)
   if (chart[3]?.cumulative !== 28600) throw new Error(`oct cumulative expected 28600, got ${chart[3]?.cumulative}`)
 }

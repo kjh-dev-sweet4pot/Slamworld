@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { contentViews } from '@/lib/content-views'
 import { buildLocationMonthlySeries } from '@/lib/monthly-performance'
-import type { MonthlyGoal } from '@/lib/monthly-goal'
+import type { MonthlyGoal, PlannedUpload } from '@/lib/monthly-goal'
 import { createServerSupabase } from '@/lib/supabase-server'
 
 export async function GET() {
@@ -14,7 +14,11 @@ export async function GET() {
       'location, visit_date, likes, saves, views, views_estimated, channel',
     ).not('visit_date', 'is', null),
     supabase.from('monthly_goals').select('month, upload_target').order('month'),
-    supabase.from('contents').select('visit_date').eq('publish_status', '진행중').not('visit_date', 'is', null),
+    supabase.from('contents')
+      .select('id, influencer_name, location, visit_date, brands, channel, profile_url, publish_status')
+      .in('publish_status', ['예정', '진행중'])
+      .not('visit_date', 'is', null)
+      .order('visit_date'),
   ])
 
   const channelRes = await supabase.from('contents').select(
@@ -77,7 +81,7 @@ export async function GET() {
   const inProgressByMonth = new Map<string, number>()
   if (!planRes.error) {
     for (const row of planRes.data ?? []) {
-      if (!row.visit_date) continue
+      if (!row.visit_date || row.publish_status !== '진행중') continue
       const month = String(row.visit_date).slice(0, 7)
       inProgressByMonth.set(month, (inProgressByMonth.get(month) ?? 0) + 1)
     }
@@ -93,6 +97,22 @@ export async function GET() {
         }
       })
 
+  const plannedUploads: PlannedUpload[] = planRes.error
+    ? []
+    : (planRes.data ?? []).flatMap(row => {
+        if (!row.visit_date || (row.publish_status !== '예정' && row.publish_status !== '진행중')) return []
+        return [{
+          id: row.id,
+          name: row.influencer_name,
+          location: row.location,
+          visitDate: String(row.visit_date).slice(0, 10),
+          brands: row.brands,
+          channel: row.channel,
+          profileUrl: row.profile_url,
+          status: row.publish_status,
+        }]
+      })
+
   return NextResponse.json({
     summary,
     locations: locationRes.data,
@@ -100,5 +120,6 @@ export async function GET() {
     locationMonthly,
     channels,
     monthlyGoals,
+    plannedUploads,
   })
 }
