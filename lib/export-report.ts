@@ -197,7 +197,9 @@ export function influencerListXlsx(rows: Content[]): Uint8Array {
 
 export function downloadInfluencerXlsx(rows: Content[], filename: string) {
   const bytes = influencerListXlsx(rows)
-  const blob = new Blob([bytes], {
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  const blob = new Blob([copy], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
   const a = document.createElement('a')
