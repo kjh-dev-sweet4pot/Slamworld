@@ -95,7 +95,7 @@ export default function LocationStatus({
         지점 현황
         <span className="text-xs font-normal text-owm-text2">{rows.length}개 지점</span>
       </div>
-      <p className="text-[11px] text-slate -mt-2 mb-3">
+      <p className="print-hide text-[11px] text-slate -mt-2 mb-3">
         카드를 누르면 해당 지점 그래프와 콘텐츠 목록이 펼쳐집니다.
       </p>
 
@@ -161,7 +161,7 @@ export default function LocationStatus({
       </div>
 
       {selected && (
-        <div className="owm-chart-section mt-3">
+        <div className="print-hide owm-chart-section mt-3">
           <div className="owm-chart-header">
             <h3>
               <span className="owm-loc-dot" style={{ background: selectedColor }} />

@@ -11,6 +11,7 @@ import ChannelDonut from '@/components/ChannelDonut'
 import RegionDonut from '@/components/RegionDonut'
 import BrandPipeline from '@/components/BrandPipeline'
 import LocationStatus from '@/components/LocationStatus'
+import ReportPrint from '@/components/ReportPrint'
 import LoginGate from '@/components/LoginGate'
 import type { Content, Summary, LocationSummary } from '@/lib/types'
 import { channelSummaryFromContents } from '@/lib/channel-summary'
@@ -18,6 +19,12 @@ import { contentViews, contentViewsDisplay } from '@/lib/content-views'
 import { contentMatchesBrand, CONTENT_FILTER_BRANDS } from '@/lib/brand-content'
 import { AUGUST_2026_PINNED, mergePinnedRows, PERF_PINNED } from '@/lib/content-priority'
 import { useAccess } from '@/lib/access-context'
+import {
+  downloadInfluencerXlsx,
+  influencerXlsxFilename,
+  printReportPdf,
+  reportPdfTitle,
+} from '@/lib/export-report'
 
 type Tab = 'perf' | 'month' | 'all'
 
@@ -81,9 +88,9 @@ function SectionHeader({ no, title, sub, right }: {
       <div>
         <span className="num text-[11px] text-azure tracking-widest">{no}</span>
         <h2 className="text-xl font-extrabold tracking-tight mt-1">{title}</h2>
-        {sub && <p className="text-[12.5px] text-body mt-1 leading-relaxed">{sub}</p>}
+        {sub && <p className="print-hide text-[12.5px] text-body mt-1 leading-relaxed">{sub}</p>}
       </div>
-      {right && <span className="num text-[11px] text-slate ml-auto">{right}</span>}
+      {right && <span className="print-hide num text-[11px] text-slate ml-auto">{right}</span>}
     </div>
   )
 }
@@ -317,13 +324,14 @@ function DashboardInner() {
 
   return (
     <>
+    <div className="report-screen">
       <header className="owm-hdr">
         <div>
           <h1 className="text-lg md:text-xl font-semibold tracking-tight">
             <b className="text-[#2f1c13]">OWM</b>
             <i className="not-italic text-owm-text3 font-normal mx-1">×</i>
             {partnerBrand ? `${partnerBrand} 리포트` : '브랜드슬램 인플루언서 리포트'}
-            <span className="align-middle text-[11px] text-owm-blue bg-[#eef3ff] px-2.5 py-0.5 rounded-[10px] ml-2 font-semibold">
+            <span className="print-hide align-middle text-[11px] text-owm-blue bg-[#eef3ff] px-2.5 py-0.5 rounded-[10px] ml-2 font-semibold">
               v0.9
             </span>
           </h1>
@@ -351,8 +359,25 @@ function DashboardInner() {
           )}
           <button
             type="button"
+            onClick={() => printReportPdf(reportPdfTitle(partnerBrand))}
+            className="no-print text-[11px] font-semibold text-owm-text hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white"
+            title="인쇄 대화상자에서 대상을 PDF로 저장하세요"
+          >
+            PDF 저장
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadInfluencerXlsx(scopedChartContents, influencerXlsxFilename(partnerBrand))}
+            disabled={scopedChartContents.length === 0}
+            className="no-print text-[11px] font-semibold text-owm-text hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white disabled:opacity-40"
+            title="현재 필터 기준 참여 인플루언서 목록"
+          >
+            엑셀 저장
+          </button>
+          <button
+            type="button"
             onClick={logout}
-            className="text-[11px] font-semibold text-owm-text2 hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white"
+            className="no-print text-[11px] font-semibold text-owm-text2 hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white"
           >
             로그아웃
           </button>
@@ -367,7 +392,7 @@ function DashboardInner() {
 
       <div className="owm-dashboard-grid max-w-[1920px] mx-auto px-3 sm:px-5 lg:px-8 py-4 pb-24">
           {/* 좌측 사이드 */}
-          <aside className="owm-side-col hidden xl:flex flex-col gap-4 sticky top-28 self-start">
+          <aside className="print-hide owm-side-col hidden xl:flex flex-col gap-4 sticky top-28 self-start">
             {sideCards}
           </aside>
 
@@ -407,7 +432,7 @@ function DashboardInner() {
       </section>
 
       {/* 모바일·태블릿: 사이드 카드 */}
-      <div className="xl:hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="print-hide xl:hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {sideCards}
         <SideLiveFeed />
       </div>
@@ -423,8 +448,19 @@ function DashboardInner() {
             : `${scopedContents.length}건`}
         />
 
+        <p className="print-only hidden text-[11px] text-slate -mt-1 mb-3">
+          {[
+            partnerBrand ?? (brandFilter ? `브랜드 ${brandFilter}` : null),
+            campaign !== '전체' ? campaign : null,
+            location !== '전체' ? location : null,
+            channel !== '전체' ? channel : null,
+            tab === 'month' ? monthSub(selectedMonth) : '전체 기간',
+            `${scopedChartContents.length}건`,
+          ].filter(Boolean).join(' · ')}
+        </p>
+
         {/* 탭 */}
-        <div className="flex gap-1 bg-white/55 border border-white/75 rounded p-0.5 w-fit mb-3">
+        <div className="print-hide flex gap-1 bg-white/55 border border-white/75 rounded p-0.5 w-fit mb-3">
           {([['perf','성과순'],['month','월별'],['all','전체']] as [Tab,string][]).map(([t,label]) => (
             <button key={t} onClick={() => {
                 if (t !== tab) setLoading(true)
@@ -440,7 +476,7 @@ function DashboardInner() {
         </div>
 
         {/* 필터 */}
-        <div className="flex gap-2 flex-wrap mb-4">
+        <div className="print-hide flex gap-2 flex-wrap mb-4">
           {!partnerBrand && (
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-slate font-semibold">브랜드</span>
@@ -504,26 +540,26 @@ function DashboardInner() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-4 items-start">
-          <div className="min-w-0">
+        <div className="print-s1-body grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-4 items-start">
+          <div className="print-s1-main min-w-0">
         {/* ── 성과순 ── */}
         {tab === 'perf' && (
           <>
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+              <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5">
                 {[...Array(PERF_PREVIEW_COUNT)].map((_, i) => (
                   <div key={i} className="glass-solid h-40 animate-pulse" />
                 ))}
               </div>
             ) : scopedContents.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5">
                   {cardContents.slice(0, visibleCount).map(c => (
                     <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
                   ))}
                 </div>
                 {(cardContents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
-                  <div className="mt-3 flex items-center justify-between gap-3 px-1">
+                  <div className="print-hide mt-3 flex items-center justify-between gap-3 px-1">
                     <p className="text-[12px] text-slate">
                       {visibleCount}건 표시 중
                       {cardContents.length > visibleCount && (
@@ -587,20 +623,20 @@ function DashboardInner() {
               </p>
             </div>
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
+              <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
                 {[...Array(PERF_PREVIEW_COUNT)].map((_, i) => (
                   <div key={i} className="glass-solid h-40 animate-pulse" />
                 ))}
               </div>
             ) : scopedContents.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
+                <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
                   {cardContents.slice(0, visibleCount).map(c => (
                     <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
                   ))}
                 </div>
                 {(cardContents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
-                  <div className="mt-3 flex items-center justify-between gap-3 px-1">
+                  <div className="print-hide mt-3 flex items-center justify-between gap-3 px-1">
                     <p className="text-[12px] text-slate">
                       {visibleCount}건 표시 중
                       {cardContents.length > visibleCount && (
@@ -640,7 +676,7 @@ function DashboardInner() {
 
         {/* ── 전체 테이블 ── */}
         {tab === 'all' && (
-          <div className="glass overflow-hidden">
+          <div className="print-hide glass overflow-hidden">
             <div className="grid grid-cols-7 gap-3 px-4 py-2.5 bg-white/40
               num text-[10.5px] text-slate uppercase tracking-wider items-center">
               <div>지점</div><div>인플루언서</div><div>채널</div>
@@ -704,7 +740,7 @@ function DashboardInner() {
         )}
           </div>
 
-          <aside className="flex flex-col gap-2.5 w-full shrink-0 lg:sticky lg:top-16 self-start">
+          <aside className="print-s1-charts flex flex-col gap-2.5 w-full shrink-0 lg:sticky lg:top-16 self-start">
             <ChannelDonut
               data={chartChannels}
               scopeLabel={chartScopeLabel}
@@ -729,7 +765,7 @@ function DashboardInner() {
 
       {/* ── §3 자료 ── */}
       {!partnerBrand && (
-      <section id="s3" className="scroll-mt-20">
+      <section id="s3" className="print-hide scroll-mt-20">
         <SectionHeader no="07" title="자료 및 향후 개선"/>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
           <div className="glass p-5">
@@ -796,10 +832,25 @@ function DashboardInner() {
 
           </main>
 
-          <aside className="owm-side-col hidden xl:block sticky top-28 self-start">
+          <aside className="print-hide owm-side-col hidden xl:block sticky top-28 self-start">
             <SideLiveFeed />
           </aside>
         </div>
+    </div>
+    <ReportPrint
+      partnerBrand={partnerBrand}
+      scope={[
+        partnerBrand ?? (brandFilter ? `브랜드 ${brandFilter}` : null),
+        campaign !== '전체' ? campaign : null,
+        location !== '전체' ? location : null,
+        channel !== '전체' ? channel : null,
+        '3월 ~ 8월 누적',
+      ].filter(Boolean).join(' · ')}
+      summary={displaySummary}
+      monthly={filteredMonthly}
+      channels={chartChannels}
+      rows={scopedChartContents}
+    />
     </>
   )
 }
