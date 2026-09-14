@@ -68,6 +68,7 @@ function donutSlices(
 const STAGE_LEGEND: { label: string; color: string }[] = [
   { label: '확정 · 입금 완료', color: budgetItemColor('확정 및 진행', '입금 완료') },
   { label: '확정 · 입금 예정', color: budgetItemColor('확정 및 진행', '입금 예정') },
+  { label: '확정 · 입금 지연', color: budgetItemColor('확정 및 진행', '입금 지연') },
   { label: '확정 · 미입금', color: budgetItemColor('확정 및 진행', '미입금') },
   { label: '계약 논의중', color: budgetItemColor('10월 예정', '검토 중') },
   { label: '계약 예정·검토', color: budgetItemColor('계약 예정', '검토 중') },
@@ -440,8 +441,8 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
   return (
     <div className="relative flex-1 min-h-[240px] w-full flex flex-col">
       <div className="relative flex-1 min-h-[200px] w-full flex flex-col">
-        <div className="relative flex-1 min-h-0 pt-4">
-          <div className="absolute inset-x-0 top-4 bottom-0">
+        <div className="relative flex-1 min-h-0 pt-6">
+          <div className="absolute inset-x-0 top-6 bottom-0">
           {[0.25, 0.5, 0.75, 1].map(ratio => (
             <div
               key={ratio}
@@ -482,9 +483,6 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
                   <div className="flex-1 w-full flex items-end min-h-0">
                     {hasData ? (
                       <div className="relative w-full" style={{ height: `${barH}%` }}>
-                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-0.5 num text-[9px] font-semibold text-body whitespace-nowrap pointer-events-none">
-                          {fmtBudgetManwon(row.total)}만
-                        </span>
                         <div
                           className={`w-full h-full rounded-t-[4px] overflow-hidden flex flex-col justify-end
                             shadow-[0_2px_8px_rgba(24,104,240,.15)] transition-opacity
@@ -560,8 +558,9 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
               >
                 {showCumLabel && (
                   <span
-                    className="num text-[9px] font-bold whitespace-nowrap absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+3px)]
-                      px-1 rounded bg-white/85"
+                    className={`num text-[9px] font-bold whitespace-nowrap absolute bottom-[calc(100%+4px)]
+                      px-1 rounded bg-white/90
+                      ${i === 0 ? 'left-0' : i === n - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2'}`}
                     style={{ color: CUMULATIVE_LINE }}
                   >
                     {fmtBudgetManwon(row.cumulative)}만
@@ -583,9 +582,13 @@ function MonthlyBudgetBars({ rows, maxTotal }: { rows: MonthlyBudgetChartRow[]; 
             const isHover = hovered === row.month
             return (
               <div key={row.month} className="flex-1 min-w-0 text-center">
-                <span className={`num text-[9px] font-semibold
+                <span className={`num block text-[9px] font-semibold leading-tight
                   ${row.total > 0 || isHover ? 'text-azure-deep' : 'text-slate/60'}`}>
                   {fmtMonthLabel(row.month)}
+                </span>
+                <span className={`num block text-[9px] font-semibold leading-tight mt-0.5
+                  ${row.total > 0 ? 'text-body' : 'text-transparent'}`}>
+                  {row.total > 0 ? `${fmtBudgetManwon(row.total)}만` : '–'}
                 </span>
               </div>
             )

@@ -24,7 +24,7 @@ export const PARTNER_LOGIN_SLUGS: Record<string, string> = {
   /** 흔한 오타 */
   haveblue: '해브블루',
   dalba: '달바',
-  re4day: 'Re4day',
+  re4day: '리포데이',
   skinstandard: '스킨스탠다드',
 }
 
@@ -38,6 +38,8 @@ const PARTNER_LOGIN_ALIASES: Record<string, string> = {
   '해브블루': '해브블루',
   '달바': '달바',
   '스킨스탠다드': '스킨스탠다드',
+  '리포데이': '리포데이',
+  'Re4day': '리포데이',
 }
 
 export function partnerPassword(brand: string): string {
@@ -98,8 +100,9 @@ export function loadStoredAccess(): AccessSession | null {
     const parsed = JSON.parse(v) as AccessSession
     if (parsed.kind === 'full' || parsed.kind === 'meeting') return { kind: parsed.kind }
     if (parsed.kind === 'partner' && typeof parsed.brand === 'string') {
+      const brand = parsed.brand === 'Re4day' ? '리포데이' : parsed.brand
       const known = new Set(Object.values(PARTNER_LOGIN_SLUGS))
-      return known.has(parsed.brand) ? { kind: 'partner', brand: parsed.brand } : null
+      return known.has(brand) ? { kind: 'partner', brand } : null
     }
   } catch {
     /* private mode / corrupt */

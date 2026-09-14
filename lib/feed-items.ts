@@ -21,8 +21,8 @@ export const LIVE_FEED: FeedItem[] = [
     time: '9/3 16:00',
     badge: '입금',
     badgeClass: 'bg-[#ecfdf5] text-[#16a34a]',
-    headline: 'UIQ 입금 확인',
-    detail: '1,000만원 · 진행 대기',
+    headline: 'UIQ 입금 지연',
+    detail: '1,000만원 · 입금 지연',
     accent: 'up',
   },
   {
@@ -30,7 +30,7 @@ export const LIVE_FEED: FeedItem[] = [
     badge: '예산',
     badgeClass: 'bg-[#eef3ff] text-[#4f8cff]',
     headline: 'Troubleless 9월 확정',
-    detail: '1,000만원 · 송금 대기',
+    detail: '1,000만원 · 입금 지연',
     accent: 'up',
   },
   {
@@ -69,8 +69,8 @@ export const LIVE_FEED: FeedItem[] = [
     time: '8/28 10:00',
     badge: '검토',
     badgeClass: 'bg-[#f0f2f7] text-[#6b728a]',
-    headline: '해브블루·Re4day 계약 예정·검토',
-    detail: '온보딩 진행 · 예산 미확인',
+    headline: '해브블루·달바 계약 예정',
+    detail: '해브블루 2,000–3,000만 예상 · 달바 3,000만 예상 중',
     accent: 'neutral',
   },
   {

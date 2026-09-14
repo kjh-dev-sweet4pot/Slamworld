@@ -1,6 +1,7 @@
 export type Channel = '샤오홍슈' | '인스타그램' | '틱톡' | '도우인' | '웨이보'
 export type Performance = 'high' | 'mid' | 'low' | 'no_data'
 export type ViewsSource = 'measured' | 'estimated' | 'none'
+export type PublishStatus = '예정' | '진행중' | '발행완료'
 
 export interface Content {
   id: number
@@ -18,6 +19,7 @@ export interface Content {
   visit_date: string | null
   product: string | null
   upload_url: string | null
+  publish_status?: PublishStatus
   views: number | null
   likes: number | null
   saves: number | null

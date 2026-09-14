@@ -1,6 +1,6 @@
 /** 브랜드 마케팅 예산 — 단일 소스 */
 
-export type BudgetPayment = '입금 완료' | '입금 예정' | '송금 대기' | '미입금'
+export type BudgetPayment = '입금 완료' | '입금 예정' | '송금 대기' | '미입금' | '입금 지연'
 export type BudgetStage = '확정 및 진행' | '계약 예정' | '10월 예정'
 /** 캠페인 집행 상태 (동일 브랜드 복수 캠페인용) */
 export type BudgetUseStatus = '기 소진' | '사용 예정'
@@ -24,17 +24,17 @@ export interface BrandBudget {
 
 export const BRAND_BUDGETS: BrandBudget[] = [
   { brand: 'TeloAct', campaign: '1차', useStatus: '기 소진', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-07', marketingMonth: '2026-07', note: '1차 캠페인 · 기 소진' },
-  { brand: 'TeloAct', campaign: '2차', useStatus: '사용 예정', amount: 6000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '2차 캠페인 · 사용 예정' },
-  { brand: '옵티팜', amount: 4000, payment: '미입금', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
+  { brand: 'TeloAct', campaign: '2차', useStatus: '사용 예정', amount: 6000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '2차 캠페인 · 입금 지연' },
+  { brand: '옵티팜', amount: 4000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '입금 확인' },
   { brand: '닥터 리앤장', amount: 3000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/30 입금 확인' },
-  { brand: '클리어디어', amount: 1000, payment: '입금 예정', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '계약서 전달 중' },
+  { brand: '클리어디어', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '입금 지연' },
   { brand: 'Rxme', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-08', marketingMonth: '2026-09', note: '8/31 입금 확인' },
-  { brand: 'Troubleless', amount: 1000, payment: '송금 대기', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '9월 확정 · 송금 대기' },
-  { brand: 'UIQ', amount: 1000, payment: '입금 완료', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '9/3 입금 확인 · 진행 대기' },
-  { brand: '해브블루', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
-  { brand: '달바', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
-  { brand: 'Re4day', amount: 0, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '예산 미확인' },
-  { brand: '스킨스탠다드', amount: 1100, payment: '검토 중', stage: '10월 예정', securedMonth: null, marketingMonth: '2026-10' },
+  { brand: 'Troubleless', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '입금 지연' },
+  { brand: 'UIQ', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '입금 지연' },
+  { brand: '리포데이', amount: 1000, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-09', note: '매월 1,000만원 · 입금 지연' },
+  { brand: '스킨스탠다드', amount: 1100, payment: '입금 지연', stage: '확정 및 진행', securedMonth: '2026-09', marketingMonth: '2026-10', note: '1,100만원 · 입금 지연' },
+  { brand: '해브블루', amount: 2000, rangeMax: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '2,000–3,000만원 예상' },
+  { brand: '달바', amount: 3000, payment: '검토 중', stage: '계약 예정', securedMonth: null, marketingMonth: '2026-09', note: '3,000만원 예상 중' },
 ]
 
 export function budgetRowKey(b: BrandBudget): string {
@@ -57,6 +57,8 @@ export const PARTNER_BRAND_COLOR: Record<string, string> = {
   '클리어디어': '#22C55E',
   'Rxme': '#6FBFFF',
   '해브블루': '#F59E0B',
+  '달바': '#E11D48',
+  '리포데이': '#14B8A6',
   '스킨스탠다드': '#6366F1',
 }
 
@@ -71,7 +73,7 @@ export function budgetItemColor(
   if (stage === '확정 및 진행') {
     if (payment === '입금 완료') return '#1868F0'
     if (payment === '입금 예정' || payment === '송금 대기') return '#F59E0B'
-    if (payment === '미입금') return '#EF4444'
+    if (payment === '미입금' || payment === '입금 지연') return '#EF4444'
   }
   if (stage === '계약 예정') return '#EA580C'
   if (stage === '10월 예정') return '#6366F1'
@@ -303,7 +305,7 @@ export function monthlyBudgetForChart(): MonthlyBudgetChartRow[] {
       })
       if (b.payment === '입금 완료') row.paidTotal += amt
       else if (b.payment === '입금 예정' || b.payment === '송금 대기') row.payPendingTotal += amt
-      else if (b.payment === '미입금') row.unpaidTotal += amt
+      else if (b.payment === '미입금' || b.payment === '입금 지연') row.unpaidTotal += amt
       row.total += amt
       continue
     }
@@ -388,19 +390,20 @@ export function computeBudgetSummary(): BudgetSummary {
 // ponytail: totals drift → 상단 KPI 깨짐
 if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   const s = computeBudgetSummary()
-  if (s.securedTotal !== 21000) throw new Error(`securedTotal expected 21000, got ${s.securedTotal}`)
-  if (s.securedPaid !== 15000) throw new Error(`securedPaid expected 15000, got ${s.securedPaid}`)
+  if (s.securedTotal !== 23100) throw new Error(`securedTotal expected 23100, got ${s.securedTotal}`)
+  if (s.securedPaid !== 12000) throw new Error(`securedPaid expected 12000, got ${s.securedPaid}`)
   const brands = (k: BudgetKpiKey) => kpiCompanyRows(k).map(r => r.brand).sort().join(',')
-  if (brands('secured') !== 'Rxme,TeloAct · 1차,TeloAct · 2차,Troubleless,UIQ,닥터 리앤장,옵티팜,클리어디어') {
+  if (brands('secured') !== 'Rxme,TeloAct · 1차,TeloAct · 2차,Troubleless,UIQ,닥터 리앤장,리포데이,스킨스탠다드,옵티팜,클리어디어') {
     throw new Error(`secured kpi brands: ${brands('secured')}`)
   }
-  if (brands('planned') !== 'Re4day,달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
-  if (brands('oct') !== '스킨스탠다드') throw new Error(`oct kpi brands: ${brands('oct')}`)
+  if (brands('planned') !== '달바,해브블루') throw new Error(`planned kpi brands: ${brands('planned')}`)
+  if (brands('oct') !== '') throw new Error(`oct kpi brands: ${brands('oct')}`)
   const unknown = unknownBudgetRows().map(r => r.brand).sort().join(',')
-  if (unknown !== 'Re4day,달바,해브블루') throw new Error(`unknown budget brands: ${unknown}`)
+  if (unknown !== '') throw new Error(`unknown budget brands: ${unknown}`)
+  if (s.byStage['계약 예정'].total !== 5500) throw new Error(`planned total expected 5500, got ${s.byStage['계약 예정'].total}`)
   const chart = monthlyBudgetForChart()
   if (chart[0]?.cumulative !== 4000) throw new Error(`jul cumulative expected 4000, got ${chart[0]?.cumulative}`)
   if (chart[1]?.cumulative !== 13000) throw new Error(`aug cumulative expected 13000, got ${chart[1]?.cumulative}`)
-  if (chart[2]?.cumulative !== 21000) throw new Error(`sep cumulative expected 21000, got ${chart[2]?.cumulative}`)
-  if (chart[3]?.cumulative !== 22100) throw new Error(`oct cumulative expected 22100, got ${chart[3]?.cumulative}`)
+  if (chart[2]?.cumulative !== 28600) throw new Error(`sep cumulative expected 28600, got ${chart[2]?.cumulative}`)
+  if (chart[3]?.cumulative !== 28600) throw new Error(`oct cumulative expected 28600, got ${chart[3]?.cumulative}`)
 }

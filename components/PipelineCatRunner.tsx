@@ -32,7 +32,7 @@ export default function PipelineCatRunner({
   const prepPos = prepPct <= 0 ? 4 : Math.min(100, Math.max(8, prepPct))
 
   return (
-    <div className="relative pt-[52px]">
+    <div className="pipeline-cat-runner relative pt-[52px]">
       <div className="absolute inset-x-0 top-0 z-10 flex gap-0.5 h-[52px] pointer-events-none" aria-hidden>
         <div className="flex-none w-[76px] sm:w-[92px] relative">
           {stage === 'delivering' && <CatMarker />}

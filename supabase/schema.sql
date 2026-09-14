@@ -21,10 +21,11 @@ CREATE TABLE IF NOT EXISTS contents (
   target_audience TEXT,                   -- '미국, 이란' (메가 인플루언서용)
   is_press        BOOLEAN DEFAULT FALSE,  -- 기자단 여부
 
-  -- 방문/업로드
+  -- 방문/업로드. 월 분류는 visit_date (YYYY-MM). 별도 month 컬럼 없음
   visit_date      DATE,
   product         TEXT,
   upload_url      TEXT,
+  publish_status  TEXT NOT NULL DEFAULT '예정',  -- '예정' | '진행중' | '발행완료'
 
   -- 성과 지표
   views           INTEGER,    -- 조회수 (없으면 NULL)
@@ -124,3 +125,21 @@ CREATE INDEX IF NOT EXISTS idx_contents_channel   ON contents(channel);
 CREATE INDEX IF NOT EXISTS idx_contents_is_press  ON contents(is_press);
 CREATE INDEX IF NOT EXISTS idx_contents_views     ON contents(views DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS idx_contents_likes     ON contents(likes DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_contents_visit_date ON contents(visit_date);
+CREATE INDEX IF NOT EXISTS idx_contents_publish_status ON contents(publish_status);
+
+ALTER TABLE contents DROP CONSTRAINT IF EXISTS contents_publish_status_check;
+ALTER TABLE contents ADD CONSTRAINT contents_publish_status_check
+  CHECK (publish_status IN ('예정', '진행중', '발행완료'));
+
+-- 7. 월 목표 숫자만. 인원은 contents.visit_date + publish_status
+CREATE TABLE IF NOT EXISTS monthly_goals (
+  month         DATE PRIMARY KEY,
+  upload_target INTEGER NOT NULL CHECK (upload_target >= 0),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE monthly_goals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public read" ON monthly_goals;
+CREATE POLICY "public read" ON monthly_goals FOR SELECT TO anon, authenticated USING (true);
+GRANT SELECT ON monthly_goals TO anon, authenticated;
