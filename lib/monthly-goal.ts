@@ -5,6 +5,17 @@ export interface MonthlyGoal {
   inProgress: number
 }
 
+export interface PlannedUpload {
+  id: number
+  name: string
+  location: string
+  visitDate: string
+  brands: string | null
+  channel: string
+  profileUrl: string | null
+  status: '예정' | '진행중'
+}
+
 export function planProgressPct(inProgress: number, target: number): number {
   if (target <= 0) return 0
   return Math.round((inProgress / target) * 100)

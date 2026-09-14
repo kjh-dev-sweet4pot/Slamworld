@@ -26,6 +26,7 @@ export const PARTNER_LOGIN_SLUGS: Record<string, string> = {
   dalba: '달바',
   re4day: '리포데이',
   skinstandard: '스킨스탠다드',
+  tocobo: '토코보',
 }
 
 /** 한글·표시명으로도 입장 가능 (복붙·구비밀번호 대응) */
@@ -40,6 +41,8 @@ const PARTNER_LOGIN_ALIASES: Record<string, string> = {
   '스킨스탠다드': '스킨스탠다드',
   '리포데이': '리포데이',
   'Re4day': '리포데이',
+  '토코보': '토코보',
+  'Tocobo': '토코보',
 }
 
 export function partnerPassword(brand: string): string {

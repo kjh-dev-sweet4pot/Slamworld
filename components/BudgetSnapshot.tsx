@@ -15,6 +15,8 @@ import {
   computeBudgetSummary,
   fmtBudgetManwon,
   fmtBudgetRange,
+  isLatePayment,
+  LATE_UPLOAD_NOTE,
   kpiCompanyRows,
   monthlyBudgetForChart,
   partnerCompanyDonut,
@@ -101,7 +103,7 @@ function BudgetTipRow({
           <span className="block truncate font-medium text-owm-text">{brand}</span>
           <span className="flex flex-wrap gap-x-1.5 text-[9px] font-semibold leading-snug" style={{ color }}>
             <span>{budgetStageLabel(stage)}</span>
-            <span>{budgetPaymentLabel(payment)}</span>
+            <span>{isLatePayment(payment) ? LATE_UPLOAD_NOTE : budgetPaymentLabel(payment)}</span>
           </span>
         </span>
       </span>
@@ -263,6 +265,7 @@ function BudgetCompositionDonut({
 }) {
   const { active: hoverBrand, show, hide, setActive: setHoverBrand } = useHoverPopover<string | null>(null)
   const { slices, totalWeight, count } = partnerCompanyDonut()
+  const paymentByKey = new Map(slices.map(s => [s.key, s.payment]))
   const arcs = donutSlices(
     totalWeight,
     slices.map(s => ({
@@ -323,6 +326,7 @@ function BudgetCompositionDonut({
         {arcs.map(a => {
           const active = hoverBrand === a.key
           const isUnknown = a.key === '__unknown__'
+          const late = isLatePayment(paymentByKey.get(a.key))
           return (
             <li
               key={a.key}
@@ -333,11 +337,20 @@ function BudgetCompositionDonut({
               <button
                 type="button"
                 className={`w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-left transition-colors
-                  ${active ? 'bg-azure/8 ring-1 ring-azure/25' : 'hover:bg-slate/5'}`}
+                  ${late
+                    ? 'border border-[#EF4444] bg-[#FEF2F2]'
+                    : active ? 'bg-azure/8 ring-1 ring-azure/25' : 'hover:bg-slate/5'}`}
                 onClick={() => setHoverBrand(prev => (prev === a.key ? null : a.key))}
               >
                 <span className="w-2.5 h-2.5 rounded-[2px] flex-none" style={{ background: a.color }} />
-                <span className="text-[12.5px] font-semibold truncate">{a.label}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12.5px] font-semibold truncate">{a.label}</span>
+                  {late && (
+                    <span className="mt-0.5 inline-block rounded border border-[#EF4444] bg-white px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
+                      {LATE_UPLOAD_NOTE}
+                    </span>
+                  )}
+                </span>
                 <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
                   {a.pct}%
                   {isUnknown ? '' : ` · ${fmtBudgetManwon(a.value)}만`}
@@ -861,7 +874,9 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
             {rows.map(b => (
               <li
                 key={budgetRowKey(b)}
-                className="flex items-baseline gap-2 text-[12.5px] py-1.5 border-b border-[var(--owm-border)] last:border-0"
+                className={`flex items-baseline gap-2 text-[12.5px] py-1.5 border-b border-[var(--owm-border)] last:border-b-0 ${
+                  isLatePayment(b.payment) ? 'border-r-2 border-r-[#EF4444] pr-2' : ''
+                }`}
               >
                 <span
                   className="w-2 h-2 rounded-[2px] shrink-0"
@@ -871,8 +886,15 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
                   {budgetRowLabel(b)}
                   {b.useStatus ? ` · ${b.useStatus}` : ''}
                 </span>
-                <span className="num text-[11px] text-slate ml-auto whitespace-nowrap">
-                  {fmtBudgetRange(b)} · {budgetPaymentLabel(b.payment)}
+                <span className="num text-[11px] text-slate ml-auto whitespace-nowrap text-right">
+                  {fmtBudgetRange(b)}
+                  {isLatePayment(b.payment) ? (
+                    <span className="mt-0.5 block rounded border border-[#EF4444] bg-[#FEF2F2] px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
+                      {LATE_UPLOAD_NOTE}
+                    </span>
+                  ) : (
+                    <> · {budgetPaymentLabel(b.payment)}</>
+                  )}
                 </span>
               </li>
             ))}

@@ -5,6 +5,7 @@ import {
   goalMonthLabel,
   planProgressPct,
   type MonthlyGoal,
+  type PlannedUpload,
 } from '@/lib/monthly-goal'
 
 function fmt(n: number) {
@@ -24,32 +25,77 @@ const KPI = [
     sub: (s: Summary) => `저장 ${fmt(s.total_saves)} · 댓글 ${fmt(s.total_comments)}` },
 ] as const
 
-function SeptemberPlanCard({ goal }: { goal: MonthlyGoal }) {
-  const pct = planProgressPct(goal.inProgress, goal.uploadTarget)
+function visitLabel(iso: string): string {
+  const [, m, d] = iso.split('-')
+  return `${Number(m)}/${Number(d)}`
+}
+
+function SeptemberPlanBanner({
+  goal,
+  people,
+}: {
+  goal: MonthlyGoal | null
+  people: PlannedUpload[]
+}) {
+  const month = goal?.month ?? people[0]?.visitDate.slice(0, 7) ?? ''
+  const scheduled = people.filter(p => p.status === '예정')
+  const inProgress = people.filter(p => p.status === '진행중')
+  const linedUp = scheduled.length + inProgress.length
+  const target = goal?.uploadTarget ?? 0
+  const pct = target > 0 ? planProgressPct(linedUp, target) : 0
+
   return (
-    <div
-      className="owm-kpi-card"
-      style={{ '--bc': '#f59e0b' } as CSSProperties}
-      data-emoji="📅"
-    >
-      <div className="owm-kpi-header">
-        <span className="owm-kpi-dot" />
-        <span className="owm-kpi-label">{goalMonthLabel(goal.month)} 예정 업로드</span>
+    <div className="mb-3 rounded-2xl border border-[#f5d7a1] bg-[#fff8ee] px-4 py-3.5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="text-[22px] font-black tracking-tight text-[#92400e]">
+            {month ? `${goalMonthLabel(month)} 성과 예정` : '성과 예정'}
+          </div>
+          <p className="text-[12px] text-[#92400e] mt-0.5">
+            업로드 예정 {scheduled.length}명
+            {inProgress.length > 0 && ` · 진행중 ${inProgress.length}명`}
+            {target > 0 && ` · 목표 대비 ${pct}%`}
+          </p>
+        </div>
+        {target > 0 && (
+          <div className="text-right">
+            <div className="num text-[28px] font-extrabold leading-none tracking-tight text-[#92400e]">
+              {target}<span className="text-[13px] font-bold ml-0.5">건</span>
+            </div>
+            <div className="text-[10px] font-semibold text-[#b45309] mt-1">목표 업로드</div>
+          </div>
+        )}
       </div>
-      <div className="owm-kpi-amount">
-        {goal.uploadTarget}
-        <small>건</small>
-      </div>
-      <div className="owm-kpi-divider" />
-      <div className="owm-kpi-sub">
-        <span>{pct}% 진행중 · {goal.inProgress}명</span>
-        <span className="mt-1.5 block h-[4px] rounded-full bg-[#f0f2f7] overflow-hidden">
-          <span
-            className="block h-full rounded-full bg-[#f59e0b]"
-            style={{ width: `${Math.min(100, pct)}%` }}
-          />
-        </span>
-      </div>
+      {target > 0 && (
+        <div className="mt-2.5 h-1.5 rounded-full bg-white overflow-hidden">
+          <div className="h-full rounded-full bg-[#f59e0b]" style={{ width: `${Math.min(100, pct)}%` }} />
+        </div>
+      )}
+      {people.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {people.map(p => {
+            const chip = (
+              <>
+                <b className="font-bold">{p.name}</b>
+                <span className="text-[#b45309]">
+                  {visitLabel(p.visitDate)} · {p.location.replace(/점$/, '')}
+                  {p.status === '진행중' ? ' · 진행중' : ''}
+                </span>
+              </>
+            )
+            const cls = 'inline-flex items-center gap-1.5 rounded-full bg-white border border-[#f5d7a1] px-2.5 py-1 text-[12px] text-[#1a1d2e]'
+            return (
+              <li key={p.id}>
+                {p.profileUrl ? (
+                  <a href={p.profileUrl} target="_blank" rel="noopener noreferrer" className={cls}>{chip}</a>
+                ) : (
+                  <span className={cls}>{chip}</span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
@@ -57,14 +103,17 @@ function SeptemberPlanCard({ goal }: { goal: MonthlyGoal }) {
 export default function SnapshotBar({
   summary,
   monthGoal = null,
+  plannedUploads = [],
 }: {
   summary: Summary | null
   monthGoal?: MonthlyGoal | null
+  plannedUploads?: PlannedUpload[]
 }) {
+  const showPlan = !!monthGoal || plannedUploads.length > 0
   if (!summary) {
     return (
-      <div className={`owm-kpi-grid mb-3 ${monthGoal ? 'owm-kpi-grid-5' : ''}`}>
-        {[...Array(monthGoal ? 5 : 4)].map((_, i) => (
+      <div className="owm-kpi-grid mb-3">
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="owm-kpi-card animate-pulse h-28 bg-white/60" />
         ))}
       </div>
@@ -79,8 +128,9 @@ export default function SnapshotBar({
   }
 
   return (
-    <div className={`owm-kpi-grid mb-3 ${monthGoal ? 'owm-kpi-grid-5' : ''}`}>
-      {monthGoal && <SeptemberPlanCard goal={monthGoal} />}
+    <>
+    {showPlan && <SeptemberPlanBanner goal={monthGoal} people={plannedUploads} />}
+    <div className="owm-kpi-grid mb-3">
       {KPI.map(({ key, label, emoji, color, unit, sub }) => (
         <div
           key={key}
@@ -101,5 +151,6 @@ export default function SnapshotBar({
         </div>
       ))}
     </div>
+    </>
   )
 }

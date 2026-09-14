@@ -60,3 +60,19 @@ WHERE NOT EXISTS (
   WHERE c.influencer_name = v.influencer_name
     AND c.visit_date = v.visit_date::date
 );
+
+-- 서하얀은 발행완료. 조회수는 샤오홍슈 역산 추정.
+UPDATE contents
+SET
+  publish_status = '발행완료',
+  upload_url = 'https://www.xiaohongshu.com/explore/6aa27ff1000000002b026e69?source=webshare&xhsshare=pc_web&xsec_token=ABPoV-P0i-ri4yNCt6xJnpT8M8JkoMtgHZuS9UPVarbCA=&xsec_source=pc_share',
+  likes = 219,
+  comments = 1,
+  saves = 112,
+  views_estimated = 18444,
+  views_est_low = 15810,
+  views_est_high = 22133,
+  views_source = 'estimated',
+  metrics_updated_at = NOW()
+WHERE influencer_name = '서하얀'
+  AND visit_date = '2026-09-06';

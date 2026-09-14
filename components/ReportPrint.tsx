@@ -3,7 +3,7 @@ import type { Content, Summary, ChannelSummary } from '@/lib/types'
 import type { MonthlyPoint } from '@/lib/monthly-performance'
 import { contentViewsDisplay } from '@/lib/content-views'
 import { LOC_COLOR } from '@/lib/feed-items'
-import { goalMonthLabel, planProgressPct, type MonthlyGoal } from '@/lib/monthly-goal'
+import { goalMonthLabel, planProgressPct, type MonthlyGoal, type PlannedUpload } from '@/lib/monthly-goal'
 
 const CHANNEL_COLOR: Record<string, string> = {
   '샤오홍슈': '#1868F0',
@@ -60,6 +60,7 @@ export default function ReportPrint({
   channels,
   rows,
   monthGoal = null,
+  plannedUploads = [],
 }: {
   partnerBrand: string | null
   scope: string
@@ -68,6 +69,7 @@ export default function ReportPrint({
   channels: ChannelSummary[]
   rows: Content[]
   monthGoal?: MonthlyGoal | null
+  plannedUploads?: PlannedUpload[]
 }) {
   const chMax = Math.max(1, ...channels.map(c => c.interaction))
   const locs = locBars(rows)
@@ -82,7 +84,7 @@ export default function ReportPrint({
     ...(monthGoal ? [[
       `${goalMonthLabel(monthGoal.month)} 예정 업로드`,
       `${monthGoal.uploadTarget}건`,
-      `${planProgressPct(monthGoal.inProgress, monthGoal.uploadTarget)}% 진행중`,
+      `예정 ${plannedUploads.filter(p => p.status === '예정').length}명 · 진행중 ${planProgressPct(monthGoal.inProgress, monthGoal.uploadTarget)}%`,
     ] as const] : []),
     ['인플루언서', `${summary.total_influencers.toLocaleString()}명`, ''],
     ['업로드', `${summary.uploaded.toLocaleString()}건`, ''],
@@ -99,7 +101,7 @@ export default function ReportPrint({
             <span className="text-[#9aa0b3] font-normal mx-1">×</span>
             {partnerBrand ? `${partnerBrand} 리포트` : '브랜드슬램 인플루언서 리포트'}
           </h1>
-          <p className="text-[10.5px] text-[#6b728a] mt-0.5">09.03 기준 · {scope}</p>
+          <p className="text-[10.5px] text-[#6b728a] mt-0.5">09.14 기준 · {scope}</p>
         </div>
         <p className="text-[10px] text-[#9aa0b3] shrink-0">한눈에 보기</p>
       </header>
@@ -114,6 +116,14 @@ export default function ReportPrint({
             </div>
           ))}
         </div>
+      )}
+
+      {plannedUploads.length > 0 && (
+        <p className="text-[10px] text-[#92400e] mb-3 leading-relaxed">
+          업로드 예정 {plannedUploads.filter(p => p.status === '예정').length}명
+          {' · '}
+          {plannedUploads.map(p => p.name).join(', ')}
+        </p>
       )}
 
       <div className="grid grid-cols-2 gap-3 mb-3">

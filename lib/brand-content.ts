@@ -13,6 +13,7 @@ export const BRAND_CONTENT_ALIASES: Record<string, string[]> = {
   '달바': ['달바', 'dalba'],
   '스킨스탠다드': ['스킨스탠다드', '스킨'],
   '리포데이': ['리포데이', 'Re4day', 're4day'],
+  '토코보': ['토코보', 'Tocobo', 'tocobo'],
 }
 
 /** 콘텐츠 성과 필터용 브랜드 목록 */
