@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server'
 import { contentViews } from '@/lib/content-views'
 import { buildLocationMonthlySeries } from '@/lib/monthly-performance'
+import type { MonthlyGoal } from '@/lib/monthly-goal'
 import { createServerSupabase } from '@/lib/supabase-server'
 
 export async function GET() {
   const supabase = createServerSupabase()
 
-  const [summaryRes, locationRes, monthlyRes] = await Promise.all([
+  const [summaryRes, locationRes, monthlyRes, goalRes, planRes] = await Promise.all([
     supabase.from('summary').select('*').single(),
     supabase.from('location_summary').select('*'),
     supabase.from('contents').select(
       'location, visit_date, likes, saves, views, views_estimated, channel',
     ).not('visit_date', 'is', null),
+    supabase.from('monthly_goals').select('month, upload_target').order('month'),
+    supabase.from('contents').select('visit_date').eq('publish_status', '진행중').not('visit_date', 'is', null),
   ])
 
   const channelRes = await supabase.from('contents').select(
@@ -71,11 +74,31 @@ export async function GET() {
       }
     : null
 
+  const inProgressByMonth = new Map<string, number>()
+  if (!planRes.error) {
+    for (const row of planRes.data ?? []) {
+      if (!row.visit_date) continue
+      const month = String(row.visit_date).slice(0, 7)
+      inProgressByMonth.set(month, (inProgressByMonth.get(month) ?? 0) + 1)
+    }
+  }
+  const monthlyGoals: MonthlyGoal[] = goalRes.error
+    ? []
+    : (goalRes.data ?? []).map(row => {
+        const month = String(row.month).slice(0, 7)
+        return {
+          month,
+          uploadTarget: row.upload_target,
+          inProgress: inProgressByMonth.get(month) ?? 0,
+        }
+      })
+
   return NextResponse.json({
     summary,
     locations: locationRes.data,
     monthly: monthlyData,
     locationMonthly,
     channels,
+    monthlyGoals,
   })
 }

@@ -3,6 +3,7 @@ import type { Content, Summary, ChannelSummary } from '@/lib/types'
 import type { MonthlyPoint } from '@/lib/monthly-performance'
 import { contentViewsDisplay } from '@/lib/content-views'
 import { LOC_COLOR } from '@/lib/feed-items'
+import { goalMonthLabel, planProgressPct, type MonthlyGoal } from '@/lib/monthly-goal'
 
 const CHANNEL_COLOR: Record<string, string> = {
   '샤오홍슈': '#1868F0',
@@ -58,6 +59,7 @@ export default function ReportPrint({
   monthly,
   channels,
   rows,
+  monthGoal = null,
 }: {
   partnerBrand: string | null
   scope: string
@@ -65,6 +67,7 @@ export default function ReportPrint({
   monthly: MonthlyPoint[]
   channels: ChannelSummary[]
   rows: Content[]
+  monthGoal?: MonthlyGoal | null
 }) {
   const chMax = Math.max(1, ...channels.map(c => c.interaction))
   const locs = locBars(rows)
@@ -76,11 +79,16 @@ export default function ReportPrint({
   const regionTotal = cn + west || 1
 
   const kpis = summary ? [
-    ['인플루언서', `${summary.total_influencers.toLocaleString()}명`],
-    ['업로드', `${summary.uploaded.toLocaleString()}건`],
-    ['조회수', fmt(summary.total_views)],
-    ['좋아요', fmt(summary.total_likes)],
-  ] as const : []
+    ...(monthGoal ? [[
+      `${goalMonthLabel(monthGoal.month)} 예정 업로드`,
+      `${monthGoal.uploadTarget}건`,
+      `${planProgressPct(monthGoal.inProgress, monthGoal.uploadTarget)}% 진행중`,
+    ] as const] : []),
+    ['인플루언서', `${summary.total_influencers.toLocaleString()}명`, ''],
+    ['업로드', `${summary.uploaded.toLocaleString()}건`, ''],
+    ['조회수', fmt(summary.total_views), ''],
+    ['좋아요', fmt(summary.total_likes), `저장 ${fmt(summary.total_saves)} · 댓글 ${fmt(summary.total_comments)}`],
+  ] : []
 
   return (
     <div className="report-print">
@@ -97,16 +105,12 @@ export default function ReportPrint({
       </header>
 
       {summary && (
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          {kpis.map(([label, value], i) => (
+        <div className={`grid gap-2 mb-3 ${monthGoal ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          {kpis.map(([label, value, note]) => (
             <div key={label} className="rounded-lg border border-[#e8eaef] px-2.5 py-2">
               <div className="text-[10px] text-[#6b728a] font-semibold">{label}</div>
               <div className="num text-[18px] font-extrabold tracking-tight mt-0.5">{value}</div>
-              {i === 3 && (
-                <div className="text-[9.5px] text-[#9aa0b3] mt-0.5">
-                  저장 {fmt(summary.total_saves)} · 댓글 {fmt(summary.total_comments)}
-                </div>
-              )}
+              {note && <div className="text-[9.5px] text-[#9aa0b3] mt-0.5">{note}</div>}
             </div>
           ))}
         </div>

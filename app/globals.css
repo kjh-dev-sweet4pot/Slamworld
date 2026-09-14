@@ -86,6 +86,9 @@ body {
   .owm-kpi-grid {
     @apply grid grid-cols-2 lg:grid-cols-4 gap-2;
   }
+  .owm-kpi-grid-5 {
+    @apply lg:grid-cols-5;
+  }
   .owm-kpi-card {
     @apply bg-white rounded-xl px-4 pt-4 pb-3 relative overflow-hidden;
     border: 1px solid var(--owm-border);

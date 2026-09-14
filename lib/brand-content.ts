@@ -10,7 +10,9 @@ export const BRAND_CONTENT_ALIASES: Record<string, string[]> = {
   'Troubleless': ['Troubleless', '트러블리스'],
   'UIQ': ['UIQ', '유아이큐'],
   '해브블루': ['해브블루', '해브'],
+  '달바': ['달바', 'dalba'],
   '스킨스탠다드': ['스킨스탠다드', '스킨'],
+  '리포데이': ['리포데이', 'Re4day', 're4day'],
 }
 
 /** 콘텐츠 성과 필터용 브랜드 목록 */

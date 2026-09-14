@@ -1,6 +1,11 @@
 'use client'
 import type { CSSProperties } from 'react'
 import type { Summary } from '@/lib/types'
+import {
+  goalMonthLabel,
+  planProgressPct,
+  type MonthlyGoal,
+} from '@/lib/monthly-goal'
 
 function fmt(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
@@ -19,11 +24,47 @@ const KPI = [
     sub: (s: Summary) => `저장 ${fmt(s.total_saves)} · 댓글 ${fmt(s.total_comments)}` },
 ] as const
 
-export default function SnapshotBar({ summary }: { summary: Summary | null }) {
+function SeptemberPlanCard({ goal }: { goal: MonthlyGoal }) {
+  const pct = planProgressPct(goal.inProgress, goal.uploadTarget)
+  return (
+    <div
+      className="owm-kpi-card"
+      style={{ '--bc': '#f59e0b' } as CSSProperties}
+      data-emoji="📅"
+    >
+      <div className="owm-kpi-header">
+        <span className="owm-kpi-dot" />
+        <span className="owm-kpi-label">{goalMonthLabel(goal.month)} 예정 업로드</span>
+      </div>
+      <div className="owm-kpi-amount">
+        {goal.uploadTarget}
+        <small>건</small>
+      </div>
+      <div className="owm-kpi-divider" />
+      <div className="owm-kpi-sub">
+        <span>{pct}% 진행중 · {goal.inProgress}명</span>
+        <span className="mt-1.5 block h-[4px] rounded-full bg-[#f0f2f7] overflow-hidden">
+          <span
+            className="block h-full rounded-full bg-[#f59e0b]"
+            style={{ width: `${Math.min(100, pct)}%` }}
+          />
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export default function SnapshotBar({
+  summary,
+  monthGoal = null,
+}: {
+  summary: Summary | null
+  monthGoal?: MonthlyGoal | null
+}) {
   if (!summary) {
     return (
-      <div className="owm-kpi-grid mb-3">
-        {[...Array(4)].map((_, i) => (
+      <div className={`owm-kpi-grid mb-3 ${monthGoal ? 'owm-kpi-grid-5' : ''}`}>
+        {[...Array(monthGoal ? 5 : 4)].map((_, i) => (
           <div key={i} className="owm-kpi-card animate-pulse h-28 bg-white/60" />
         ))}
       </div>
@@ -38,7 +79,8 @@ export default function SnapshotBar({ summary }: { summary: Summary | null }) {
   }
 
   return (
-    <div className="owm-kpi-grid mb-3">
+    <div className={`owm-kpi-grid mb-3 ${monthGoal ? 'owm-kpi-grid-5' : ''}`}>
+      {monthGoal && <SeptemberPlanCard goal={monthGoal} />}
       {KPI.map(({ key, label, emoji, color, unit, sub }) => (
         <div
           key={key}
