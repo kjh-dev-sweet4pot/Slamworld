@@ -318,6 +318,12 @@ export function contractStageLabel(stage: PipelineStage): ContractStageLabel {
   return CONTRACT_STAGES[stage - 1]
 }
 
+/** 다음 단계 라벨. 종료(5)면 null. */
+export function nextContractStageLabel(stage: PipelineStage): ContractStageLabel | null {
+  if (stage === 5) return null
+  return CONTRACT_STAGES[stage]
+}
+
 /**
  * 보딩패스 contract_stage / 입금 상태 → 화면 5단계.
  * 입금 지연은 계약 완료(입금 대기). 입금 완료·캠페인 진행중 → 4.
@@ -357,4 +363,6 @@ if (process.env.NODE_ENV !== 'production') {
   if (pipelineStageFromContract('캠페인 진행중') !== 4) throw new Error('stage 캠페인 진행중')
   if (pipelineStageFromContract('종료') !== 5) throw new Error('stage 종료')
   if (contractStageLabel(4) !== '캠페인 진행중') throw new Error('label')
+  if (nextContractStageLabel(4) !== '캠페인 종료') throw new Error('next')
+  if (nextContractStageLabel(5) !== null) throw new Error('next end')
 }

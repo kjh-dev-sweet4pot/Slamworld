@@ -12,6 +12,7 @@ import {
   BUDGET_DISCLAIMER,
   MARKETING_NOTE,
   contractStageLabel,
+  nextContractStageLabel,
   formatContractDate,
   pipelineContentBrand,
   matchesPartnerBrand,
@@ -159,6 +160,7 @@ export default function BrandPipeline({
 
         {contracts.map(b => {
           const late = b.meta.includes('입금 지연') || b.status.includes('입금 지연')
+          const nextStage = nextContractStageLabel(b.stage)
           return (
           <div key={b.name} className={`glass px-5 py-4 mb-2 ${late ? 'ring-1 ring-[#EF4444] ring-inset shadow-[inset_-3px_0_0_#EF4444]' : ''}`}>
             <div className="flex items-baseline gap-2.5 flex-wrap mb-2.5">
@@ -209,8 +211,8 @@ export default function BrandPipeline({
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 num text-[9.5px] text-slate mt-1.5 items-center justify-between">
               <span className="text-body">
                 현재 <span className="text-azure-deep font-semibold">{contractStageLabel(b.stage)}</span>
-                {b.stage < 5 && (
-                  <> · 다음 <span className="font-semibold">{CONTRACT_STAGES[b.stage]}</span></>
+                {nextStage && (
+                  <> · 다음 <span className="font-semibold">{nextStage}</span></>
                 )}
               </span>
               <span className="text-right">
