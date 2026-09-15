@@ -7,7 +7,14 @@ import SideLiveFeed from '@/components/SideLiveFeed'
 import ContentCard from '@/components/ContentCard'
 import MonthlyBarChart from '@/components/MonthlyBarChart'
 import { aggregateByMonth, toCumulative } from '@/lib/monthly-performance'
-import { goalForNow, goalMonthKey, type MonthlyGoal, type PlannedUpload } from '@/lib/monthly-goal'
+import {
+  goalForNow,
+  goalMonthKey,
+  recentUploadsDisplay,
+  type MonthlyGoal,
+  type PlannedUpload,
+  type RecentUpload,
+} from '@/lib/monthly-goal'
 import ChannelDonut from '@/components/ChannelDonut'
 import RegionDonut from '@/components/RegionDonut'
 import BrandPipeline from '@/components/BrandPipeline'
@@ -100,6 +107,20 @@ function monthLabel(ym: string): string {
   return `${Number(ym.slice(5))}월`
 }
 
+function collectedLabel(iso: string | null): { short: string; full: string } | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+  const [y, m, day] = parts.split('-')
+  return { short: `${m}.${day}`, full: `${y}.${m}.${day}` }
+}
+
 function monthSub(ym: string): string {
   return `${ym.replace('-', '.')} 방문 기준`
 }
@@ -119,6 +140,8 @@ function DashboardInner() {
   const [monthly, setMonthly] = useState<{ month: string; count: number; views: number; likes: number; saves: number }[]>([])
   const [monthlyGoals, setMonthlyGoals] = useState<MonthlyGoal[]>([])
   const [plannedUploads, setPlannedUploads] = useState<PlannedUpload[]>([])
+  const [recentUploads, setRecentUploads] = useState<RecentUpload[]>([])
+  const [metricsUpdatedAt, setMetricsUpdatedAt] = useState<string | null>(null)
   const [locationMonthly, setLocationMonthly] = useState<{
     months: string[]
     series: { location: string; points: { month: string; count: number; cumulative: number }[] }[]
@@ -155,6 +178,8 @@ function DashboardInner() {
         setMonthly(d.monthly ?? [])
         setMonthlyGoals(d.monthlyGoals ?? [])
         setPlannedUploads(d.plannedUploads ?? [])
+        setRecentUploads(d.recentUploads ?? [])
+        setMetricsUpdatedAt(d.metricsUpdatedAt ?? null)
         setLocationMonthly(d.locationMonthly ?? { months: [], series: [] })
       })
       .catch(() => setLoadError('요약 데이터를 불러오지 못했습니다.'))
@@ -258,6 +283,11 @@ function DashboardInner() {
     })
   }, [plannedUploads, monthGoal, brandFilter])
 
+  const visibleRecent = useMemo(() => {
+    const rows = recentUploads.filter(p => !brandFilter || contentMatchesBrand(p.brands, brandFilter))
+    return recentUploadsDisplay(rows)
+  }, [recentUploads, brandFilter])
+
   function handleViewBrandContent(brand: string) {
     if (partnerBrand && brand !== partnerBrand) return
     setBrandFilter(brand)
@@ -318,6 +348,8 @@ function DashboardInner() {
         ['자료', '#s3'] as const,
       ])
 
+  const collected = collectedLabel(metricsUpdatedAt)
+
   const sideCards = (
     <>
       <SideTopCard
@@ -347,13 +379,18 @@ function DashboardInner() {
             <i className="not-italic text-owm-text3 font-normal mx-1">×</i>
             {partnerBrand ? `${partnerBrand} 리포트` : '브랜드슬램 인플루언서 리포트'}
             <span className="print-hide align-middle text-[11px] text-owm-blue bg-[#eef3ff] px-2.5 py-0.5 rounded-[10px] ml-2 font-semibold">
-              v0.9
+              v1.0.0
             </span>
           </h1>
           <div className="text-[11px] text-owm-text2 mt-1 flex flex-wrap gap-1">
-            <span>09.14 기준</span><span className="text-[#bbb]">·</span>
-            <span>수동 수집</span><span className="text-[#bbb]">·</span>
-            <span>{partnerBrand ? `${partnerBrand} 전용` : '3월 ~ 8월 누적'}</span>
+            <span>{collected ? `${collected.short} 기준` : '수집 전'}</span><span className="text-[#bbb]">·</span>
+            <span>자동 수집</span>
+            {partnerBrand && (
+              <>
+                <span className="text-[#bbb]">·</span>
+                <span>{partnerBrand} 전용</span>
+              </>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -435,18 +472,19 @@ function DashboardInner() {
           <span className="owm-sec-no">00</span>
           {partnerBrand ? `${partnerBrand} 누적 성과` : '누적 성과'}
           <span className="text-xs font-normal text-owm-text2">
-            {partnerBrand ? '회원사 콘텐츠 기준' : '8개 지점 · 2026.03 ~ 08'}
+            {partnerBrand ? '회원사 콘텐츠 기준' : '8개 지점'}
           </span>
         </div>
         <SnapshotBar
           summary={displaySummary}
           monthGoal={partnerBrand ? null : goalForNow(monthlyGoals)}
           plannedUploads={visiblePlanned}
+          recentUploads={visibleRecent}
         />
         <div className="owm-info-box">
           <b className="text-owm-text">수치 기준 —</b> 샤오홍슈·도우인 조회수는 좋아요·저장·댓글로 역산했으며
           상단 누적 조회수에 반영됩니다. 도우인은 실측 조회수가 있으면 실측을 우선합니다.
-          지표는 수동 수집이며 마지막 갱신은 2026.09.03입니다.
+          지표는 자동 수집이며 마지막 갱신은 {collected ? `${collected.full}입니다` : '아직 없습니다.'}
         </div>
       </section>
 
@@ -863,7 +901,6 @@ function DashboardInner() {
         campaign !== '전체' ? campaign : null,
         location !== '전체' ? location : null,
         channel !== '전체' ? channel : null,
-        '3월 ~ 8월 누적',
       ].filter(Boolean).join(' · ')}
       summary={displaySummary}
       monthly={filteredMonthly}
@@ -871,6 +908,7 @@ function DashboardInner() {
       rows={scopedChartContents}
       monthGoal={partnerBrand ? null : monthGoal}
       plannedUploads={visiblePlanned}
+      asOf={collected?.full ?? null}
     />
     </>
   )

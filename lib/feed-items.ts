@@ -62,15 +62,15 @@ export const LIVE_FEED: FeedItem[] = [
     badge: '일정',
     badgeClass: 'bg-[#f3e8ff] text-[#7c3aed]',
     headline: '9/6 방문 마케팅 시작',
-    detail: '목표 발행 54건 · 명동 80% · 북촌 20%',
+    detail: '목표 발행 150건 · 명동 80% · 북촌 20%',
     accent: 'up',
   },
   {
     time: '8/28 10:00',
     badge: '검토',
     badgeClass: 'bg-[#f0f2f7] text-[#6b728a]',
-    headline: '해브블루·달바 계약 예정',
-    detail: '해브블루 예산 협의중 · 달바 3,000만 예상 중',
+    headline: '헤브블루·달바 계약 예정',
+    detail: '헤브블루 예산 협의중 · 달바 3,000만 예상 중',
     accent: 'neutral',
   },
   {

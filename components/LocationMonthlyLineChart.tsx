@@ -189,6 +189,8 @@ export default function LocationMonthlyLineChart({
           return months.map((month, i) => {
             const count = s.counts[i]
             if (count <= 0) return null
+            // 숫자 라벨은 지점 선택 시에만 — 미선택이면 같은 월에 지점 숫자가 겹침
+            const showLabel = activeLoc
             const showDot = activeLoc || month === activeMonth
             if (!showDot) return null
             const yPct = lineY(count, maxCount)
@@ -198,14 +200,14 @@ export default function LocationMonthlyLineChart({
                 className="absolute z-[3] pointer-events-none"
                 style={{
                   left: `${((i + 0.5) / months.length) * 100}%`,
-                  bottom: `${yPct}%`,
-                  transform: 'translate(-50%, 50%)',
+                  top: `${yPct}%`,
+                  transform: 'translate(-50%, -50%)',
                 }}
               >
-                {(activeLoc || month === activeMonth) && (
+                {showLabel && (
                   <span
-                    className={`num absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+3px)] whitespace-nowrap
-                      px-1 rounded font-bold ${activeLoc ? 'text-[9px]' : 'text-[8px] opacity-90'}`}
+                    className="num absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+3px)] whitespace-nowrap
+                      px-1 rounded font-bold text-[9px]"
                     style={{ color, background: 'rgba(255,255,255,0.9)' }}
                   >
                     {count}

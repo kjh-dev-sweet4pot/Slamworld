@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { contentViews } from '@/lib/content-views'
 import { buildLocationMonthlySeries } from '@/lib/monthly-performance'
-import type { MonthlyGoal, PlannedUpload } from '@/lib/monthly-goal'
+import type { MonthlyGoal, PlannedUpload, RecentUpload } from '@/lib/monthly-goal'
 import { createServerSupabase } from '@/lib/supabase-server'
 
 export async function GET() {
   const supabase = createServerSupabase()
 
-  const [summaryRes, locationRes, monthlyRes, goalRes, planRes] = await Promise.all([
+  const [summaryRes, locationRes, monthlyRes, goalRes, planRes, recentRes] = await Promise.all([
     supabase.from('summary').select('*').single(),
     supabase.from('location_summary').select('*'),
     supabase.from('contents').select(
@@ -19,6 +19,12 @@ export async function GET() {
       .in('publish_status', ['예정', '진행중'])
       .not('visit_date', 'is', null)
       .order('visit_date'),
+    supabase.from('contents')
+      .select('id, influencer_name, location, visit_date, brands, channel, profile_url, upload_url')
+      .eq('publish_status', '발행완료')
+      .not('visit_date', 'is', null)
+      .order('visit_date', { ascending: false })
+      .limit(80),
   ])
 
   const channelRes = await supabase.from('contents').select(
@@ -97,6 +103,33 @@ export async function GET() {
         }
       })
 
+  let metricsUpdatedAt: string | null = null
+  const latestRes = await supabase
+    .from('contents')
+    .select('metrics_updated_at')
+    .not('metrics_updated_at', 'is', null)
+    .order('metrics_updated_at', { ascending: false })
+    .limit(1)
+  if (!latestRes.error) {
+    metricsUpdatedAt = latestRes.data?.[0]?.metrics_updated_at ?? null
+  }
+
+  const recentUploads: RecentUpload[] = recentRes.error
+    ? []
+    : (recentRes.data ?? []).flatMap(row => {
+        if (!row.visit_date) return []
+        return [{
+          id: row.id,
+          name: row.influencer_name,
+          location: row.location,
+          visitDate: String(row.visit_date).slice(0, 10),
+          brands: row.brands,
+          channel: row.channel,
+          uploadUrl: row.upload_url,
+          profileUrl: row.profile_url,
+        }]
+      })
+
   const plannedUploads: PlannedUpload[] = planRes.error
     ? []
     : (planRes.data ?? []).flatMap(row => {
@@ -121,5 +154,7 @@ export async function GET() {
     channels,
     monthlyGoals,
     plannedUploads,
+    recentUploads,
+    metricsUpdatedAt,
   })
 }
