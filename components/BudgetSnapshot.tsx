@@ -13,6 +13,7 @@ import {
   budgetRowLabel,
   budgetsForBrand,
   computeBudgetSummary,
+  currentBudgetMonth,
   fmtBudgetManwon,
   fmtBudgetRange,
   isLatePayment,
@@ -20,13 +21,15 @@ import {
   availableBudgetRows,
   kpiCompanyRows,
   sepAvailableRows,
-  usedBudgetRows,
   unreceivedBudgetRows,
+  DISCUSSING_STAGE,
+  ENTRY_DISCUSSING_STAGE,
   monthlyDepositChart,
   monthlyUnpaidChart,
   partnerCompanyDonut,
   unknownBudgetRows,
   type BudgetMonthItem,
+  type BrandBudget,
   type BudgetStage,
   type PartnerTooltipRow,
 } from '@/lib/brand-budget'
@@ -247,15 +250,36 @@ function BudgetCompositionBar({
   )
 }
 
+function useDbBudgets() {
+  const [rows, setRows] = useState<BrandBudget[] | null>(null)
+  const [discussing, setDiscussing] = useState<{ brand: string; amount: number }[]>([])
+  const [entryDiscussing, setEntryDiscussing] = useState<{ brand: string; amount: number }[]>([])
+  const [missing, setMissing] = useState(false)
+  useEffect(() => {
+    fetch('/api/budgets')
+      .then(r => r.json())
+      .then(d => {
+        setMissing(!!d.missing)
+        setRows(d.rows ?? [])
+        setDiscussing(d.discussing ?? [])
+        setEntryDiscussing(d.entryDiscussing ?? [])
+      })
+      .catch(() => setRows([]))
+  }, [])
+  return { rows, discussing, entryDiscussing, missing }
+}
+
 function BudgetCompositionDonut({
   contents,
+  budgets,
   onViewBrandContent,
 }: {
   contents: Content[]
+  budgets: BrandBudget[]
   onViewBrandContent?: (brand: string) => void
 }) {
   const { active: hoverBrand, show, hide, setActive: setHoverBrand } = useHoverPopover<string | null>(null)
-  const received = partnerCompanyDonut().slices.filter(s => s.payment === '입금 완료' && !s.spent)
+  const received = partnerCompanyDonut(budgets).slices.filter(s => s.payment === '입금 완료' && !s.spent)
   const slices = received
   const totalWeight = received.reduce((sum, s) => sum + s.weight, 0)
   const count = new Set(received.map(s => s.label.split(' · ')[0])).size
@@ -270,7 +294,7 @@ function BudgetCompositionDonut({
     })),
   ).sort((a, b) => b.value - a.value)
 
-  const unknownRows = unknownBudgetRows()
+  const unknownRows = unknownBudgetRows(budgets)
   const brandContents = useMemo(() => {
     if (!hoverBrand || hoverBrand === '__unknown__') return []
     const brand = hoverBrand.includes('::') ? hoverBrand.split('::')[0]! : hoverBrand
@@ -532,6 +556,62 @@ function MonthBars({ rows, maxTotal }: { rows: MonthBar[]; maxTotal: number }) {
   )
 }
 
+function EntryDiscussingList({ rows }: { rows: { brand: string; amount: number }[] }) {
+  if (rows.length === 0) return null
+  const total = rows.reduce((n, r) => n + r.amount, 0)
+  return (
+    <div className="mt-3 pt-3 border-t border-[var(--owm-border)] flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+      <div className="shrink-0 sm:w-[148px]">
+        <h3 className="text-[13px] font-extrabold tracking-tight text-[#1D4ED8] whitespace-nowrap">{ENTRY_DISCUSSING_STAGE}</h3>
+        {total > 0 && (
+          <p className="num text-[13px] font-semibold text-[#1D4ED8] mt-0.5">{fmtBudgetManwon(total)}만</p>
+        )}
+      </div>
+      <ul className="flex flex-1 flex-wrap gap-1.5 min-w-0">
+        {rows.map(r => (
+          <li
+            key={r.brand}
+            className="flex items-center gap-2 rounded-md border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1.5 text-[12px]"
+          >
+            <span className="font-semibold truncate">{r.brand}</span>
+            <span className={`shrink-0 font-semibold ${r.amount > 0 ? 'num text-[#1D4ED8]' : 'text-[11px] text-slate'}`}>
+              {r.amount > 0 ? `${fmtBudgetManwon(r.amount)}만` : '입점 논의중'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function DiscussingList({ rows }: { rows: { brand: string; amount: number }[] }) {
+  if (rows.length === 0) return null
+  const total = rows.reduce((n, r) => n + r.amount, 0)
+  return (
+    <div className="mt-3 pt-3 border-t border-[var(--owm-border)] flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+      <div className="shrink-0 sm:w-[168px]">
+        <h3 className="text-[13px] font-extrabold tracking-tight text-[#166534] whitespace-nowrap">{DISCUSSING_STAGE}</h3>
+        {total > 0 && (
+          <p className="num text-[13px] font-semibold text-[#15803D] mt-0.5">{fmtBudgetManwon(total)}만</p>
+        )}
+      </div>
+      <ul className="flex flex-1 flex-wrap gap-1.5 min-w-0">
+        {rows.map(r => (
+          <li
+            key={r.brand}
+            className="flex items-center gap-2 rounded-md border border-[#86EFAC] bg-[#F0FDF4] px-2.5 py-1.5 text-[12px]"
+          >
+            <span className="font-semibold truncate">{r.brand}</span>
+            <span className={`shrink-0 font-semibold ${r.amount > 0 ? 'num text-[#15803D]' : 'text-[11px] text-slate'}`}>
+              {r.amount > 0 ? `${fmtBudgetManwon(r.amount)}만` : '예산 협의중'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function UnreceivedList({ rows }: { rows: PartnerTooltipRow[] }) {
   const total = rows.reduce((n, r) => n + r.amount, 0)
   const late = rows.some(r => isLatePayment(r.payment))
@@ -553,7 +633,13 @@ function UnreceivedList({ rows }: { rows: PartnerTooltipRow[] }) {
             className="flex items-center gap-2 rounded-md border border-[#FECACA] bg-[#FEF2F2] px-2.5 py-1.5 text-[12px]"
           >
             <span className="font-semibold truncate">{r.brand}</span>
-            <span className="num shrink-0 font-semibold text-[#B91C1C]">{fmtBudgetManwon(r.amount)}만</span>
+            <span className={`shrink-0 font-semibold ${r.amount > 0 ? 'num text-[#B91C1C]' : 'text-[11px] text-[#B91C1C]'}`}>
+              {r.amount > 0
+                ? `${fmtBudgetManwon(r.amount)}만`
+                : isLatePayment(r.payment)
+                  ? '입금 지연'
+                  : '예산 협의중'}
+            </span>
           </li>
         ))}
       </ul>
@@ -567,9 +653,12 @@ export default function BudgetSnapshot({
   onViewBrandContent?: (brand: string) => void
 }) {
   const [contents, setContents] = useState<Content[]>([])
-  const s = computeBudgetSummary()
-  const deposit = monthlyDepositChart()
-  const unpaid = monthlyUnpaidChart()
+  const { rows: budgets, discussing, entryDiscussing, missing } = useDbBudgets()
+  const month = currentBudgetMonth()
+  const monthNo = Number(month.slice(5))
+  const s = computeBudgetSummary(budgets ?? [], month)
+  const deposit = monthlyDepositChart(budgets ?? [])
+  const unpaid = monthlyUnpaidChart(budgets ?? [])
   const maxMonthly = Math.max(
     ...deposit.map(m => m.total),
     ...unpaid.map(m => m.total),
@@ -603,7 +692,7 @@ export default function BudgetSnapshot({
       .catch(() => setContents([]))
   }, [])
 
-  const unreceivedRows = unreceivedBudgetRows()
+  const unreceivedRows = unreceivedBudgetRows(budgets ?? [])
   const cards: {
     k: string
     v: string
@@ -614,11 +703,11 @@ export default function BudgetSnapshot({
     hero?: boolean
   }[] = [
     {
-      k: '9월 가용예산',
+      k: `${monthNo}월 가용예산`,
       v: fmtBudgetManwon(s.sepAvailable),
-      d: '9월에 쓸 수 있는 입금',
+      d: `${monthNo}월에 쓸 수 있는 입금`,
       color: '#0B47B4',
-      rows: sepAvailableRows(),
+      rows: sepAvailableRows(budgets ?? [], month),
       emoji: '📅',
       hero: true,
     },
@@ -627,21 +716,13 @@ export default function BudgetSnapshot({
       v: fmtBudgetManwon(s.availableTotal),
       d: '입금완료 − 사용완료',
       color: KPI_PART_COLOR.secured,
-      rows: availableBudgetRows(),
+      rows: availableBudgetRows(budgets ?? []),
       emoji: '✅',
-    },
-    {
-      k: '사용완료',
-      v: fmtBudgetManwon(s.usedTotal),
-      d: '이미 집행한 입금',
-      color: '#64748B',
-      rows: usedBudgetRows(),
-      emoji: '✓',
     },
     {
       k: '미수령',
       v: fmtBudgetManwon(s.securedPending),
-      d: `확정 · 입금 전 ${unreceivedRows.length}건`,
+      d: `입금 지연 ${unreceivedRows.length}건`,
       color: '#EF4444',
       rows: unreceivedRows,
       emoji: '⏳',
@@ -651,15 +732,23 @@ export default function BudgetSnapshot({
       v: fmtBudgetManwon(s.byStage['계약 예정'].total),
       d: `${s.byStage['계약 예정'].count}개사 · 가용 제외`,
       color: KPI_PART_COLOR.planned,
-      rows: kpiCompanyRows('planned'),
+      rows: kpiCompanyRows('planned', budgets ?? []),
       emoji: '📝',
     },
   ]
   const hero = cards[0]
   const rest = cards.slice(1)
 
+  if (!budgets) return null
+
   return (
     <section id="s-budget" className="mb-3 scroll-mt-28">
+      {missing && (
+        <p className="mb-2 text-xs text-owm-text2">예산 테이블이 없습니다. supabase/add-companies.sql 실행 후 동기화가 필요합니다.</p>
+      )}
+      {!missing && budgets.length === 0 && (
+        <p className="mb-2 text-xs text-owm-text2">동기화된 예산이 없습니다. node scripts/sync-from-boardingpass.mjs --apply</p>
+      )}
       <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 p-2.5 shadow-[var(--owm-shadow)]">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1.05fr)_auto_minmax(0,2.2fr)] gap-2 items-stretch">
           <BudgetKpiCard
@@ -675,11 +764,10 @@ export default function BudgetSnapshot({
             <BudgetCompositionBar
               parts={[
                 { key: 'available', value: s.availableTotal, color: KPI_PART_COLOR.secured, label: '가용예산' },
-                { key: 'used', value: s.usedTotal, color: '#64748B', label: '사용완료' },
                 { key: 'unreceived', value: s.securedPending, color: '#EF4444', label: '미수령' },
               ]}
             />
-            <div className="grid grid-cols-2 gap-2 flex-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 flex-1">
               {rest.map(p => (
                 <BudgetKpiCard
                   key={p.k}
@@ -704,9 +792,8 @@ export default function BudgetSnapshot({
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-stretch">
           <div className="min-w-0 rounded-xl bg-[#F8FAFC] border border-[var(--owm-border)] p-3 flex flex-col">
-            <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h3 className="text-[13px] font-extrabold">입금 예산</h3>
-              <span className="num text-[12px] font-semibold text-azure-deep">{fmtBudgetManwon(s.securedPaid)}만</span>
+            <div className="mb-2">
+              <h3 className="text-[13px] font-extrabold">가용예산</h3>
             </div>
             <MonthBars rows={depositBars} maxTotal={maxMonthly} />
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px] text-slate">
@@ -717,6 +804,13 @@ export default function BudgetSnapshot({
                 <i className="w-2 h-2 rounded-[2px]" style={{ background: CHART_COLOR.used }} /> 사용
               </span>
             </div>
+          </div>
+          <div className="min-w-0 rounded-xl bg-[#F8FAFC] border border-[var(--owm-border)] p-3">
+            <BudgetCompositionDonut
+              contents={contents}
+              budgets={budgets}
+              onViewBrandContent={onViewBrandContent}
+            />
           </div>
           <div className="min-w-0 rounded-xl bg-[#F8FAFC] border border-[var(--owm-border)] p-3 flex flex-col">
             <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -730,18 +824,10 @@ export default function BudgetSnapshot({
               </span>
             </div>
           </div>
-          <div className="min-w-0 rounded-xl bg-[#F8FAFC] border border-[var(--owm-border)] p-3">
-            <div className="mb-1 flex items-baseline justify-between gap-2">
-              <h3 className="text-[13px] font-extrabold">가용예산</h3>
-              <span className="num text-[12px] font-semibold text-azure-deep">{fmtBudgetManwon(s.availableTotal)}만</span>
-            </div>
-            <BudgetCompositionDonut
-              contents={contents}
-              onViewBrandContent={onViewBrandContent}
-            />
-          </div>
         </div>
         <UnreceivedList rows={unreceivedRows} />
+        <EntryDiscussingList rows={entryDiscussing} />
+        <DiscussingList rows={discussing} />
       </div>
     </section>
   )
@@ -749,17 +835,25 @@ export default function BudgetSnapshot({
 
 /** 회원사 로그인용 — 본인 예산만 */
 export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
-  const rows = budgetsForBrand(brand)
+  const { rows: budgets, missing } = useDbBudgets()
+  const month = currentBudgetMonth()
+  const monthNo = Number(month.slice(5))
+  const rows = budgetsForBrand(brand, budgets ?? [])
   const available = rows.filter(b => b.payment === '입금 완료' && b.useStatus !== '기 소진').reduce((s, b) => s + budgetMid(b), 0)
-  const sepAvailable = rows.filter(b => b.payment === '입금 완료' && b.useStatus !== '기 소진' && b.marketingMonth === '2026-09').reduce((s, b) => s + budgetMid(b), 0)
+  const sepAvailable = rows.filter(b => b.payment === '입금 완료' && b.useStatus !== '기 소진' && b.marketingMonth === month).reduce((s, b) => s + budgetMid(b), 0)
   const unreceived = rows
     .filter(b => b.stage === '확정 및 진행' && b.payment !== '입금 완료')
     .reduce((s, b) => s + budgetMid(b), 0)
   const spent = rows.filter(b => b.useStatus === '기 소진').reduce((s, b) => s + budgetMid(b), 0)
   const planned = rows.filter(b => b.useStatus === '사용 예정').reduce((s, b) => s + budgetMid(b), 0)
 
+  if (!budgets) return null
+
   return (
     <section id="s-budget" className="mb-3 scroll-mt-28">
+      {missing && (
+        <p className="mb-2 text-xs text-owm-text2">예산 테이블이 없습니다. supabase/add-companies.sql 실행 후 동기화가 필요합니다.</p>
+      )}
       <div className="mb-2 rounded-xl border border-[var(--owm-border)] bg-white/70 p-2.5 shadow-[var(--owm-shadow)]">
         <div className="owm-sec-title mb-2.5 px-0.5">
           <span className="owm-sec-no">예산</span>
@@ -829,7 +923,7 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
             >
               <div className="owm-kpi-header">
                 <span className="owm-kpi-dot" />
-                <span className="owm-kpi-label">9월 가용예산</span>
+                <span className="owm-kpi-label">{monthNo}월 가용예산</span>
               </div>
               <div className="owm-kpi-amount">
                 {fmtBudgetManwon(sepAvailable)}<small>만원</small>
@@ -865,11 +959,16 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
             >
               <div className="owm-kpi-header">
                 <span className="owm-kpi-dot" />
-                <span className="owm-kpi-label">{budgetPaymentLabel(rows[0]?.payment ?? '검토 중')}</span>
-              </div>
-              <div className="owm-kpi-amount">
-                {fmtBudgetManwon(rows.reduce((n, b) => n + budgetMid(b), 0))}<small>만원</small>
-              </div>
+              <span className="owm-kpi-label">
+                {rows.every(b => budgetMid(b) <= 0) ? '예산 협의중' : budgetPaymentLabel(rows[0]?.payment ?? '검토 중')}
+              </span>
+            </div>
+            <div className="owm-kpi-amount">
+              {rows.every(b => budgetMid(b) <= 0)
+                ? '—'
+                : fmtBudgetManwon(rows.reduce((n, b) => n + budgetMid(b), 0))}
+              {!rows.every(b => budgetMid(b) <= 0) && <small>만원</small>}
+            </div>
               <div className="owm-kpi-divider" />
               <div className="owm-kpi-sub">
                 <span>{budgetStageLabel(rows[0]?.stage ?? '미정')} · 가용 제외</span>
@@ -901,9 +1000,9 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
                     <span className="mt-0.5 block rounded border border-[#EF4444] bg-[#FEF2F2] px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-[#B91C1C]">
                       {LATE_UPLOAD_NOTE}
                     </span>
-                  ) : (
+                  ) : b.amount > 0 ? (
                     <> · {budgetPaymentLabel(b.payment)}</>
-                  )}
+                  ) : null}
                 </span>
               </li>
             ))}

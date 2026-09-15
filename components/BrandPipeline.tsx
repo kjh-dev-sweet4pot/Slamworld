@@ -1,6 +1,7 @@
 'use client'
 import {
   CONTRACT_BRANDS,
+  CONTRACT_STAGES,
   COMMON_TIMELINE,
   SEPTEMBER_BRAND_STATUS,
   GUIDE_PREP,
@@ -10,9 +11,9 @@ import {
   LEAD_RANGE,
   BUDGET_DISCLAIMER,
   MARKETING_NOTE,
-  contractPrepProgress,
+  contractStageLabel,
+  nextContractStageLabel,
   formatContractDate,
-  pipelineCatStage,
   pipelineContentBrand,
   matchesPartnerBrand,
   type BrandTier,
@@ -90,8 +91,8 @@ function PipelineRow({
         {showSales ? `${TIER_LABEL[p.tier]} · ${p.budget}` : TIER_LABEL[p.tier]}
       </span>
       <div className="flex items-center gap-1">
-        {[1, 2, 3, 4].map(s => (
-          <i key={s} className={`w-[22px] h-[5px] rounded-[2px] ${s <= p.stage ? 'bg-azure' : 'bg-mist'}`} />
+        {CONTRACT_STAGES.map((_, i) => (
+          <i key={CONTRACT_STAGES[i]} className={`w-[18px] h-[5px] rounded-[2px] ${i + 1 <= p.stage ? 'bg-azure' : 'bg-mist'}`} />
         ))}
         <span className="num text-[10.5px] text-slate ml-1.5 whitespace-nowrap">{p.stageLabel}</span>
       </div>
@@ -150,21 +151,16 @@ export default function BrandPipeline({
             </div>
           </div>
           <p className="flex-1 min-w-[250px] text-[12.5px] text-body leading-relaxed">
-            <b className="text-azure-deep">계약서 전달</b> 후 <b className="text-azure-deep">계약 완료</b> 시점부터
-            마케팅 시작까지 <b className="text-azure-deep">통상 {LEAD_RANGE.min}~{LEAD_RANGE.max}일</b>
+            계약 단계: <b className="text-azure-deep">협의중 → 계약 완료 → 입금 완료 → 캠페인 진행중 → 캠페인 종료</b>.
+            입금 완료 후 마케팅 시작까지 통상 <b className="text-azure-deep">{LEAD_RANGE.min}~{LEAD_RANGE.max}일</b>
             (평균 {LEAD_RANGE.typical}일)이 걸립니다.
-            8월 말까지 가이드라인을 확정하고, 9월 초부터 본격적인 방문·발행을 진행합니다.
           </p>
         </div>
         )}
 
         {contracts.map(b => {
-          const stage = pipelineCatStage(b)
-          const prepPct = b.contractCompletedOn
-            ? contractPrepProgress(b.contractCompletedOn, b.days)
-            : 0
-
           const late = b.meta.includes('입금 지연') || b.status.includes('입금 지연')
+          const nextStage = nextContractStageLabel(b.stage)
           return (
           <div key={b.name} className={`glass px-5 py-4 mb-2 ${late ? 'ring-1 ring-[#EF4444] ring-inset shadow-[inset_-3px_0_0_#EF4444]' : ''}`}>
             <div className="flex items-baseline gap-2.5 flex-wrap mb-2.5">
@@ -181,76 +177,43 @@ export default function BrandPipeline({
               )}
               <span className="num text-[10.5px] text-slate">{b.meta}</span>
               <span className="num text-[13px] font-semibold text-azure-deep ml-auto">
-                {showBudget && (
-                  <>
-                    {b.budget}
-                    <small className="text-[10px] text-slate font-normal ml-1.5">
-                      계약 완료 후 약 {b.days}일
-                    </small>
-                  </>
-                )}
-                {!showBudget && (
-                  <small className="text-[10px] text-slate font-normal">
-                    계약 완료 후 약 {b.days}일
-                  </small>
-                )}
+                {showBudget && b.budget && <>{b.budget}</>}
+                <small className="text-[10px] text-slate font-normal ml-1.5">
+                  {contractStageLabel(b.stage)}
+                </small>
               </span>
             </div>
 
-            <PipelineCatRunner stage={stage} prepPct={prepPct}>
+            <PipelineCatRunner stage={b.stage}>
             <div className="flex gap-0.5 h-7 rounded overflow-hidden bg-mist items-stretch">
-              <div className={`flex-none w-[76px] sm:w-[92px] grid place-items-center text-[9px] sm:text-[9.5px] font-semibold px-1 shrink-0 ${
-                stage === 'delivering'
-                  ? 'bg-azure/15 text-azure-deep'
-                  : 'bg-[#DCFCE7] text-[#166534]'
-              }`}>
-                계약서 전달
-              </div>
-
-              <div className="flex-none flex flex-col items-center justify-center px-2 bg-white border-x border-mist shrink-0 min-w-[68px]">
-                <span className={`text-[9px] font-bold leading-none tracking-tight ${
-                  b.contractCompletedOn ? 'text-azure-deep' : 'text-slate'
-                }`}>
-                  ◀ 계약 완료 ▶
-                </span>
-                {b.contractCompletedOn ? (
-                  <span className="num text-[8.5px] text-azure font-bold mt-0.5 whitespace-nowrap">
-                    {formatContractDate(b.contractCompletedOn)}
-                  </span>
-                ) : (
-                  <span className="num text-[8px] text-slate mt-0.5 whitespace-nowrap">
-                    미완료
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-1 gap-0.5 min-w-0 h-full">
-                {b.segs.map((n, i) => (
+              {CONTRACT_STAGES.map((label, i) => {
+                const done = i + 1 <= b.stage
+                const current = i + 1 === b.stage
+                return (
                   <div
-                    key={i}
-                    className={`grid place-items-center num text-[9.5px] font-medium whitespace-nowrap overflow-hidden ${SEG_CLASS[i]}`}
-                    style={{ flex: n }}
+                    key={label}
+                    className={`flex-1 grid place-items-center text-[8.5px] sm:text-[9.5px] font-semibold px-0.5 text-center leading-tight ${
+                      done ? SEG_CLASS[i] : 'bg-mist text-slate'
+                    } ${current ? 'ring-1 ring-inset ring-azure-deep/40' : ''}`}
                   >
-                    {n}일
+                    {label}
+                    {label === '계약 완료' && b.contractCompletedOn && (
+                      <span className="num text-[8px] font-bold opacity-80 block">
+                        {formatContractDate(b.contractCompletedOn)}
+                      </span>
+                    )}
                   </div>
-                ))}
-              </div>
+                )
+              })}
             </div>
             </PipelineCatRunner>
 
-            <div className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_auto_1fr_auto] gap-x-2 gap-y-0.5 num text-[9.5px] text-slate mt-1.5 items-center">
-              <span className={stage === 'delivering' ? 'text-azure-deep font-semibold' : undefined}>
-                계약서 전달
-              </span>
-              <span className={`hidden sm:inline font-semibold ${
-                b.contractCompletedOn ? 'text-azure-deep' : 'text-slate'
-              }`}>
-                {b.contractCompletedOn
-                  ? `계약 완료 ${formatContractDate(b.contractCompletedOn)}`
-                  : '계약 미완료'}
-              </span>
-              <span className="text-center sm:text-left text-body">
-                가이드 · 매칭 · 방문 준비 <span className="text-azure-deep font-semibold">(약 {b.days}일)</span>
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 num text-[9.5px] text-slate mt-1.5 items-center justify-between">
+              <span className="text-body">
+                현재 <span className="text-azure-deep font-semibold">{contractStageLabel(b.stage)}</span>
+                {nextStage && (
+                  <> · 다음 <span className="font-semibold">{nextStage}</span></>
+                )}
               </span>
               <span className="text-right">
                 {late ? (
@@ -286,11 +249,11 @@ export default function BrandPipeline({
           <p className="text-[11.5px] text-slate mb-4">8월 말 가이드 확정 → 9월 초 방문·발행</p>
           <div className="relative pl-4 border-l border-mist space-y-3">
             {COMMON_TIMELINE.map((m, i) => (
-              <div key={m.date} className="relative">
+              <div key={m.title} className="relative">
                 <div className={`absolute -left-[21px] top-1 w-2 h-2 rounded-[2px] border-2
                   ${i === 0 ? 'border-azure shadow-[0_0_0_3px_rgba(24,104,240,.15)] bg-white' : 'border-sky bg-white'}`} />
-                <div className="num text-[10px] text-azure tracking-wider">{m.date}</div>
-                <div className="text-[13px] font-bold text-ink mt-0.5">{m.title}</div>
+                {m.date && <div className="num text-[10px] text-azure tracking-wider">{m.date}</div>}
+                <div className={`text-[13px] font-bold text-ink ${m.date ? 'mt-0.5' : ''}`}>{m.title}</div>
                 <div className="text-[12px] text-body mt-0.5">{m.detail}</div>
               </div>
             ))}

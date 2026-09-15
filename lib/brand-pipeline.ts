@@ -1,5 +1,16 @@
 export type BrandTier = 'large' | 'mid' | 'small'
-export type PipelineStage = 1 | 2 | 3 | 4
+/** 협의중 → 계약 완료 → 입금 완료 → 캠페인 진행중 → 캠페인 종료 */
+export type PipelineStage = 1 | 2 | 3 | 4 | 5
+
+export const CONTRACT_STAGES = [
+  '협의중',
+  '계약 완료',
+  '입금 완료',
+  '캠페인 진행중',
+  '캠페인 종료',
+] as const
+
+export type ContractStageLabel = (typeof CONTRACT_STAGES)[number]
 
 export interface ContractBrand {
   name: string
@@ -7,9 +18,10 @@ export interface ContractBrand {
   meta: string
   days: number
   status: string
-  /** 계약 완료일 (YYYY-MM-DD). 없으면 계약서 전달 중 */
+  /** 현재 contract stage (1–5) */
+  stage: PipelineStage
+  /** 계약 완료일 (YYYY-MM-DD). 있으면 계약 완료 칸에 표시 */
   contractCompletedOn?: string
-  segs: [number, number, number, number, number]
 }
 
 export interface TimelineMilestone {
@@ -59,16 +71,16 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     meta: '기 소진 · 7월 집행 완료',
     days: 16,
     status: '1차 마케팅 완료',
+    stage: 5,
     contractCompletedOn: '2026-07-10',
-    segs: [4, 2, 4, 3, 2],
   },
   {
     name: 'TeloAct 2차',
-    budget: '6,000만원',
+    budget: '6,500만원',
     meta: '사용 예정 · 입금 지연',
     days: 16,
     status: '2차 준비',
-    segs: [4, 2, 4, 3, 2],
+    stage: 2,
   },
   {
     name: '옵티팜',
@@ -76,7 +88,7 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     meta: '8월 2,000 사용 · 9월 2,000 가용',
     days: 16,
     status: '9월 마케팅 목표',
-    segs: [5, 2, 5, 2, 2],
+    stage: 4,
   },
   {
     name: '닥터 리앤장',
@@ -84,16 +96,16 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     meta: '8월 1,000 사용 · 9월 2,000 가용',
     days: 15,
     status: '9월 마케팅 목표',
+    stage: 4,
     contractCompletedOn: '2026-08-30',
-    segs: [4, 2, 4, 3, 2],
   },
   {
     name: '클리어디어',
     budget: '1,000만원',
-    meta: '입금 지연',
+    meta: '사용 예정 · 입금 지연',
     days: 14,
-    status: '9월 마케팅 목표',
-    segs: [4, 2, 4, 2, 2],
+    status: '마케팅 준비',
+    stage: 2,
   },
   {
     name: 'Rxme',
@@ -101,47 +113,30 @@ export const CONTRACT_BRANDS: ContractBrand[] = [
     meta: '1,000만원 · 9월 가용',
     days: 14,
     status: '9월 마케팅 목표',
+    stage: 4,
     contractCompletedOn: '2026-08-31',
-    segs: [4, 2, 4, 2, 2],
-  },
-  {
-    name: 'Troubleless',
-    budget: '1,000만원',
-    meta: '입금 지연',
-    days: 14,
-    status: '9월 마케팅 목표',
-    segs: [4, 2, 4, 2, 2],
-  },
-  {
-    name: 'UIQ',
-    budget: '1,000만원',
-    meta: '입금 지연',
-    days: 14,
-    status: '진행 대기',
-    segs: [4, 2, 4, 2, 2],
   },
 ]
 
-/** 8월 말 가이드 확정 → 9월 초 방문 시작 */
 export const COMMON_TIMELINE: TimelineMilestone[] = [
   {
-    date: '~ 8.31 (월)',
+    date: '',
     title: '초기 가이드라인 전달',
     detail: '컨셉 4종 PPL + Rxme 원브랜디드 영상 가이드 제작·전달',
   },
   {
-    date: '~ 9.4',
+    date: '',
     title: '2차 리스트',
     detail: '영미권·중화권 인플루언서 2차 리스트 전달',
   },
   {
-    date: '9.6',
+    date: '',
     title: '방문 시작',
     detail: '가장 빠른 인플루언서 기준 방문 마케팅 시작',
   },
   {
-    date: '당월 목표',
-    title: '발행 54건',
+    date: '이번달 목표',
+    title: '발행 150건',
     detail: '명동 80% · 북촌 20%',
   },
 ]
@@ -155,7 +150,7 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: 'TeloAct 2차',
-    status: '사용 예정 · 6,000만 · 입금 지연',
+    status: '사용 예정 · 6,500만 · 입금 지연',
     pct: 0,
   },
   {
@@ -170,23 +165,13 @@ export const SEPTEMBER_BRAND_STATUS: BrandStatusItem[] = [
   },
   {
     brand: '클리어디어',
-    status: '입금 지연',
-    pct: 12,
+    status: '사용 예정 · 1,000만 · 입금 지연',
+    pct: 0,
   },
   {
     brand: 'Rxme',
     status: '1,000만원 · 9월 가용',
     pct: 55,
-  },
-  {
-    brand: 'Troubleless',
-    status: '입금 지연',
-    pct: 12,
-  },
-  {
-    brand: 'UIQ',
-    status: '입금 지연',
-    pct: 0,
   },
 ]
 
@@ -203,7 +188,7 @@ export const GUIDE_PREP: PrepItem[] = [
     detail: '2차 가이드 대기',
     eta: '사용 예정',
     pct: 0,
-    note: '6,000만원 · 입금 지연',
+    note: '6,500만원 · 입금 지연',
   },
   {
     brand: '닥터 리앤장',
@@ -229,21 +214,7 @@ export const GUIDE_PREP: PrepItem[] = [
   {
     brand: '클리어디어',
     detail: '계획안 착수',
-    eta: '입금 지연',
-    pct: 10,
-    note: '1,000만원 · 입금 지연',
-  },
-  {
-    brand: 'Troubleless',
-    detail: '가이드 착수',
-    eta: '입금 지연',
-    pct: 10,
-    note: '1,000만원 · 입금 지연',
-  },
-  {
-    brand: 'UIQ',
-    detail: '진행 대기',
-    eta: '대기',
+    eta: '사용 예정',
     pct: 0,
     note: '1,000만원 · 입금 지연',
   },
@@ -263,7 +234,7 @@ export const MATCH_PREP: MatchItem[] = [
     detail: '약사 4 · 메가 1 · 미들 1',
     done: 0,
     total: 6,
-    note: '계약서 전달·확정 후 매칭',
+    note: '입금 지연 · 계약 확정 후 매칭',
     eta: '9월 목표',
   },
 ]
@@ -271,13 +242,31 @@ export const MATCH_PREP: MatchItem[] = [
 /** 온보딩·계약 검토 중 */
 export const REVIEW_BRANDS: PipelineBrand[] = [
   {
-    name: '해브블루',
+    name: 'UIQ',
+    desc: '유이크',
+    budget: '예산 협의중',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '협의중',
+    eta: '예산 협의중',
+  },
+  {
+    name: 'Troubleless',
+    desc: '트러블레스',
+    budget: '예산 협의중',
+    tier: 'small',
+    stage: 1,
+    stageLabel: '협의중',
+    eta: '예산 협의중',
+  },
+  {
+    name: '헤브블루',
     desc: '온보딩 진행',
-    budget: '2,000–3,000만원 예상',
+    budget: '예산 협의중',
     tier: 'mid',
     stage: 1,
-    stageLabel: '온보딩 예정',
-    eta: '일정 조율 중',
+    stageLabel: '협의중',
+    eta: '예산 협의중',
   },
   {
     name: '달바',
@@ -285,17 +274,17 @@ export const REVIEW_BRANDS: PipelineBrand[] = [
     budget: '3,000만원 예상',
     tier: 'mid',
     stage: 1,
-    stageLabel: '온보딩 예정',
+    stageLabel: '협의중',
     eta: '일정 조율 중',
   },
   {
     name: '리포데이',
-    desc: '매월 1,000만원',
-    budget: '1,000만원/월',
+    desc: '협의중',
+    budget: '예산 협의중',
     tier: 'small',
     stage: 1,
     stageLabel: '협의중',
-    eta: '협의중',
+    eta: '예산 협의중',
   },
   {
     name: '스킨스탠다드',
@@ -309,11 +298,11 @@ export const REVIEW_BRANDS: PipelineBrand[] = [
   {
     name: '토코보',
     desc: 'Tocobo',
-    budget: '협의중',
+    budget: '예산 협의중',
     tier: 'small',
     stage: 1,
     stageLabel: '협의중',
-    eta: '협의중',
+    eta: '예산 협의중',
   },
 ]
 
@@ -325,29 +314,26 @@ export const PIPELINE_BRANDS: PipelineBrand[] = [...REVIEW_BRANDS, ...OCTOBER_BR
 
 export const LEAD_RANGE = { min: 14, max: 20, typical: 16 }
 
-export type PipelineCatStage = 'delivering' | 'prep'
-
-export function pipelineCatStage(brand: ContractBrand): PipelineCatStage {
-  return brand.contractCompletedOn ? 'prep' : 'delivering'
+export function contractStageLabel(stage: PipelineStage): ContractStageLabel {
+  return CONTRACT_STAGES[stage - 1]
 }
 
-/** 계약 완료일 00:00 기준 경과 일수 (완료 당일 = 0) */
-export function daysSinceContractComplete(completedOn: string, asOf = new Date()): number {
-  const [y, m, d] = completedOn.split('-').map(Number)
-  const start = new Date(y, m - 1, d)
-  const end = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate())
-  return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86_400_000))
+/** 다음 단계 라벨. 종료(5)면 null. */
+export function nextContractStageLabel(stage: PipelineStage): ContractStageLabel | null {
+  if (stage === 5) return null
+  return CONTRACT_STAGES[stage]
 }
 
-/** 계약 완료 이후 가이드·매칭 구간 진행률 — 경과일 ÷ 예상 소요일 */
-export function contractPrepProgress(
-  completedOn: string,
-  totalDays: number,
-  asOf = new Date(),
-): number {
-  if (totalDays <= 0) return 0
-  const elapsed = daysSinceContractComplete(completedOn, asOf)
-  return Math.min(100, Math.round((elapsed / totalDays) * 100))
+/**
+ * 보딩패스 contract_stage / 입금 상태 → 화면 5단계.
+ * 입금 지연은 계약 완료(입금 대기). 입금 완료·캠페인 진행중 → 4.
+ */
+export function pipelineStageFromContract(raw: string | null | undefined): PipelineStage {
+  const s = String(raw || '').trim()
+  if (s === '캠페인 종료' || s === '종료' || s === '캠페인 진행 완료') return 5
+  if (s === '캠페인 진행중' || s === '입금 완료') return s === '입금 완료' ? 3 : 4
+  if (s === '계약 완료' || s === '입금 지연') return 2
+  return 1
 }
 
 export function formatContractDate(iso: string): string {
@@ -369,3 +355,14 @@ export const BUDGET_DISCLAIMER =
 
 export const MARKETING_NOTE =
   '추가 예산 집행 시 발행량 및 PPL 채우기 작업이 원활해질 것으로 예상됩니다.'
+
+if (process.env.NODE_ENV !== 'production') {
+  if (pipelineStageFromContract('협의중') !== 1) throw new Error('stage 협의중')
+  if (pipelineStageFromContract('입금 지연') !== 2) throw new Error('stage 입금 지연')
+  if (pipelineStageFromContract('입금 완료') !== 3) throw new Error('stage 입금 완료')
+  if (pipelineStageFromContract('캠페인 진행중') !== 4) throw new Error('stage 캠페인 진행중')
+  if (pipelineStageFromContract('종료') !== 5) throw new Error('stage 종료')
+  if (contractStageLabel(4) !== '캠페인 진행중') throw new Error('label')
+  if (nextContractStageLabel(4) !== '캠페인 종료') throw new Error('next')
+  if (nextContractStageLabel(5) !== null) throw new Error('next end')
+}

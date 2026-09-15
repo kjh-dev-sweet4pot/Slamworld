@@ -61,6 +61,7 @@ export default function ReportPrint({
   rows,
   monthGoal = null,
   plannedUploads = [],
+  asOf = null,
 }: {
   partnerBrand: string | null
   scope: string
@@ -70,6 +71,7 @@ export default function ReportPrint({
   rows: Content[]
   monthGoal?: MonthlyGoal | null
   plannedUploads?: PlannedUpload[]
+  asOf?: string | null
 }) {
   const chMax = Math.max(1, ...channels.map(c => c.interaction))
   const locs = locBars(rows)
@@ -101,7 +103,7 @@ export default function ReportPrint({
             <span className="text-[#9aa0b3] font-normal mx-1">×</span>
             {partnerBrand ? `${partnerBrand} 리포트` : '브랜드슬램 인플루언서 리포트'}
           </h1>
-          <p className="text-[10.5px] text-[#6b728a] mt-0.5">09.14 기준 · {scope}</p>
+          <p className="text-[10.5px] text-[#6b728a] mt-0.5">{asOf ? `${asOf} 기준` : '자동 수집'} · {scope}</p>
         </div>
         <p className="text-[10px] text-[#9aa0b3] shrink-0">한눈에 보기</p>
       </header>

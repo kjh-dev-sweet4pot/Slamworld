@@ -143,3 +143,6 @@ ALTER TABLE monthly_goals ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "public read" ON monthly_goals;
 CREATE POLICY "public read" ON monthly_goals FOR SELECT TO anon, authenticated USING (true);
 GRANT SELECT ON monthly_goals TO anon, authenticated;
+
+-- 8. 회원사·월별 예산. 원본은 보딩패스. 금액은 원.
+-- 기존 DB는 supabase/add-companies.sql 을 SQL editor에서 한 번 실행.

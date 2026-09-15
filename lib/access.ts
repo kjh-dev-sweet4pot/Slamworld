@@ -20,9 +20,9 @@ export const PARTNER_LOGIN_SLUGS: Record<string, string> = {
   rxme: 'Rxme',
   troubleless: 'Troubleless',
   uiq: 'UIQ',
-  heveblue: '해브블루',
-  /** 흔한 오타 */
-  haveblue: '해브블루',
+  heveblue: '헤브블루',
+  /** 흔한 오타 · 옛 표기 */
+  haveblue: '헤브블루',
   dalba: '달바',
   re4day: '리포데이',
   skinstandard: '스킨스탠다드',
@@ -36,7 +36,8 @@ const PARTNER_LOGIN_ALIASES: Record<string, string> = {
   '닥터 리앤장': '닥터 리앤장',
   '닥터리앤장': '닥터 리앤장',
   '클리어디어': '클리어디어',
-  '해브블루': '해브블루',
+  '헤브블루': '헤브블루',
+  '해브블루': '헤브블루',
   '달바': '달바',
   '스킨스탠다드': '스킨스탠다드',
   '리포데이': '리포데이',
