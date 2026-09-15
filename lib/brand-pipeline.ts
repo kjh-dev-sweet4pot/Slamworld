@@ -137,7 +137,7 @@ export const COMMON_TIMELINE: TimelineMilestone[] = [
   {
     date: '이번달 목표',
     title: '발행 150건',
-    detail: '명동 80% · 북촌 20%',
+    detail: '',
   },
 ]
 

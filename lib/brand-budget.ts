@@ -5,7 +5,7 @@ import { canonicalBrand } from '@/lib/brand-content'
 export type BudgetPayment = '입금 완료' | '입금 예정' | '송금 대기' | '미입금' | '입금 지연' | '협의중' | '입점 논의중'
 export type BudgetStage = '확정 및 진행' | '계약 예정' | '10월 예정'
 /** 캠페인 집행 상태 (동일 브랜드 복수 캠페인용) */
-export type BudgetUseStatus = '기 소진' | '사용 예정'
+export type BudgetUseStatus = '기 소진' | '사용 예정' | '가용'
 
 export interface BrandBudget {
   brand: string
@@ -85,67 +85,32 @@ function stageOf(payment: BrandBudget['payment']): BudgetStage {
   return payment === '입금 완료' || payment === '입금 지연' ? '확정 및 진행' : '계약 예정'
 }
 
-function roundKey(company: string, label?: string | null): string {
-  return `${company.trim().toLowerCase()}::${(label || '').trim()}`
+function useStatusOf(raw: string): BudgetUseStatus | undefined {
+  const v = String(raw || '').trim()
+  if (v === '기소진' || v === '기 소진') return '기 소진'
+  if (v === '사용 예정') return '사용 예정'
+  if (v === '가용') return '가용'
+  return undefined
 }
 
-/** 같은 회사·라벨 입금 행에서 상태 고름. 입금 지연 > 입금 완료 > 그 외. 라벨 없어도 매칭. */
-function depositHits(
-  deposits: BudgetRoundRow[],
-  company: string,
-  label?: string | null,
-): BudgetRoundRow[] {
-  return deposits.filter(d =>
-    d.company_name === company && (d.label || '') === (label || ''),
-  )
-}
-
-function depositPaymentFor(
-  deposits: BudgetRoundRow[],
-  company: string,
-  label?: string | null,
-): BrandBudget['payment'] | null {
-  const hits = depositHits(deposits, company, label)
-  if (!hits.length) return null
-  if (hits.some(h => h.deposit_status === '입금 지연')) return '입금 지연'
-  if (hits.some(h => h.deposit_status === '입금 완료')) return '입금 완료'
-  return paymentOf(hits[0]!.deposit_status)
-}
-
-/** 사용 행 금액이 비면 입금 행 금액 사용. 입금만 고쳐도 화면에 나오게. */
-function depositAmountManwon(
-  deposits: BudgetRoundRow[],
-  company: string,
-  label?: string | null,
-): number {
-  const hits = depositHits(deposits, company, label)
-  if (!hits.length) return 0
-  const late = hits.find(h => h.deposit_status === '입금 지연' && manwon(h.amount_krw) > 0)
-  if (late) return manwon(late.amount_krw)
-  const paid = hits.find(h => h.deposit_status === '입금 완료' && manwon(h.amount_krw) > 0)
-  if (paid) return manwon(paid.amount_krw)
-  return Math.max(0, ...hits.map(h => manwon(h.amount_krw)))
+/** 예산(사용) 행이 이미 잡힌 돈인지. 입금 행과 섞지 않음. */
+function usageLooksBooked(usageStatus: string): boolean {
+  const v = String(usageStatus || '').trim()
+  return v === '가용' || v === '기 소진' || v === '기소진' || v === '사용 예정'
 }
 
 function rowToBudget(
   row: BudgetRoundRow,
   payment: BrandBudget['payment'],
-  amountOverride?: number,
+  useStatus?: BudgetUseStatus,
 ): BrandBudget {
   const month = row.period_month.slice(0, 7)
-  const useStatus = row.usage_status === '기 소진'
-    ? '기 소진' as const
-    : row.usage_status === '사용 예정'
-      ? '사용 예정' as const
-      : undefined
-  const amount = amountOverride != null && amountOverride > 0
-    ? amountOverride
-    : manwon(row.amount_krw)
+  const status = useStatus ?? useStatusOf(row.usage_status)
   return {
     brand: canonicalBrand(row.company_name),
     campaign: row.label || undefined,
-    useStatus,
-    amount,
+    useStatus: status,
+    amount: manwon(row.amount_krw),
     payment,
     stage: stageOf(payment),
     securedMonth: month,
@@ -154,48 +119,28 @@ function rowToBudget(
   }
 }
 
-/** 보딩패스 입금/사용 라운드 → 화면 예산. 입금 지연은 금액 0이어도 남김. */
+/**
+ * 보딩패스 라운드 → 화면 예산.
+ * - 가용/기소진/사용예정: kind=사용(예산) 행만. 금액·상태도 그 행.
+ * - 입금 지연: kind=입금 행만. 금액·월도 그 행.
+ * 둘을 회사·라벨로 섞지 않음 (2차 가용 3000 + 2차 지연 3500 동시 표시).
+ */
 export function budgetsFromRounds(rounds: BudgetRoundRow[]): BrandBudget[] {
   const deposits = rounds.filter(r => (r.kind || '입금') === '입금')
   const usage = rounds.filter(r => r.kind === '사용')
-  const source = usage.length ? usage : deposits
 
-  const mapped = source.map(row => {
-    const fromDeposit = depositPaymentFor(deposits, row.company_name, row.label)
-    let payment = fromDeposit ?? paymentOf(row.deposit_status)
-    if (!fromDeposit && (payment === '협의중' || payment === '입점 논의중')) {
-      const paid = deposits.some(d =>
-        d.company_name === row.company_name &&
-        d.deposit_status === '입금 완료' &&
-        !(d.label && row.label && d.label !== row.label),
-      )
-      if (paid) payment = '입금 완료'
-    }
-    const own = manwon(row.amount_krw)
-    const fromDep = own > 0
-      ? undefined
-      : depositAmountManwon(deposits, row.company_name, row.label)
-    return rowToBudget(row, payment, fromDep)
+  const fromUsage = usage.map(row => {
+    const payment: BrandBudget['payment'] = usageLooksBooked(row.usage_status)
+      ? '입금 완료'
+      : paymentOf(row.deposit_status)
+    return rowToBudget(row, payment)
   })
 
-  // 사용 행만 고르면 입금 지연만 있는 회사가 빠짐 → 입금 전용 행 보강
-  if (usage.length) {
-    const covered = new Set(mapped.map(b => roundKey(b.brand, b.campaign)))
-    // also cover by original company name keys from usage source
-    for (const row of source) covered.add(roundKey(canonicalBrand(row.company_name), row.label))
+  const fromLate = deposits
+    .filter(d => d.deposit_status === '입금 지연')
+    .map(d => rowToBudget(d, '입금 지연'))
 
-    for (const d of deposits) {
-      const key = roundKey(canonicalBrand(d.company_name), d.label)
-      if (covered.has(key)) continue
-      const payment = paymentOf(d.deposit_status)
-      // 미수령·지연만 보강. 입금 완료만 있고 사용 행 없는 건 이중 합산 위험이라 금액 있을 때만 usage 없을 때 이미 source=deposits
-      if (payment === '입금 완료') continue
-      mapped.push(rowToBudget(d, payment))
-      covered.add(key)
-    }
-  }
-
-  return mapped
+  return [...fromUsage, ...fromLate]
 }
 
 export const DISCUSSING_STAGE = '계약 조건 논의중'
@@ -388,16 +333,16 @@ export function usedBudgetRows(list: BrandBudget[] = BRAND_BUDGETS): PartnerTool
 }
 
 export function availableBudgetRows(list: BrandBudget[] = BRAND_BUDGETS): PartnerTooltipRow[] {
-  return toTooltipRows(list.filter(b => b.payment === '입금 완료' && !isSpentBudget(b)))
+  return toTooltipRows(list.filter(isAvailableBudget))
 }
 
 export function sepAvailableRows(list: BrandBudget[] = BRAND_BUDGETS, month = '2026-09'): PartnerTooltipRow[] {
   return toTooltipRows(list.filter(b =>
-    b.payment === '입금 완료' && !isSpentBudget(b) && b.marketingMonth === month,
+    isAvailableBudget(b) && b.marketingMonth === month,
   ))
 }
 
-/** 입금 지연 → 미수령. 금액 0이어도 포함. */
+/** 입금 지연 → 미수령. 입금 행만. 금액 0이어도 포함. */
 export function unreceivedBudgetRows(list: BrandBudget[] = BRAND_BUDGETS): PartnerTooltipRow[] {
   return toTooltipRows(list.filter(b => b.payment === '입금 지연'))
 }
@@ -413,6 +358,14 @@ export function kpiCompanyRows(key: BudgetKpiKey, list: BrandBudget[] = BRAND_BU
 
 export function isSpentBudget(b: Pick<BrandBudget, 'useStatus'>): boolean {
   return b.useStatus === '기 소진'
+}
+
+/** 가용예산 = 예산(사용) 행. 입금 지연과 섞지 않음. */
+export function isAvailableBudget(b: Pick<BrandBudget, 'payment' | 'useStatus'>): boolean {
+  if (b.payment === '입금 지연') return false
+  if (b.useStatus === '가용') return true
+  if (b.useStatus === '기 소진') return false
+  return b.payment === '입금 완료'
 }
 
 export function budgetMid(b: BrandBudget): number {
@@ -561,11 +514,13 @@ export function computeBudgetSummary(list: BrandBudget[] = BRAND_BUDGETS, month 
   const paid = confirmed.filter(b => b.payment === '입금 완료')
   const securedPaid = paid.reduce((s, b) => s + budgetMid(b), 0)
   const usedTotal = paid.filter(isSpentBudget).reduce((s, b) => s + budgetMid(b), 0)
-  const availableTotal = securedPaid - usedTotal
-  const sepAvailable = paid
-    .filter(b => !isSpentBudget(b) && b.marketingMonth === month)
+  const availableTotal = list.filter(isAvailableBudget).reduce((s, b) => s + budgetMid(b), 0)
+  const sepAvailable = list
+    .filter(b => isAvailableBudget(b) && b.marketingMonth === month)
     .reduce((s, b) => s + budgetMid(b), 0)
-  const securedPending = securedTotal - securedPaid
+  const securedPending = confirmed
+    .filter(b => b.payment === '입금 지연')
+    .reduce((s, b) => s + budgetMid(b), 0)
 
   const pipelineKnown = list.reduce((s, b) => s + budgetMid(b), 0)
   const pipelineMax = list.reduce((s, b) => s + budgetMax(b), 0)
@@ -642,14 +597,21 @@ if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   if (plannedInChart) throw new Error('contract-planned must stay out of monthly charts')
   if (unreceivedBudgetRows().reduce((n, r) => n + r.amount, 0) !== 7500) throw new Error('unreceived list total')
   const mapped = budgetsFromRounds([
-    { company_name: '텔로엑트', label: '2차', period_month: '2026-09-01', amount_krw: 65000000, deposit_status: '협의중', usage_status: '예상', kind: '사용' },
-    { company_name: '텔로엑트', label: '2차', period_month: '2026-09-01', amount_krw: 65000000, deposit_status: '입금 지연', usage_status: '사용 예정', kind: '입금' },
+    { company_name: '텔로엑트', label: '2차', period_month: '2026-09-01', amount_krw: 30000000, deposit_status: '협의중', usage_status: '가용', kind: '사용' },
+    { company_name: '텔로엑트', label: '2차', period_month: '2026-09-01', amount_krw: 30000000, deposit_status: '입금 완료', usage_status: '협의중', kind: '입금' },
+    { company_name: '텔로엑트', label: '2차', period_month: '2026-10-01', amount_krw: 35000000, deposit_status: '입금 지연', usage_status: '협의중', kind: '입금' },
     { company_name: '닥터리앤장', period_month: '2026-08-01', amount_krw: 10000000, deposit_status: '협의중', usage_status: '기 소진', kind: '사용' },
     { company_name: '닥터리앤장', period_month: '2026-08-01', amount_krw: 30000000, deposit_status: '입금 완료', usage_status: '사용 예정', kind: '입금' },
   ])
-  const telo = mapped.find(b => b.campaign === '2차')
+  const teloAvail = mapped.find(b => b.campaign === '2차' && isAvailableBudget(b))
+  const teloLate = mapped.find(b => b.campaign === '2차' && b.payment === '입금 지연')
   const lj = mapped.find(b => b.useStatus === '기 소진')
-  if (telo?.payment !== '입금 지연' || telo.amount !== 6500 || telo.brand !== 'TeloAct') throw new Error('round map telo')
+  if (!teloAvail || teloAvail.amount !== 3000 || teloAvail.payment !== '입금 완료') {
+    throw new Error(`telo available 3000 expected, got ${JSON.stringify(teloAvail)}`)
+  }
+  if (!teloLate || teloLate.amount !== 3500 || teloLate.marketingMonth !== '2026-10') {
+    throw new Error(`telo late 3500 Oct expected, got ${JSON.stringify(teloLate)}`)
+  }
   if (lj?.payment !== '입금 완료' || lj.useStatus !== '기 소진' || lj.brand !== '닥터 리앤장') throw new Error('round map lienjang')
   const lateOnly = budgetsFromRounds([
     { company_name: '옵티팜', label: '9월', period_month: '2026-09-01', amount_krw: 20000000, deposit_status: '입금 완료', usage_status: '가용', kind: '사용' },
@@ -657,14 +619,22 @@ if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
     { company_name: '달바', period_month: '2026-09-01', amount_krw: null, deposit_status: '협의중', usage_status: '예산 협의중', kind: '사용' },
     { company_name: 'UIQ', period_month: '2026-09-01', amount_krw: null, deposit_status: '입금 지연', usage_status: '사용 예정', kind: '입금' },
   ])
-  const dalba = lateOnly.find(b => b.brand === '달바')
-  const uiq = lateOnly.find(b => b.brand === 'UIQ')
-  if (dalba?.payment !== '입금 지연' || dalba.amount !== 3000) {
-    throw new Error(`dalba late 3000 from deposit expected, got ${JSON.stringify(dalba)}`)
+  const dalbaLate = lateOnly.filter(b => b.brand === '달바' && b.payment === '입금 지연')
+  const dalbaUsage = lateOnly.filter(b => b.brand === '달바' && b.payment !== '입금 지연')
+  const uiq = lateOnly.find(b => b.brand === 'UIQ' && b.payment === '입금 지연')
+  if (dalbaLate.length !== 1 || dalbaLate[0]?.amount !== 3000) {
+    throw new Error(`dalba late 3000 from deposit expected, got ${JSON.stringify(dalbaLate)}`)
   }
+  if (dalbaUsage.some(b => b.payment === '입금 지연')) throw new Error('usage must not inherit late')
   if (uiq?.payment !== '입금 지연' || uiq.amount !== 0) throw new Error(`uiq late zero expected, got ${JSON.stringify(uiq)}`)
   if (!unreceivedBudgetRows(lateOnly).some(r => r.brand === 'UIQ' && isLatePayment(r.payment))) {
     throw new Error('unreceived must include zero-amount late')
+  }
+  if (availableBudgetRows(lateOnly).some(r => r.brand === '달바')) {
+    throw new Error('dalba late must not appear in available')
+  }
+  if (!availableBudgetRows(lateOnly).some(r => r.brand === '옵티팜' && r.amount === 2000)) {
+    throw new Error('optipharm available from usage')
   }
   const discussing = discussingCompanyRows([
     { company_name: '트러블레스', period_month: '2026-09-01', amount_krw: 11000000, deposit_status: '협의중', usage_status: '예산 협의중', kind: '입금' },

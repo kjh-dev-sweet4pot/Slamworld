@@ -254,7 +254,7 @@ export default function BrandPipeline({
                   ${i === 0 ? 'border-azure shadow-[0_0_0_3px_rgba(24,104,240,.15)] bg-white' : 'border-sky bg-white'}`} />
                 {m.date && <div className="num text-[10px] text-azure tracking-wider">{m.date}</div>}
                 <div className={`text-[13px] font-bold text-ink ${m.date ? 'mt-0.5' : ''}`}>{m.title}</div>
-                <div className="text-[12px] text-body mt-0.5">{m.detail}</div>
+                {m.detail && <div className="text-[12px] text-body mt-0.5">{m.detail}</div>}
               </div>
             ))}
           </div>
