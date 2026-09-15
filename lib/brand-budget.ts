@@ -90,32 +90,62 @@ function roundKey(company: string, label?: string | null): string {
 }
 
 /** 같은 회사·라벨 입금 행에서 상태 고름. 입금 지연 > 입금 완료 > 그 외. 라벨 없어도 매칭. */
+function depositHits(
+  deposits: BudgetRoundRow[],
+  company: string,
+  label?: string | null,
+): BudgetRoundRow[] {
+  return deposits.filter(d =>
+    d.company_name === company && (d.label || '') === (label || ''),
+  )
+}
+
 function depositPaymentFor(
   deposits: BudgetRoundRow[],
   company: string,
   label?: string | null,
 ): BrandBudget['payment'] | null {
-  const hits = deposits.filter(d =>
-    d.company_name === company && (d.label || '') === (label || ''),
-  )
+  const hits = depositHits(deposits, company, label)
   if (!hits.length) return null
   if (hits.some(h => h.deposit_status === '입금 지연')) return '입금 지연'
   if (hits.some(h => h.deposit_status === '입금 완료')) return '입금 완료'
   return paymentOf(hits[0]!.deposit_status)
 }
 
-function rowToBudget(row: BudgetRoundRow, payment: BrandBudget['payment']): BrandBudget {
+/** 사용 행 금액이 비면 입금 행 금액 사용. 입금만 고쳐도 화면에 나오게. */
+function depositAmountManwon(
+  deposits: BudgetRoundRow[],
+  company: string,
+  label?: string | null,
+): number {
+  const hits = depositHits(deposits, company, label)
+  if (!hits.length) return 0
+  const late = hits.find(h => h.deposit_status === '입금 지연' && manwon(h.amount_krw) > 0)
+  if (late) return manwon(late.amount_krw)
+  const paid = hits.find(h => h.deposit_status === '입금 완료' && manwon(h.amount_krw) > 0)
+  if (paid) return manwon(paid.amount_krw)
+  return Math.max(0, ...hits.map(h => manwon(h.amount_krw)))
+}
+
+function rowToBudget(
+  row: BudgetRoundRow,
+  payment: BrandBudget['payment'],
+  amountOverride?: number,
+): BrandBudget {
   const month = row.period_month.slice(0, 7)
   const useStatus = row.usage_status === '기 소진'
     ? '기 소진' as const
     : row.usage_status === '사용 예정'
       ? '사용 예정' as const
       : undefined
+  const amount = amountOverride != null && amountOverride > 0
+    ? amountOverride
+    : manwon(row.amount_krw)
   return {
     brand: canonicalBrand(row.company_name),
     campaign: row.label || undefined,
     useStatus,
-    amount: manwon(row.amount_krw),
+    amount,
     payment,
     stage: stageOf(payment),
     securedMonth: month,
@@ -141,7 +171,11 @@ export function budgetsFromRounds(rounds: BudgetRoundRow[]): BrandBudget[] {
       )
       if (paid) payment = '입금 완료'
     }
-    return rowToBudget(row, payment)
+    const own = manwon(row.amount_krw)
+    const fromDep = own > 0
+      ? undefined
+      : depositAmountManwon(deposits, row.company_name, row.label)
+    return rowToBudget(row, payment, fromDep)
   })
 
   // 사용 행만 고르면 입금 지연만 있는 회사가 빠짐 → 입금 전용 행 보강
@@ -619,13 +653,15 @@ if (process.env.BRAND_BUDGET_SELF_CHECK === '1') {
   if (lj?.payment !== '입금 완료' || lj.useStatus !== '기 소진' || lj.brand !== '닥터 리앤장') throw new Error('round map lienjang')
   const lateOnly = budgetsFromRounds([
     { company_name: '옵티팜', label: '9월', period_month: '2026-09-01', amount_krw: 20000000, deposit_status: '입금 완료', usage_status: '가용', kind: '사용' },
-    { company_name: '달바', period_month: '2026-09-01', amount_krw: 0, deposit_status: '입금 지연', usage_status: '사용 예정', kind: '입금' },
+    { company_name: '달바', period_month: '2026-09-01', amount_krw: 30000000, deposit_status: '입금 지연', usage_status: '사용 예정', kind: '입금' },
     { company_name: '달바', period_month: '2026-09-01', amount_krw: null, deposit_status: '협의중', usage_status: '예산 협의중', kind: '사용' },
     { company_name: 'UIQ', period_month: '2026-09-01', amount_krw: null, deposit_status: '입금 지연', usage_status: '사용 예정', kind: '입금' },
   ])
   const dalba = lateOnly.find(b => b.brand === '달바')
   const uiq = lateOnly.find(b => b.brand === 'UIQ')
-  if (dalba?.payment !== '입금 지연') throw new Error(`dalba late expected, got ${dalba?.payment}`)
+  if (dalba?.payment !== '입금 지연' || dalba.amount !== 3000) {
+    throw new Error(`dalba late 3000 from deposit expected, got ${JSON.stringify(dalba)}`)
+  }
   if (uiq?.payment !== '입금 지연' || uiq.amount !== 0) throw new Error(`uiq late zero expected, got ${JSON.stringify(uiq)}`)
   if (!unreceivedBudgetRows(lateOnly).some(r => r.brand === 'UIQ' && isLatePayment(r.payment))) {
     throw new Error('unreceived must include zero-amount late')
