@@ -12,6 +12,7 @@ import TrendAnalysisSection from '@/components/v2/TrendAnalysisSection'
 import CompositionSection from '@/components/v2/CompositionSection'
 import FormatAnalysisSection from '@/components/v2/FormatAnalysisSection'
 import PopularContentSection from '@/components/v2/PopularContentSection'
+import ReportPrintV2 from '@/components/v2/ReportPrintV2'
 import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
 import type { Content } from '@/lib/types'
 import {
@@ -119,7 +120,8 @@ function DashboardInner() {
   }
 
   return (
-    <div className="font-sans min-h-screen pb-16 bg-gradient-to-b from-[#fdf6e9] via-[#fbeed6] via-[38%] via-[#f6e3bf] via-[62%] to-[#f2dcb2] text-[#1a1d2e]">
+    <>
+      <div className="report-screen font-sans min-h-screen pb-16 bg-gradient-to-b from-[#fdf6e9] via-[#fbeed6] via-[38%] via-[#f6e3bf] via-[62%] to-[#f2dcb2] text-[#1a1d2e]">
       {/* ── 헤더 ── */}
       <HeaderV2
         collectedLabel="08.31 수집 기준 · 자동 수집 · 다음 09.30"
@@ -213,5 +215,15 @@ function DashboardInner() {
         </div>
       </main>
     </div>
+
+    {/* ── PDF 인쇄 전용 핵심 요약 보고서 (화면에는 숨김, 인쇄 시 자동 표시) ── */}
+    <ReportPrintV2
+      partnerBrand={partnerBrand}
+      contents={filteredContents}
+      periodMode={periodMode}
+      currentMonth={currentMonth}
+      locationCount={locationCount}
+    />
+  </>
   )
 }
