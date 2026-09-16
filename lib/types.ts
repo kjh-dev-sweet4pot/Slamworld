@@ -2,6 +2,7 @@ export type Channel = '샤오홍슈' | '인스타그램' | '틱톡' | '도우인
 export type Performance = 'high' | 'mid' | 'low' | 'no_data'
 export type ViewsSource = 'measured' | 'estimated' | 'none'
 export type PublishStatus = '예정' | '진행중' | '발행완료'
+export type ContentFormat = '릴스' | '노트' | '숏폼' | '게시물'
 
 export interface Content {
   id: number
@@ -29,6 +30,7 @@ export interface Content {
   views_est_high: number | null
   views_source: ViewsSource
   metrics_updated_at?: string | null
+  content_format?: ContentFormat | null
   // from view
   total_interaction?: number
   views_best?: number | null
