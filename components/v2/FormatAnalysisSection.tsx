@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import type { Content, ContentFormat } from '@/lib/types'
 import { classifyContentFormat, CONTENT_FORMAT_LABEL } from '@/lib/content-format'
 import { contentViews } from '@/lib/content-views'
+import { useChartTooltip } from '@/components/v2/ChartTooltip'
 import { formatViews } from '@/lib/v2-analytics'
 
 interface FormatAnalysisSectionProps {
@@ -13,10 +14,19 @@ interface FormatAnalysisSectionProps {
 const FORMAT_ORDER: ContentFormat[] = ['릴스', '노트', '숏폼', '게시물']
 const CHANNELS = ['샤오홍슈', '인스타그램', '틱톡', '도우인', '웨이보'] as const
 
+const FORMAT_TIP_ROWS = [
+  { key: '릴스', color: '#8b5cf6' },
+  { key: '노트', color: '#e03131' },
+  { key: '숏폼', color: '#06b6d4' },
+  { key: '게시물', color: '#64748b' },
+  { key: '미발행', color: '#e2dbcb' },
+] as const
+
 export default function FormatAnalysisSection({
   contents = [],
 }: FormatAnalysisSectionProps) {
   const [viewMode, setViewMode] = useState<'perPost' | 'total'>('perPost')
+  const tooltip = useChartTooltip()
 
   // 형식별 통계 집계
   const formatStats = useMemo(() => {
@@ -214,7 +224,19 @@ export default function FormatAnalysisSection({
                 <div className="text-center py-8 text-[12px] text-[#9a9486]">채널 형식 데이터가 없습니다.</div>
               ) : (
                 channelFormatComposition.map(chItem => (
-                  <div key={chItem.channel} className="flex items-center gap-2.5">
+                  <div
+                    key={chItem.channel}
+                    className="flex items-center gap-2.5 cursor-default"
+                    {...tooltip.bind(
+                      `${chItem.channel} 형식 구성`,
+                      FORMAT_TIP_ROWS.filter(f => chItem.counts[f.key] > 0).map(f => ({
+                        label: f.key,
+                        color: f.color,
+                        value: `${chItem.counts[f.key]}건 (${Math.round(chItem.pcts[f.key])}%)`,
+                      })),
+                      `합계 ${chItem.total}건`,
+                    )}
+                  >
                     <span className="w-16 text-[12px] font-bold text-[#1a1d2e]">{chItem.channel}</span>
                     <span className="flex-1 h-[22px] rounded-[5px] bg-[#f4efe3] flex overflow-hidden">
                       {chItem.pcts['릴스'] > 0 && (
@@ -282,7 +304,15 @@ export default function FormatAnalysisSection({
                 : 0
 
               return (
-                <div key={f.format} className="grid grid-cols-[96px_minmax(0,1fr)_62px_74px] gap-2.5 items-center py-2.5 border-b border-[#f7f2e8] last:border-b-0">
+                <div
+                  key={f.format}
+                  className="grid grid-cols-[96px_minmax(0,1fr)_62px_74px] gap-2.5 items-center py-2.5 border-b border-[#f7f2e8] last:border-b-0 cursor-default"
+                  {...tooltip.bind(f.format, [
+                    { label: '건당 조회', value: `${f.avgViews.toLocaleString()}회`, color: f.color, active: true },
+                    { label: '건수', value: `${f.count}건` },
+                    { label: '건당 좋아요', value: f.avgLikes.toLocaleString() },
+                  ])}
+                >
                   <span className="text-[12.5px] font-bold truncate" style={{ color: f.color }}>
                     {f.format}
                   </span>
@@ -310,6 +340,7 @@ export default function FormatAnalysisSection({
           </div>
         </div>
       </div>
+      {tooltip.node}
     </section>
   )
 }

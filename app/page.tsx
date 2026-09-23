@@ -13,6 +13,7 @@ import CompositionSection from '@/components/v2/CompositionSection'
 import FormatAnalysisSection from '@/components/v2/FormatAnalysisSection'
 import PopularContentSection from '@/components/v2/PopularContentSection'
 import ReportPrintV2 from '@/components/v2/ReportPrintV2'
+import SectionPeriodScope from '@/components/v2/SectionPeriodScope'
 import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
 import type { Content } from '@/lib/types'
 import {
@@ -75,20 +76,17 @@ function DashboardInner() {
     return contents.filter(c => contentMatchesBrand(c.brands, partnerBrand))
   }, [contents, partnerBrand])
 
-  // 전체(누적) vs 월별 필터 적용
+  // 지점 필터 (전 섹션 공통)
+  const locationContents = useMemo(() => {
+    if (!selectedLocation) return scopedContents
+    return scopedContents.filter(c => c.location === selectedLocation)
+  }, [scopedContents, selectedLocation])
+
+  // 상단 기간 내비(전체/월별) — §1 지점별 방문 현황 영역에만 적용. 나머지 섹션은 각자 기간 선택기 사용
   const filteredContents = useMemo(() => {
-    let list = scopedContents
-
-    if (periodMode === 'monthly') {
-      list = list.filter(c => c.visit_date?.startsWith(currentMonth))
-    }
-
-    if (selectedLocation) {
-      list = list.filter(c => c.location === selectedLocation)
-    }
-
-    return list
-  }, [scopedContents, periodMode, currentMonth, selectedLocation])
+    if (periodMode !== 'monthly') return locationContents
+    return locationContents.filter(c => c.visit_date?.startsWith(currentMonth))
+  }, [locationContents, periodMode, currentMonth])
 
   // 고유 지점 수 (회원사 기준)
   const locationCount = useMemo(() => {
@@ -191,27 +189,43 @@ function DashboardInner() {
         />
 
         {/* ══ §2 실행 성과 요약 ══ */}
-        <ExecutionSummarySection contents={filteredContents} />
+        <SectionPeriodScope contents={locationContents}>
+          {list => <ExecutionSummarySection contents={list} />}
+        </SectionPeriodScope>
 
         {/* ══ §3 전체 합계 ══ */}
-        <OverallTotalsSection contents={filteredContents} />
+        <SectionPeriodScope contents={locationContents}>
+          {(list, period) => (
+            <OverallTotalsSection contents={list} period={period} isPartner={!!partnerBrand} />
+          )}
+        </SectionPeriodScope>
 
         {/* ══ §4 추이 분석 ══ */}
-        <TrendAnalysisSection contents={filteredContents} />
+        <SectionPeriodScope contents={locationContents}>
+          {(list, period) => <TrendAnalysisSection contents={list} period={period} />}
+        </SectionPeriodScope>
 
         {/* ══ §5 구성비 분석 ══ */}
-        <CompositionSection contents={filteredContents} />
+        <SectionPeriodScope contents={locationContents}>
+          {list => <CompositionSection contents={list} />}
+        </SectionPeriodScope>
 
         {/* ══ §6 콘텐츠 형식 분석 ══ */}
-        <FormatAnalysisSection contents={filteredContents} />
+        <SectionPeriodScope contents={locationContents}>
+          {list => <FormatAnalysisSection contents={list} />}
+        </SectionPeriodScope>
 
         {/* ══ §7 인기 콘텐츠 분석 ══ */}
         <div id="section-popular">
-          <PopularContentSection
-            contents={filteredContents}
-            selectedInfluencerName={selectedInfluencer}
-            onSelectInfluencer={setSelectedInfluencer}
-          />
+          <SectionPeriodScope contents={locationContents}>
+            {list => (
+              <PopularContentSection
+                contents={list}
+                selectedInfluencerName={selectedInfluencer}
+                onSelectInfluencer={setSelectedInfluencer}
+              />
+            )}
+          </SectionPeriodScope>
         </div>
       </main>
     </div>

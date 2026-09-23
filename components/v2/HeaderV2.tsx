@@ -25,7 +25,7 @@ export default function HeaderV2({
             {partnerBrand ? `${partnerBrand} 인플루언서 리포트` : 'SLAM 인플루언서 리포트'}
           </span>
           <span className="text-[11px] font-bold text-[#2f5fd8] bg-[#eef3ff] px-2.5 py-1 rounded-[9px]">
-            v2.0.0
+            v1.0.0
           </span>
         </div>
         <div className="text-[11.5px] text-[#8b8578] mt-1">

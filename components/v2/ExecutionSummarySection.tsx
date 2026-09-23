@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import type { Content } from '@/lib/types'
-import { contentViews } from '@/lib/content-views'
+import { contentViews, aggregateEmv, contentEmv } from '@/lib/content-views'
 import aggJson from '@/data/agg.json'
 
 interface ExecutionSummarySectionProps {
@@ -20,14 +20,18 @@ export default function ExecutionSummarySection({
     const unreleased = Math.max(0, totalRows - uploaded)
     const saves = contents.reduce((s, c) => s + (c.saves ?? 0), 0)
 
-    const v7 = Math.round((totalViews * 7) / 10000)
-    const v12 = Math.round((totalViews * 12) / 10000)
-    const v18 = Math.round((totalViews * 18) / 10000)
+    // EMV(Earned Media Value) — 조회·좋아요·저장·댓글 통합 환산
+    const emv = aggregateEmv(contents)
+    const emvTotal = Math.round(emv.total / 10000)
+    const emvViewShare = Math.round(emv.viewValue / 10000)
+    const emvEngageShare = Math.round((emv.likeValue + emv.commentValue) / 10000)
+    const emvSaveShare = Math.round(emv.saveValue / 10000)
+    const emvProductionShare = Math.round(emv.productionValue / 10000)
+    const emvMax = Math.max(emvViewShare, emvEngageShare, emvSaveShare, emvProductionShare, 1)
 
-    // 단건 최고
-    const topContent = [...contents].sort((a, b) => contentViews(b) - contentViews(a))[0]
-    const topContentViews = topContent ? contentViews(topContent) : 0
-    const topContentValue = Math.round((topContentViews * 12) / 10000)
+    // 단건 최고 (EMV 기준)
+    const topContent = [...contents].sort((a, b) => contentEmv(b) - contentEmv(a))[0]
+    const topContentValue = topContent ? Math.round(contentEmv(topContent) / 10000) : 0
 
     // 현장 진행 통계
     const visitDates = new Set(contents.map(c => c.visit_date).filter(Boolean))
@@ -71,10 +75,16 @@ export default function ExecutionSummarySection({
 
     return {
       views: totalViews,
-      value7: `${v7.toLocaleString()}만`,
-      value12: `${v12.toLocaleString()}만`,
-      value18: `${v18.toLocaleString()}만`,
-      value12Num: v12,
+      emvTotal,
+      emvViewShare,
+      emvEngageShare,
+      emvSaveShare,
+      emvProductionShare,
+      emvMax,
+      emvLikes: emv.likes,
+      emvComments: emv.comments,
+      emvSaves: emv.saves,
+      emvUploads: emv.uploads,
       uploaded,
       totalRows,
       publishRate,
@@ -104,71 +114,83 @@ export default function ExecutionSummarySection({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* 1. 환산 노출 가치 */}
+        {/* 1. EMV (통합 마케팅 가치) */}
         <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
           <div className="flex items-center gap-2">
             <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
-              💰 환산 노출 가치
+              💎 EMV (통합 마케팅 가치)
             </span>
             <span className="ml-auto text-[10.5px] font-bold text-[#9a3412] bg-[#ffedd5] rounded-[8px] px-2 py-1 whitespace-nowrap">
-              CPV 12원 기준
+              반응 + 제작비 통합
             </span>
           </div>
           <div className="text-[11px] text-[#9a9486] mt-1.5">
-            같은 노출을 유료 광고로 샀을 때의 금액
+            같은 반응·제작을 광고+제작 대행으로 진행했을 때의 환산 금액
           </div>
           <div className="text-[34px] sm:text-[38px] font-extrabold tracking-tight mt-3.5 text-[#c2410c]">
-            {metrics.value12Num.toLocaleString()}
+            {metrics.emvTotal.toLocaleString()}
             <span className="text-[17px] font-bold ml-0.5">만원</span>
           </div>
           <div className="text-[11.5px] text-[#6b6558] mt-1.5">
-            누적 조회 {metrics.views.toLocaleString()} × 12원
+            발행 {metrics.emvUploads.toLocaleString()}건 · 조회 {metrics.views.toLocaleString()} · 좋아요 {metrics.emvLikes.toLocaleString()} · 저장 {metrics.emvSaves.toLocaleString()} · 댓글 {metrics.emvComments.toLocaleString()}
           </div>
 
           <div className="h-px bg-[#f4efe3] my-3.5" />
 
-          {/* 3대 벤치마크 바 */}
+          {/* 항목별 기여도 */}
           <div className="flex flex-col gap-2.5">
             <div className="flex items-center gap-2.5">
               <span className="w-[76px] text-[11.5px] text-[#6b6558] whitespace-nowrap">
-                보수 7원
+                조회 가치
               </span>
               <span className="flex-1 h-2.5 rounded-full bg-[#f4efe3] overflow-hidden">
-                <span className="block h-full w-[38.9%] bg-[#fdba74] rounded-full" />
+                <span className="block h-full rounded-full bg-[#fdba74]" style={{ width: `${Math.max(3, Math.round((metrics.emvViewShare / metrics.emvMax) * 100))}%` }} />
               </span>
               <span className="w-[66px] text-right text-[12px] font-bold whitespace-nowrap text-[#1a1d2e]">
-                {metrics.value7}
+                {metrics.emvViewShare.toLocaleString()}만
               </span>
             </div>
 
             <div className="flex items-center gap-2.5">
               <span className="w-[76px] text-[11.5px] font-bold text-[#c2410c] whitespace-nowrap">
-                기준 12원
+                참여 가치
               </span>
               <span className="flex-1 h-2.5 rounded-full bg-[#f4efe3] overflow-hidden">
-                <span className="block h-full w-[66.7%] bg-[#f97316] rounded-full" />
+                <span className="block h-full rounded-full bg-[#f97316]" style={{ width: `${Math.max(3, Math.round((metrics.emvEngageShare / metrics.emvMax) * 100))}%` }} />
               </span>
               <span className="w-[66px] text-right text-[12px] font-extrabold whitespace-nowrap text-[#c2410c]">
-                {metrics.value12}
+                {metrics.emvEngageShare.toLocaleString()}만
               </span>
             </div>
 
             <div className="flex items-center gap-2.5">
               <span className="w-[76px] text-[11.5px] text-[#6b6558] whitespace-nowrap">
-                상단 18원
+                저장 가치
               </span>
               <span className="flex-1 h-2.5 rounded-full bg-[#f4efe3] overflow-hidden">
-                <span className="block h-full w-full bg-[#ea580c] rounded-full" />
+                <span className="block h-full rounded-full bg-[#ea580c]" style={{ width: `${Math.max(3, Math.round((metrics.emvSaveShare / metrics.emvMax) * 100))}%` }} />
               </span>
               <span className="w-[66px] text-right text-[12px] font-bold whitespace-nowrap text-[#1a1d2e]">
-                {metrics.value18}
+                {metrics.emvSaveShare.toLocaleString()}만
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <span className="w-[76px] text-[11.5px] text-[#6b6558] whitespace-nowrap">
+                제작비 가치
+              </span>
+              <span className="flex-1 h-2.5 rounded-full bg-[#f4efe3] overflow-hidden">
+                <span className="block h-full rounded-full bg-[#c2410c]" style={{ width: `${Math.max(3, Math.round((metrics.emvProductionShare / metrics.emvMax) * 100))}%` }} />
+              </span>
+              <span className="w-[66px] text-right text-[12px] font-bold whitespace-nowrap text-[#1a1d2e]">
+                {metrics.emvProductionShare.toLocaleString()}만
               </span>
             </div>
           </div>
 
           <div className="bg-[#fff7ed] border border-[#fed7aa] rounded-xl p-3 mt-3.5">
             <p className="text-[11px] leading-relaxed text-[#9a3412]">
-              화장품·뷰티 카테고리 CPM 벤치마크를 조회당 단가로 환산한 값입니다. 국내 숏폼 평균 CPM 3,000~8,000원에 뷰티 배율 2.2배, 미국 뷰티 CPM $5~$20을 함께 반영해 <b>CPV 7~18원</b> 구간을 잡았습니다.
+              화장품·뷰티 카테고리 벤치마크 기준 조회당 <b>12원</b>, 좋아요당 <b>50원</b>, 댓글당 <b>100원</b>, 저장(구매의향)당 <b>150원</b>의 광고 환산가에 더해, 발행 콘텐츠 1건당 촬영·편집 제작비 대체가치를 합산한 EMV(Earned Media Value)입니다.
             </p>
           </div>
 

@@ -7,6 +7,7 @@ import {
   V2_LOC_META,
   V2_ORDERED_LOCATIONS,
   formatViews,
+  normalizeLocationName,
 } from '@/lib/v2-analytics'
 import { contentViews, contentViewsDisplay } from '@/lib/content-views'
 
@@ -23,7 +24,7 @@ export default function LocationVisitSection({
 }: LocationVisitSectionProps) {
   // 실제 데이터에 존재하는 지점 탭 목록
   const availableTabs = useMemo(() => {
-    const locSet = new Set(contents.map(c => c.location).filter(Boolean))
+    const locSet = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
     const locs = V2_ORDERED_LOCATIONS.filter(l => locSet.has(l)).map(l => l.replace('점', ''))
     return ['전체', ...locs]
   }, [contents])
@@ -72,7 +73,7 @@ export default function LocationVisitSection({
       const meta = V2_LOC_META[locName] || { tag: '', highlight: '' }
       const color = V2_LOC_COLORS[locName] || '#6b6558'
 
-      const rows = contents.filter(c => c.location === locName)
+      const rows = contents.filter(c => normalizeLocationName(c.location) === locName)
       const influencers = new Set(rows.map(r => r.influencer_name)).size
       const uploaded = rows.filter(r => r.upload_url).length
       const views = rows.reduce((s, r) => s + contentViews(r), 0)

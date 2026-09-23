@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react'
 import type { Content } from '@/lib/types'
-import { contentViews, contentViewsDisplay } from '@/lib/content-views'
-import { formatViews, V2_CH_COLORS, V2_LOC_COLORS } from '@/lib/v2-analytics'
+import { contentViews, contentViewsDisplay, aggregateEmv } from '@/lib/content-views'
+import { formatViews, V2_CH_COLORS, V2_LOC_COLORS, V2_MONTHS } from '@/lib/v2-analytics'
 
 interface ReportPrintV2Props {
   partnerBrand?: string | null
@@ -33,7 +33,7 @@ export default function ReportPrintV2({
     const totalSaves = contents.reduce((s, c) => s + (c.saves ?? 0), 0)
     const totalEngage = totalLikes + totalComments + totalSaves
     const avgEngageRate = totalViews > 0 ? ((totalEngage / totalViews) * 100).toFixed(2) : '0'
-    const adValue = Math.round((totalViews * 12) / 10000) // 12원 기준 (만원)
+    const adValue = Math.round(aggregateEmv(contents).total / 10000) // EMV 기준 (만원)
 
     const locSet = new Set(contents.map(c => c.location).filter(Boolean))
     const calculatedLocCount = locationCount ?? locSet.size
@@ -127,7 +127,7 @@ export default function ReportPrintV2({
   // 기간 레이블
   const periodLabel = periodMode === 'monthly' && currentMonth
     ? `${currentMonth.replace('-', '년 ')}월 집행 성과`
-    : '전체 누적 집행 성과 (2026.03 ~ 2026.08)'
+    : `전체 누적 집행 성과 (${V2_MONTHS[0].replace('-', '.')} ~ ${V2_MONTHS[V2_MONTHS.length - 1].replace('-', '.')})`
 
   // 인쇄 출력 일시
   const todayStr = useMemo(() => {
@@ -188,14 +188,14 @@ export default function ReportPrintV2({
             </div>
           </div>
 
-          {/* 광고비 환산 가치 */}
+          {/* EMV(통합 마케팅 가치) */}
           <div className="border border-[#fed7aa] bg-[#fffaf5] rounded-xl p-3.5">
-            <div className="text-[11px] font-semibold text-[#c2410c]">광고비 환산 가치</div>
+            <div className="text-[11px] font-semibold text-[#c2410c]">EMV(통합 마케팅 가치)</div>
             <div className="text-[22px] font-extrabold text-[#ea580c] mt-1">
               {metrics.adValue.toLocaleString()}<span className="text-[13px] font-bold ml-0.5">만원</span>
             </div>
             <div className="text-[10.5px] text-[#9a3412] mt-1">
-              단가 12원/view 환산
+              조회·좋아요·저장·댓글 통합 환산
             </div>
           </div>
 

@@ -14,6 +14,14 @@ export const V2_LOC_COLORS: Record<string, string> = {
   '종각점': '#f5c142',
 }
 
+/** 데이터 입력 시 '점' 접미사가 누락된 지점명 보정 (예: '명동' → '명동점') */
+export function normalizeLocationName(loc: string | null | undefined): string {
+  if (!loc) return ''
+  if (V2_LOC_COLORS[loc]) return loc
+  const withSuffix = `${loc}점`
+  return V2_LOC_COLORS[withSuffix] ? withSuffix : loc
+}
+
 export const V2_CH_COLORS: Record<string, string> = {
   '샤오홍슈': '#e03131',
   '인스타그램': '#8b5cf6',
@@ -160,8 +168,16 @@ export const V2_ORDERED_LOCATIONS = [
   '종각점',
 ]
 
-/** 6개 분석 월 */
-export const V2_MONTHS = ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08']
+/** 6개 분석 월 (당월 포함 최근 6개월) */
+export const V2_MONTHS = (() => {
+  const now = new Date()
+  const months: string[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return months
+})()
 
 export function formatViews(n: number): string {
   if (n >= 100000000) return `${(n / 100000000).toFixed(1)}억`
@@ -171,4 +187,43 @@ export function formatViews(n: number): string {
 
 export function isGreaterChina(channel: string): boolean {
   return channel === '샤오홍슈' || channel === '도우인' || channel === '웨이보'
+}
+
+/** 차트 x축 구간 — 전체 모드는 6개월, 월별 모드는 해당 월의 주차(1–7일, 8–14일 …) */
+export interface V2TimeBucket {
+  key: string
+  label: string
+  /** 툴팁용 상세 라벨 (예: '8/1–8/7') */
+  detail: string
+  match: (visitDate: string | null | undefined) => boolean
+}
+
+export function v2TimeBuckets(mode: 'all' | 'monthly', month: string): V2TimeBucket[] {
+  if (mode === 'all') {
+    return V2_MONTHS.map(m => ({
+      key: m,
+      label: `${Number(m.slice(5))}월`,
+      detail: m.replace('-', '.'),
+      match: d => !!d?.startsWith(m),
+    }))
+  }
+
+  const [y, mo] = month.split('-').map(Number)
+  const daysInMonth = new Date(y, mo, 0).getDate()
+  const buckets: V2TimeBucket[] = []
+  for (let start = 1; start <= daysInMonth; start += 7) {
+    const end = Math.min(start + 6, daysInMonth)
+    const week = buckets.length + 1
+    buckets.push({
+      key: `${month}-w${week}`,
+      label: `${week}주`,
+      detail: `${mo}/${start}–${mo}/${end}`,
+      match: d => {
+        if (!d?.startsWith(month)) return false
+        const day = Number(d.slice(8, 10))
+        return day >= start && day <= end
+      },
+    })
+  }
+  return buckets
 }

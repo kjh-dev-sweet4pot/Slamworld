@@ -245,6 +245,14 @@ export function branchLocation(name) {
   return t
 }
 
+/** 같은 링크(콘텐츠)가 여러 회원사에 공동 배정된 협업 건 — 회원사명을 콤마로 누적한다. */
+export function mergeBrand(row, brand) {
+  if (!brand) return
+  const parts = String(row.brands || '').split(/[,，、]/).map(s => s.trim()).filter(Boolean)
+  if (parts.includes(brand)) return
+  row.brands = [...parts, brand].join(',')
+}
+
 export function toContent(link) {
   const status = publishStatusOf(link)
   if (!status) return null
@@ -564,6 +572,7 @@ export async function runBoardingpassSync({ apply = false } = {}) {
     const prev = mappedByKey.get(item.key)
     if (prev) {
       if (item.photoPath && !prev.photoPath) prev.photoPath = item.photoPath
+      mergeBrand(prev.row, item.row.brands)
       skipped += 1
       continue
     }

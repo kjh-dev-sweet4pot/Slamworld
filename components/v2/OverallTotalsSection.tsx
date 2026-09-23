@@ -2,38 +2,73 @@
 
 import { useState, useMemo } from 'react'
 import type { Content } from '@/lib/types'
-import { V2_LOC_COLORS, V2_CH_COLORS, V2_MONTHS, formatViews } from '@/lib/v2-analytics'
+import { V2_LOC_COLORS, V2_CH_COLORS, V2_MONTHS, formatViews, normalizeLocationName, v2TimeBuckets } from '@/lib/v2-analytics'
 import { contentViews } from '@/lib/content-views'
+import { useChartTooltip } from '@/components/v2/ChartTooltip'
+import type { SectionPeriod } from '@/components/v2/SectionPeriodScope'
 
 interface OverallTotalsSectionProps {
   contents?: Content[]
+  /** 회원사 전용 뷰 — 데이터 규모가 작아 그래프가 바닥에 붙는 것을 막는 별도 최소 스케일 적용 */
+  isPartner?: boolean
+  /** 섹션 기간 (전체: 6개월 / 월별: 주차). 없으면 전체 6개월 */
+  period?: SectionPeriod
 }
 
-const MONTH_LABELS = ['3월', '4월', '5월', '6월', '7월', '8월']
-const X_COORDS = [50, 158, 266, 374, 482, 590]
+const PARTNER_MIN_VIEWS = 10_000
+
 const CHANNELS = ['샤오홍슈', '인스타그램', '틱톡', '도우인', '웨이보'] as const
+const DEFAULT_BUCKETS = v2TimeBuckets('all', V2_MONTHS[V2_MONTHS.length - 1])
+const DEFAULT_RANGE_LABEL = `${V2_MONTHS[0].replace('-', '.')} ~ ${V2_MONTHS[V2_MONTHS.length - 1].replace('-', '.')}`
+
+/** SVG 라인 차트 x 좌표 (50 ~ 590 균등 분할) */
+function xCoords(n: number): number[] {
+  if (n <= 1) return [320]
+  return Array.from({ length: n }, (_, i) => Math.round(50 + (i * 540) / (n - 1)))
+}
+
+/** 실제 최대값 바로 위의 보기 좋은 눈금 최대값 (1/2/5 × 10^n) */
+function niceMax(value: number): number {
+  if (value <= 1) return 1
+  const exp = Math.floor(Math.log10(value))
+  const base = Math.pow(10, exp)
+  for (const step of [1, 2, 5, 10]) {
+    if (value <= step * base) return step * base
+  }
+  return 10 * base
+}
 
 export default function OverallTotalsSection({
   contents = [],
+  isPartner = false,
+  period,
 }: OverallTotalsSectionProps) {
   const [metricMode, setMetricMode] = useState<'views' | 'count'>('views')
+  const tooltip = useChartTooltip()
+
+  const buckets = period?.buckets ?? DEFAULT_BUCKETS
+  const highlightIdx = period ? period.highlightIdx : buckets.length - 1
+  const rangeLabel = period?.label ?? DEFAULT_RANGE_LABEL
+  const isMonthly = period?.mode === 'monthly'
+  const monthName = period ? `${Number(period.month.slice(5))}월` : ''
+  const X_COORDS = useMemo(() => xCoords(buckets.length), [buckets.length])
 
   // 지점 목록 (데이터에 실제 존재하는 지점만 추출)
   const activeLocations = useMemo(() => {
-    const locs = new Set(contents.map(c => c.location).filter(Boolean))
+    const locs = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
     return Object.keys(V2_LOC_COLORS).filter(l => locs.has(l))
   }, [contents])
 
   // 월별 스택 데이터
   const monthlyData = useMemo(() => {
-    return V2_MONTHS.map((monthStr, idx) => {
-      const monthRows = contents.filter(c => c.visit_date?.startsWith(monthStr))
+    return buckets.map(bucket => {
+      const monthRows = contents.filter(c => bucket.match(c.visit_date))
       const totalViews = monthRows.reduce((s, c) => s + contentViews(c), 0)
       const totalCount = monthRows.length
 
       // 지점별 분류
       const byLocation = activeLocations.map(loc => {
-        const locRows = monthRows.filter(c => c.location === loc)
+        const locRows = monthRows.filter(c => normalizeLocationName(c.location) === loc)
         const v = locRows.reduce((s, c) => s + contentViews(c), 0)
         const cnt = locRows.length
         return {
@@ -46,19 +81,21 @@ export default function OverallTotalsSection({
       }).filter(item => item.count > 0 || item.views > 0)
 
       return {
-        month: monthStr,
-        label: MONTH_LABELS[idx],
+        month: bucket.key,
+        label: bucket.label,
+        detail: bucket.detail,
         views: totalViews,
         count: totalCount,
         byLocation,
       }
     })
-  }, [contents, activeLocations])
+  }, [contents, activeLocations, buckets])
 
-  // 월별 최대값 (바 높이 180px 기준)
+  // 월별 최대값 (바 높이 180px 기준, 회원사 뷰는 최소 스케일 적용 — 주차 뷰는 규모가 작아 제외)
   const maxMonthViews = useMemo(() => {
-    return Math.max(...monthlyData.map(m => m.views), 1)
-  }, [monthlyData])
+    const floor = isPartner && !isMonthly ? PARTNER_MIN_VIEWS : 1
+    return niceMax(Math.max(...monthlyData.map(m => m.views), floor))
+  }, [monthlyData, isPartner, isMonthly])
 
   const maxMonthCount = useMemo(() => {
     return Math.max(...monthlyData.map(m => m.count), 1)
@@ -67,8 +104,8 @@ export default function OverallTotalsSection({
   // 채널별 6개월 업로드 추이
   const channelTrends = useMemo(() => {
     const dataByCh = CHANNELS.map(ch => {
-      const counts = V2_MONTHS.map(m => {
-        return contents.filter(c => c.channel === ch && c.visit_date?.startsWith(m) && c.upload_url).length
+      const counts = buckets.map(b => {
+        return contents.filter(c => c.channel === ch && b.match(c.visit_date) && c.upload_url).length
       })
       const total = counts.reduce((a, b) => a + b, 0)
       return {
@@ -80,7 +117,7 @@ export default function OverallTotalsSection({
     })
 
     const allCounts = dataByCh.flatMap(d => d.counts)
-    const maxVal = Math.max(...allCounts, 5)
+    const maxVal = niceMax(Math.max(...allCounts, 1))
 
     const chLines = dataByCh
       .filter(d => d.total > 0)
@@ -98,24 +135,26 @@ export default function OverallTotalsSection({
         }
       })
 
-    // 8월(마지막 월) 최다 채널
-    const augIndex = 5
+    // 강조 구간(당월) 최다 채널 — 월별 모드는 해당 월 전체 합계 기준
     let topAugCh = ''
     let topAugCount = 0
     for (const d of dataByCh) {
-      if (d.counts[augIndex] > topAugCount) {
-        topAugCount = d.counts[augIndex]
+      const v = highlightIdx >= 0 ? d.counts[highlightIdx] : d.total
+      if (v > topAugCount) {
+        topAugCount = v
         topAugCh = d.channel
       }
     }
 
     return {
+      dataByCh,
       chLines,
       maxVal,
       topAugCh,
       topAugCount,
     }
-  }, [contents])
+  }, [contents, buckets, highlightIdx, X_COORDS])
+
 
   return (
     <section className="mb-8">
@@ -128,7 +167,7 @@ export default function OverallTotalsSection({
         <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
-              월별 전체 {metricMode === 'views' ? '조회수' : '건수'} 합계
+              {isMonthly ? `${monthName} 주차별` : '월별'} 전체 {metricMode === 'views' ? '조회수' : '건수'} 합계
             </span>
             <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
               <button
@@ -154,7 +193,7 @@ export default function OverallTotalsSection({
                 건수
               </button>
             </div>
-            <span className="text-[11px] text-[#9a9486]">2026.03 ~ 2026.08</span>
+            <span className="text-[11px] text-[#9a9486]">{rangeLabel}</span>
           </div>
 
           {/* 지점 범례 */}
@@ -172,21 +211,36 @@ export default function OverallTotalsSection({
           </div>
 
           {/* 스택 바 차트 */}
-          <div className="grid grid-cols-6 gap-3.5 items-end h-[232px] mt-4.5 pt-1 border-b border-[#eee6d6]">
+          <div
+            className="grid gap-3.5 items-end h-[232px] mt-4.5 pt-1 border-b border-[#eee6d6]"
+            style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
+          >
             {monthlyData.map((m, idx) => {
-              const isAug = idx === 5
-              const isJune = idx === 3
+              const isLast = idx === highlightIdx
+              const fmt = (views: number, count: number) =>
+                metricMode === 'views' ? formatViews(views) : `${count}건`
               const labelText = metricMode === 'views'
                 ? (m.views > 0 ? formatViews(m.views) : '0')
                 : `${m.count}건`
+              const tipRows = m.byLocation.map(seg => ({
+                label: seg.name,
+                color: seg.color,
+                value: `${fmt(seg.views, seg.count)}${metricMode === 'views' ? ` · ${seg.count}건` : ''}`,
+              }))
 
               return (
-                <div key={m.month} className="flex flex-col items-center gap-1.5 h-full justify-end">
+                <div
+                  key={m.month}
+                  className="flex flex-col items-center gap-1.5 h-full justify-end rounded-md hover:bg-[#faf7f0]/70 transition-colors cursor-default"
+                  {...tooltip.bind(
+                    `${m.label} · ${m.detail}`,
+                    tipRows.length > 0 ? tipRows : [{ label: '집행 없음', value: '–' }],
+                    `합계 ${m.views.toLocaleString()}회 · ${m.count}건`,
+                  )}
+                >
                   <span className={`text-[11.5px] ${
-                    isAug && m.count > 0
+                    isLast && m.count > 0
                       ? 'font-extrabold text-[#e03131]'
-                      : isJune && m.count > 0
-                      ? 'font-extrabold text-[#1a1d2e]'
                       : 'font-bold text-[#6b6558]'
                   }`}>
                     {labelText}
@@ -206,7 +260,6 @@ export default function OverallTotalsSection({
                             height: `${heightPx}px`,
                             backgroundColor: seg.color,
                           }}
-                          title={`${seg.name}: ${metricMode === 'views' ? formatViews(seg.views) : `${seg.count}건`}`}
                         />
                       )
                     })}
@@ -216,13 +269,20 @@ export default function OverallTotalsSection({
             })}
           </div>
 
-          <div className="grid grid-cols-6 gap-3.5 mt-2">
-            <span className="text-center text-[11.5px] text-[#9a9486]">3월</span>
-            <span className="text-center text-[11.5px] text-[#9a9486]">4월</span>
-            <span className="text-center text-[11.5px] text-[#9a9486]">5월</span>
-            <span className="text-center text-[11.5px] font-bold text-[#6b6558]">6월 ☀️</span>
-            <span className="text-center text-[11.5px] text-[#9a9486]">7월</span>
-            <span className="text-center text-[11.5px] font-bold text-[#e03131]">8월 ⚡</span>
+          <div
+            className="grid gap-3.5 mt-2"
+            style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
+          >
+            {buckets.map((b, idx) => (
+              <span
+                key={b.key}
+                className={`text-center text-[11.5px] ${
+                  idx === highlightIdx ? 'font-bold text-[#e03131]' : 'text-[#9a9486]'
+                }`}
+              >
+                {b.label}{idx === highlightIdx ? ' ⚡' : ''}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -230,10 +290,10 @@ export default function OverallTotalsSection({
         <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
           <div className="flex items-center gap-2.5">
             <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
-              채널별 업로드 추이
+              {isMonthly ? `${monthName} 주차별 ` : ''}채널별 업로드 추이
             </span>
             <span className="ml-auto text-[11px] text-[#9a9486]">
-              월별 건수 · {channelTrends.chLines.length}개 활성 채널
+              {isMonthly ? '주차별' : '월별'} 건수 · {channelTrends.chLines.length}개 활성 채널
             </span>
           </div>
 
@@ -291,34 +351,61 @@ export default function OverallTotalsSection({
                     key={i}
                     cx={p.x}
                     cy={p.y}
-                    r={p.count > 0 ? (i === 5 ? 5 : 4) : 2}
+                    r={p.count > 0 ? (i === highlightIdx ? 5 : 4) : 2}
                     fill={ch.color}
                   />
                 ))}
               </g>
             ))}
 
-            {/* 8월 최고 채널 강조 라벨 */}
-            {channelTrends.topAugCount > 0 && (
-              <text x="590" y="12" fontSize="11" fontWeight="800" fill="#e03131" textAnchor="middle">
+            {/* 당월 최고 채널 강조 라벨 */}
+            {highlightIdx >= 0 && channelTrends.topAugCount > 0 && (
+              <text x={X_COORDS[highlightIdx]} y="12" fontSize="11" fontWeight="800" fill="#e03131" textAnchor="middle">
                 {channelTrends.topAugCount}건
               </text>
             )}
 
             <g fontSize="11" fill="#9a9486" textAnchor="middle" fontWeight="600">
-              <text x="50" y="196">3월</text>
-              <text x="158" y="196">4월</text>
-              <text x="266" y="196">5월</text>
-              <text x="374" y="196">6월</text>
-              <text x="482" y="196">7월</text>
-              <text x="590" y="196">8월</text>
+              {buckets.map((b, idx) => (
+                <text key={b.key} x={X_COORDS[idx]} y="196">{b.label}</text>
+              ))}
             </g>
+
+            {/* 호버 영역 (구간별 세로 밴드) */}
+            {buckets.map((b, idx) => {
+              const bandW = buckets.length > 1 ? 540 / (buckets.length - 1) : 540
+              const rows = channelTrends.dataByCh
+                .filter(d => d.total > 0)
+                .map(d => ({ label: d.channel, color: d.color, value: `${d.counts[idx]}건` }))
+              const sum = channelTrends.dataByCh.reduce((acc, d) => acc + d.counts[idx], 0)
+              return (
+                <g key={b.key} className="group">
+                  <line
+                    x1={X_COORDS[idx]} y1="20" x2={X_COORDS[idx]} y2="170"
+                    stroke="#d8cfbd" strokeWidth="1" strokeDasharray="3 3"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
+                  <rect
+                    x={X_COORDS[idx] - bandW / 2}
+                    y="0"
+                    width={bandW}
+                    height="205"
+                    fill="transparent"
+                    {...tooltip.bind(
+                      `${b.label} · ${b.detail}`,
+                      rows.length > 0 ? rows : [{ label: '업로드 없음', value: '–' }],
+                      `합계 ${sum}건`,
+                    )}
+                  />
+                </g>
+              )
+            })}
           </svg>
 
           <div className="bg-[#fbf9f4] rounded-xl p-3 sm:p-3.5 mt-1.5 text-[12px] leading-relaxed text-[#4b4a44]">
             {channelTrends.topAugCount > 0 ? (
               <>
-                <b>8월 {channelTrends.topAugCh} {channelTrends.topAugCount}건 집행.</b> 집중 채널을 중심으로 안정적인 노출량을 확보했습니다.
+                <b>{highlightIdx >= 0 ? buckets[highlightIdx].label : monthName} {channelTrends.topAugCh} {channelTrends.topAugCount}건 집행.</b> 집중 채널을 중심으로 안정적인 노출량을 확보했습니다.
               </>
             ) : (
               '월별 채널 업로드 데이터를 집계 중입니다.'
@@ -326,6 +413,7 @@ export default function OverallTotalsSection({
           </div>
         </div>
       </div>
+      {tooltip.node}
     </section>
   )
 }

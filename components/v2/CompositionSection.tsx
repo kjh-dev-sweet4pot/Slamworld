@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import type { Content } from '@/lib/types'
-import { V2_CH_COLORS, V2_ORDERED_LOCATIONS, isGreaterChina, formatViews } from '@/lib/v2-analytics'
+import { V2_CH_COLORS, V2_ORDERED_LOCATIONS, isGreaterChina, formatViews, normalizeLocationName } from '@/lib/v2-analytics'
 import { contentViews } from '@/lib/content-views'
+import { useChartTooltip } from '@/components/v2/ChartTooltip'
 
 interface CompositionSectionProps {
   contents?: Content[]
@@ -18,6 +19,7 @@ export default function CompositionSection({
   const [chMetric, setChMetric] = useState<'count' | 'views'>('count')
   const [selectedLoc, setSelectedLoc] = useState('전체')
   const [regionMetric, setRegionMetric] = useState<'views' | 'count'>('views')
+  const tooltip = useChartTooltip()
 
   // 실제 데이터에 존재하는 지점 옵션
   const locOptions = useMemo(() => {
@@ -71,11 +73,11 @@ export default function CompositionSection({
 
   // 권역별 분석 데이터
   const regionalData = useMemo(() => {
-    const locSet = new Set(contents.map(c => c.location).filter(Boolean))
+    const locSet = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
     const locations = V2_ORDERED_LOCATIONS.filter(l => locSet.has(l))
 
     const locList = locations.map(locName => {
-      const rows = contents.filter(c => c.location === locName)
+      const rows = contents.filter(c => normalizeLocationName(c.location) === locName)
       const chinaViews = rows.filter(c => isGreaterChina(c.channel)).reduce((s, c) => s + contentViews(c), 0)
       const globalViews = rows.filter(c => !isGreaterChina(c.channel)).reduce((s, c) => s + contentViews(c), 0)
       const chinaCount = rows.filter(c => isGreaterChina(c.channel) && c.upload_url).length
@@ -209,7 +211,12 @@ export default function CompositionSection({
                         strokeDasharray={`${ch.dash} ${CIRCUMFERENCE}`}
                         strokeDashoffset={ch.offset}
                         strokeLinecap="butt"
-                        className="transition-all"
+                        className="transition-all hover:opacity-80 cursor-default"
+                        {...tooltip.bind(ch.channel, [
+                          { label: '점유율', value: `${ch.pct}%`, color: ch.color, active: true },
+                          { label: '업로드', value: `${ch.count}건` },
+                          { label: '조회수', value: `${ch.views.toLocaleString()}회` },
+                        ])}
                       />
                     )
                   ))}
@@ -240,7 +247,15 @@ export default function CompositionSection({
             {/* 채널별 리스트 */}
             <div className="flex flex-col gap-3 flex-1 min-w-0">
               {channelData.list.map(ch => (
-                <div key={ch.channel} className="flex items-center gap-2">
+                <div
+                  key={ch.channel}
+                  className="flex items-center gap-2 cursor-default"
+                  {...tooltip.bind(ch.channel, [
+                    { label: '점유율', value: `${ch.pct}%`, color: ch.color, active: true },
+                    { label: '업로드', value: `${ch.count}건` },
+                    { label: '조회수', value: `${ch.views.toLocaleString()}회` },
+                  ])}
+                >
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ch.color }} />
                   <span className="text-[12.5px] font-semibold text-[#1a1d2e] flex-1 truncate">{ch.channel}</span>
                   <span className="text-[13px] font-extrabold text-[#1a1d2e] w-14 text-right">
@@ -304,7 +319,26 @@ export default function CompositionSection({
               <div className="text-center py-8 text-[12px] text-[#9a9486]">권역별 데이터가 없습니다.</div>
             ) : (
               regionalData.locList.map(loc => (
-                <div key={loc.name} className="flex items-center gap-2.5">
+                <div
+                  key={loc.name}
+                  className="flex items-center gap-2.5 cursor-default"
+                  {...tooltip.bind(
+                    `${loc.name}점 · 권역별 ${regionMetric === 'views' ? '조회' : '건수'}`,
+                    [
+                      {
+                        label: '중화권',
+                        color: '#f97316',
+                        value: `${regionMetric === 'views' ? formatViews(loc.chinaVal) : `${loc.chinaVal}건`} (${loc.chinaPct}%)`,
+                      },
+                      {
+                        label: '영미·글로벌',
+                        color: '#64748b',
+                        value: `${regionMetric === 'views' ? formatViews(loc.globalVal) : `${loc.globalVal}건`} (${loc.globalPct}%)`,
+                      },
+                    ],
+                    `합계 ${regionMetric === 'views' ? `${loc.totalVal.toLocaleString()}회` : `${loc.totalCount}건`}`,
+                  )}
+                >
                   <span className="w-12 text-[12px] font-bold text-[#1a1d2e]">{loc.name}</span>
                   <span className="flex-1 h-[22px] rounded-[5px] bg-[#f4efe3] flex overflow-hidden">
                     {loc.chinaPct > 0 && (
@@ -356,6 +390,7 @@ export default function CompositionSection({
           </div>
         </div>
       </div>
+      {tooltip.node}
     </section>
   )
 }

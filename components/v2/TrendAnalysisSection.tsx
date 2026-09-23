@@ -2,28 +2,41 @@
 
 import { useState, useMemo } from 'react'
 import type { Content } from '@/lib/types'
-import { V2_LOC_COLORS, V2_ORDERED_LOCATIONS, V2_MONTHS } from '@/lib/v2-analytics'
+import { V2_LOC_COLORS, V2_ORDERED_LOCATIONS, V2_MONTHS, formatViews, normalizeLocationName, v2TimeBuckets } from '@/lib/v2-analytics'
 import { contentViews } from '@/lib/content-views'
+import { useChartTooltip } from '@/components/v2/ChartTooltip'
+import type { SectionPeriod } from '@/components/v2/SectionPeriodScope'
 
 interface TrendAnalysisSectionProps {
   contents?: Content[]
+  /** 섹션 기간 (전체: 6개월 / 월별: 주차). 없으면 전체 6개월 */
+  period?: SectionPeriod
 }
+
+const DEFAULT_BUCKETS = v2TimeBuckets('all', V2_MONTHS[V2_MONTHS.length - 1])
 
 export default function TrendAnalysisSection({
   contents = [],
+  period,
 }: TrendAnalysisSectionProps) {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table')
   const [showAverage, setShowAverage] = useState(false)
+  const tooltip = useChartTooltip()
+
+  const buckets = period?.buckets ?? DEFAULT_BUCKETS
+  const LAST_IDX = period ? period.highlightIdx : buckets.length - 1
+  const isMonthly = period?.mode === 'monthly'
+  const gridCols = { gridTemplateColumns: `84px repeat(${buckets.length}, minmax(0, 1fr)) 78px` }
 
   // 실제 데이터가 있는 지점들 순서 정렬
   const matrixData = useMemo(() => {
-    const locSet = new Set(contents.map(c => c.location).filter(Boolean))
+    const locSet = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
     const locations = V2_ORDERED_LOCATIONS.filter(l => locSet.has(l))
 
     return locations.map(locName => {
-      const locRows = contents.filter(c => c.location === locName)
-      const counts = V2_MONTHS.map(m => {
-        return locRows.filter(c => c.visit_date?.startsWith(m)).length
+      const locRows = contents.filter(c => normalizeLocationName(c.location) === locName)
+      const counts = buckets.map(b => {
+        return locRows.filter(c => b.match(c.visit_date)).length
       })
 
       const total = counts.reduce((a, b) => a + b, 0)
@@ -36,21 +49,22 @@ export default function TrendAnalysisSection({
       return {
         name: locName.replace('점', ''),
         color: V2_LOC_COLORS[locName] || '#6b6558',
+        views: locRows.reduce((s, c) => s + contentViews(c), 0),
         counts,
         maxMonthIdx: maxCount > 0 ? maxMonthIdx : -1,
         total,
         avg,
       }
     })
-  }, [contents])
+  }, [contents, buckets])
 
   // 지점별 콘텐츠 효율
   const efficiencyData = useMemo(() => {
-    const locSet = new Set(contents.map(c => c.location).filter(Boolean))
+    const locSet = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
     const locations = V2_ORDERED_LOCATIONS.filter(l => locSet.has(l))
 
     const list = locations.map(locName => {
-      const locRows = contents.filter(c => c.location === locName)
+      const locRows = contents.filter(c => normalizeLocationName(c.location) === locName)
       const views = locRows.reduce((s, c) => s + contentViews(c), 0)
       const count = locRows.length
       const avgViews = count > 0 ? Math.round(views / count) : 0
@@ -95,7 +109,7 @@ export default function TrendAnalysisSection({
         <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
           <div className="flex items-center gap-2.5">
             <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
-              지점별 월간 업로드 비교
+              지점별 {isMonthly ? '주차별' : '월간'} 업로드 비교
             </span>
             <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
               <button
@@ -127,23 +141,31 @@ export default function TrendAnalysisSection({
             <div className="text-center py-12 text-[12px] text-[#9a9486]">집행된 지점 데이터가 없습니다.</div>
           ) : viewMode === 'table' ? (
             <div className="mt-4">
-              <div className="grid grid-cols-[84px_repeat(6,minmax(0,1fr))_78px] gap-1.5 items-center pb-2.5 border-b border-[#eee6d6]">
+              <div className="grid gap-1.5 items-center pb-2.5 border-b border-[#eee6d6]" style={gridCols}>
                 <span className="text-[11px] text-[#9a9486] font-semibold">지점</span>
-                <span className="text-[11px] text-[#9a9486] font-semibold text-center">3월</span>
-                <span className="text-[11px] text-[#9a9486] font-semibold text-center">4월</span>
-                <span className="text-[11px] text-[#9a9486] font-semibold text-center">5월</span>
-                <span className="text-[11px] text-[#9a9486] font-semibold text-center">6월 ☀️</span>
-                <span className="text-[11px] text-[#9a9486] font-semibold text-center">7월</span>
-                <span className="text-[11px] text-[#e03131] font-bold text-center">8월 ⚡</span>
+                {buckets.map(({ key, label }, idx) => (
+                  <span
+                    key={key}
+                    title={buckets[idx].detail}
+                    className={
+                      idx === LAST_IDX
+                        ? 'text-[11px] text-[#e03131] font-bold text-center'
+                        : 'text-[11px] text-[#9a9486] font-semibold text-center'
+                    }
+                  >
+                    {label}{idx === LAST_IDX ? ' ⚡' : ''}
+                  </span>
+                ))}
                 <span className="text-[11px] text-[#9a9486] font-semibold text-right">
-                  {showAverage ? '월평균' : '누적'}
+                  {showAverage ? (isMonthly ? '주평균' : '월평균') : '누적'}
                 </span>
               </div>
 
               {matrixData.map(row => (
                 <div
                   key={row.name}
-                  className="grid grid-cols-[84px_repeat(6,minmax(0,1fr))_78px] gap-1.5 items-center py-2.5 border-b border-[#f7f2e8] last:border-b-0"
+                  className="grid gap-1.5 items-center py-2.5 border-b border-[#f7f2e8] last:border-b-0"
+                  style={gridCols}
                 >
                   <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-[#1a1d2e]">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: row.color }} />
@@ -151,11 +173,16 @@ export default function TrendAnalysisSection({
                   </span>
                   {row.counts.map((cnt, i) => {
                     const isHighlight = i === row.maxMonthIdx && cnt > 0
-                    const isAug = i === 5
+                    const isAug = i === LAST_IDX
                     return (
                       <span
                         key={i}
-                        className={`text-center text-[12px] ${
+                        {...tooltip.bind(`${row.name} · ${buckets[i].label}`, [
+                          { label: '기간', value: buckets[i].detail },
+                          { label: '업로드', value: `${cnt}건`, color: row.color, active: true },
+                          { label: '누적 대비', value: row.total > 0 ? `${((cnt / row.total) * 100).toFixed(1)}%` : '–' },
+                        ])}
+                        className={`text-center text-[12px] cursor-default ${
                           cnt === 0
                             ? 'text-[#c9c2b2]'
                             : isHighlight
@@ -182,7 +209,7 @@ export default function TrendAnalysisSection({
                   onClick={() => setShowAverage(!showAverage)}
                   className="ml-auto text-[11.5px] font-bold text-[#2f5fd8] bg-[#eef3ff] hover:bg-[#e0ebff] transition-colors rounded-[9px] px-3 py-1.5 whitespace-nowrap"
                 >
-                  {showAverage ? '📊 누적 합계 보기' : '📊 월 평균 보기'}
+                  {showAverage ? '📊 누적 합계 보기' : isMonthly ? '📊 주 평균 보기' : '📊 월 평균 보기'}
                 </button>
               </div>
             </div>
@@ -192,7 +219,15 @@ export default function TrendAnalysisSection({
               {matrixData.map(row => {
                 const widthPct = Math.min(100, Math.round((row.total / maxTotalForChart) * 100))
                 return (
-                  <div key={row.name} className="flex items-center gap-3">
+                  <div
+                    key={row.name}
+                    className="flex items-center gap-3 cursor-default"
+                    {...tooltip.bind(
+                      `${row.name}점`,
+                      row.counts.map((cnt, i) => ({ label: buckets[i].label, value: `${cnt}건`, color: row.color, active: i === row.maxMonthIdx })),
+                      `누적 ${row.total}건 · 조회 ${formatViews(row.views)}`,
+                    )}
+                  >
                     <span className="w-14 text-[12px] font-bold text-[#1a1d2e]">{row.name}</span>
                     <span className="flex-1 h-3.5 rounded-full bg-[#f4efe3] overflow-hidden">
                       <span
@@ -232,7 +267,15 @@ export default function TrendAnalysisSection({
               <div className="text-center py-8 text-[12px] text-[#9a9486]">효율 데이터가 없습니다.</div>
             ) : (
               efficiencyData.list.map(item => (
-                <div key={item.name}>
+                <div
+                  key={item.name}
+                  className="cursor-default"
+                  {...tooltip.bind(`${item.name}점`, [
+                    { label: '건당 평균', value: `${item.val}회`, color: item.color, active: true },
+                    { label: '총 조회수', value: `${item.views.toLocaleString()}회` },
+                    { label: '콘텐츠', value: `${item.count}건` },
+                  ])}
+                >
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-[12.5px] font-bold text-[#1a1d2e]">{item.name}</span>
                     <span className="ml-auto text-[13px] font-extrabold text-[#1a1d2e]">
@@ -264,6 +307,7 @@ export default function TrendAnalysisSection({
           </div>
         </div>
       </div>
+      {tooltip.node}
     </section>
   )
 }
