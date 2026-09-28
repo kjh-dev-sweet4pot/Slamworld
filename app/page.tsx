@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import LoginGate from '@/components/LoginGate'
 import { useAccess } from '@/lib/access-context'
 import HeaderV2 from '@/components/v2/HeaderV2'
-import PeriodNavV2, { type PeriodMode } from '@/components/v2/PeriodNavV2'
+import PeriodNavV2, { AVAILABLE_MONTHS, type PeriodMode } from '@/components/v2/PeriodNavV2'
 import LocationVisitSection from '@/components/v2/LocationVisitSection'
 import ExecutionSummarySection from '@/components/v2/ExecutionSummarySection'
 import OverallTotalsSection from '@/components/v2/OverallTotalsSection'
@@ -14,6 +14,9 @@ import FormatAnalysisSection from '@/components/v2/FormatAnalysisSection'
 import PopularContentSection from '@/components/v2/PopularContentSection'
 import ReportPrintV2 from '@/components/v2/ReportPrintV2'
 import SectionPeriodScope from '@/components/v2/SectionPeriodScope'
+import ExecutiveSummarySection from '@/components/v2/ExecutiveSummarySection'
+import UploadGallerySection from '@/components/v2/UploadGallerySection'
+import ChannelSummaryCard from '@/components/v2/ChannelSummaryCard'
 import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
 import type { Content } from '@/lib/types'
 import {
@@ -24,6 +27,7 @@ import {
 } from '@/lib/export-report'
 import { contentMatchesBrand } from '@/lib/brand-content'
 import { getFallbackContents } from '@/lib/v2-analytics'
+import { contentPeriodDate } from '@/lib/posted-date'
 
 export default function Dashboard() {
   return (
@@ -37,10 +41,11 @@ function DashboardInner() {
   const { showSales, logout, partnerBrand } = useAccess()
   const [contents, setContents] = useState<Content[]>([])
   const [, setLoading] = useState(true)
-  const [periodMode, setPeriodMode] = useState<PeriodMode>('all')
-  const [currentMonth, setCurrentMonth] = useState<string>('2026-08')
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('monthly')
+  const [currentMonth, setCurrentMonth] = useState<string>(AVAILABLE_MONTHS[AVAILABLE_MONTHS.length - 1])
   const [selectedInfluencer, setSelectedInfluencer] = useState<string | null>('pada_heli')
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+  const [galleryLocation, setGalleryLocation] = useState<string | null>(null)
   const [showBudgetCollapse, setShowBudgetCollapse] = useState(false)
 
   // 콘텐츠 데이터 조회 (Supabase)
@@ -85,7 +90,7 @@ function DashboardInner() {
   // 상단 기간 내비(전체/월별) — §1 지점별 방문 현황 영역에만 적용. 나머지 섹션은 각자 기간 선택기 사용
   const filteredContents = useMemo(() => {
     if (periodMode !== 'monthly') return locationContents
-    return locationContents.filter(c => c.visit_date?.startsWith(currentMonth))
+    return locationContents.filter(c => contentPeriodDate(c)?.startsWith(currentMonth))
   }, [locationContents, periodMode, currentMonth])
 
   // 고유 지점 수 (회원사 기준)
@@ -109,20 +114,33 @@ function DashboardInner() {
     }
   }
 
+  // 지점 카드 클릭 → 전역 필터 대신 업로드 목록을 해당 지점으로 좁혀서 보여준다
   const handleSelectLocation = (locName: string) => {
-    if (selectedLocation === locName) {
-      setSelectedLocation(null)
-    } else {
-      setSelectedLocation(locName)
-    }
+    setGalleryLocation(prev => (prev === locName ? null : locName))
+    document.getElementById('section-uploads')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+
+
+  // 실제 최종 수집 시각 기준. 동기화 크론은 매일 00:00 UTC(09:00 KST)
+  const collectedLabel = useMemo(() => {
+    const latest = contents.reduce((max, c) => {
+      const t = c.metrics_updated_at ? Date.parse(c.metrics_updated_at) : NaN
+      return Number.isFinite(t) && t > max ? t : max
+    }, 0)
+    if (!latest) return '자동 수집'
+    const fmt = (t: number) => {
+      const d = new Date(t + 9 * 3600_000)
+      return `${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}`
+    }
+    return `${fmt(latest)} 수집 기준 · 자동 수집 · 다음 ${fmt(Date.now() + 24 * 3600_000)}`
+  }, [contents])
 
   return (
     <>
       <div className="report-screen font-sans min-h-screen pb-16 bg-gradient-to-b from-[#fdf6e9] via-[#fbeed6] via-[38%] via-[#f6e3bf] via-[62%] to-[#f2dcb2] text-[#1a1d2e]">
       {/* ── 헤더 ── */}
       <HeaderV2
-        collectedLabel="08.31 수집 기준 · 자동 수집 · 다음 09.30"
+        collectedLabel={collectedLabel}
         partnerBrand={partnerBrand}
         locationCount={locationCount}
         onPrintPdf={handlePrintPdf}
@@ -186,7 +204,22 @@ function DashboardInner() {
           contents={filteredContents}
           onSelectInfluencer={handleSelectInfluencer}
           onSelectLocation={handleSelectLocation}
-        />
+        >
+          {/* 핵심 성과 요약 — KPI 아래 빈 공간을 채우도록 중앙 영역에 배치 */}
+          <ExecutiveSummarySection contents={locationContents} showRoi={!partnerBrand} />
+        </LocationVisitSection>
+
+        {/* ══ 업로드 인플루언서 | 채널별 성과 ══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <UploadGallerySection
+            contents={filteredContents}
+            location={galleryLocation}
+            onLocationChange={setGalleryLocation}
+            onSelectInfluencer={handleSelectInfluencer}
+          />
+          <ChannelSummaryCard contents={filteredContents} />
+        </div>
+
 
         {/* ══ §2 실행 성과 요약 ══ */}
         <SectionPeriodScope contents={locationContents}>

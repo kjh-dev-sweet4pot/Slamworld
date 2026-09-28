@@ -18,6 +18,8 @@ export interface Content {
   target_audience: string | null
   is_press: boolean
   visit_date: string | null
+  /** 게시일 (업로드 날짜) */
+  posted_date?: string | null
   product: string | null
   upload_url: string | null
   publish_status?: PublishStatus

@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import type { Content } from '@/lib/types'
 import PeriodNavV2, { AVAILABLE_MONTHS, type PeriodMode } from '@/components/v2/PeriodNavV2'
 import { v2TimeBuckets, type V2TimeBucket } from '@/lib/v2-analytics'
+import { contentPeriodDate } from '@/lib/posted-date'
 
 export interface SectionPeriod {
   mode: PeriodMode
@@ -26,11 +27,11 @@ interface SectionPeriodScopeProps {
  * 선택기는 섹션 제목 줄 오른쪽에 겹쳐 표시된다.
  */
 export default function SectionPeriodScope({ contents, children }: SectionPeriodScopeProps) {
-  const [mode, setMode] = useState<PeriodMode>('all')
+  const [mode, setMode] = useState<PeriodMode>('monthly')
   const [month, setMonth] = useState<string>(AVAILABLE_MONTHS[AVAILABLE_MONTHS.length - 1])
 
   const scoped = useMemo(
-    () => (mode === 'monthly' ? contents.filter(c => c.visit_date?.startsWith(month)) : contents),
+    () => (mode === 'monthly' ? contents.filter(c => contentPeriodDate(c)?.startsWith(month)) : contents),
     [contents, mode, month],
   )
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import type { Content } from '@/lib/types'
 import {
   V2_LOC_COLORS,
@@ -15,12 +15,15 @@ interface LocationVisitSectionProps {
   contents?: Content[]
   onSelectInfluencer?: (name: string) => void
   onSelectLocation?: (location: string) => void
+  /** 중앙 영역 KPI 아래에 붙는 콘텐츠 (핵심 성과 요약) */
+  children?: ReactNode
 }
 
 export default function LocationVisitSection({
   contents = [],
   onSelectInfluencer,
   onSelectLocation,
+  children,
 }: LocationVisitSectionProps) {
   // 실제 데이터에 존재하는 지점 탭 목록
   const availableTabs = useMemo(() => {
@@ -77,6 +80,9 @@ export default function LocationVisitSection({
       const influencers = new Set(rows.map(r => r.influencer_name)).size
       const uploaded = rows.filter(r => r.upload_url).length
       const views = rows.reduce((s, r) => s + contentViews(r), 0)
+      const byChannel = new Map<string, number>()
+      for (const r of rows) byChannel.set(r.channel, (byChannel.get(r.channel) ?? 0) + contentViews(r))
+      const channels = [...byChannel].sort((a, b) => b[1] - a[1]).map(([name, v]) => ({ name, views: v }))
 
       return {
         name: locName,
@@ -84,6 +90,7 @@ export default function LocationVisitSection({
         tag: meta.tag,
         views: views.toLocaleString(),
         viewsRaw: views,
+        channels,
         influencers,
         uploaded: uploaded || rows.length,
         highlight: meta.highlight,
@@ -136,29 +143,6 @@ export default function LocationVisitSection({
       locationsCount,
       campaignsCount,
     }
-  }, [contents])
-
-  // Live 피드 데이터 (실제 콘텐츠 기반 생성)
-  const liveFeedItems = useMemo(() => {
-    if (!contents || contents.length === 0) return []
-    const sorted = [...contents]
-      .filter(c => c.upload_url)
-      .sort((a, b) => contentViews(b) - contentViews(a))
-      .slice(0, 8)
-
-    return sorted.map((c, i) => {
-      const dateStr = c.visit_date ? c.visit_date.replace(/^2026-0?/, '').replace('-', '/') : '최근'
-      const viewsFormatted = formatViews(contentViews(c))
-      const isTop = i === 0
-      return {
-        date: dateStr,
-        badge: isTop ? '최고' : c.channel === '샤오홍슈' ? '인기' : '성과',
-        badgeBg: isTop ? '#fee2e2' : '#eef3ff',
-        badgeColor: isTop ? '#b42318' : '#2f5fd8',
-        borderColor: isTop ? '#e03131' : '#4f7cff',
-        textHtml: `<b>${c.influencer_name}</b> ${c.location.replace('점', '')} · ${c.channel} <b>${viewsFormatted}</b> 조회 ${c.likes ? `· ❤️ ${c.likes}` : ''}`,
-      }
-    })
   }, [contents])
 
   return (
@@ -260,11 +244,12 @@ export default function LocationVisitSection({
 
         {/* 중앙 지점 카드 그리드 & 누적 KPI */}
         <div className="flex-[4_1_430px] min-w-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="col-span-full flex flex-wrap gap-3 items-stretch">
           {activeCards.map(card => (
             <div
               key={card.name}
               onClick={() => onSelectLocation?.(card.name)}
-              className="cursor-pointer bg-white border border-[#f2ebdd] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4 hover:shadow-[0_6px_20px_rgba(30,41,59,0.1)] transition-all"
+              className="flex-1 min-w-[240px] cursor-pointer bg-white border border-[#f2ebdd] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4 hover:shadow-[0_6px_20px_rgba(30,41,59,0.1)] transition-all"
               style={{ borderTop: `4px solid ${card.color}` }}
             >
               <div className="flex items-center gap-1.5">
@@ -300,11 +285,23 @@ export default function LocationVisitSection({
                   {card.highlight}
                 </span>
               </div>
+              {activeCards.length <= 2 && card.channels.length > 0 && (
+                <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-3 pt-3 border-t border-[#f4efe3]">
+                  {card.channels.map(ch => (
+                    <span key={ch.name} className="text-[11.5px] text-[#6b6558] whitespace-nowrap">
+                      {ch.name} <b className="text-[12.5px] text-[#1a1d2e]">{formatViews(ch.views)}</b>
+                      <span className="text-[#a9a294] ml-1">
+                        {card.viewsRaw > 0 ? `${Math.round((ch.views / card.viewsRaw) * 100)}%` : ''}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 
           {zeroCards.length > 0 && (
-            <div className="col-span-full flex items-center justify-center pt-2 pb-1">
+            <div className="flex items-center">
               <button
                 type="button"
                 onClick={() => setShowZeroLocations(prev => !prev)}
@@ -313,11 +310,12 @@ export default function LocationVisitSection({
                 <span>
                   {showZeroLocations
                     ? '수치 0인 지점 접기 ▲'
-                    : `수치 0인 지점 더보기 (${zeroCards.length}개) ▼`}
+                    : `0인 지점 ${zeroCards.length}개 ▼`}
                 </span>
               </button>
             </div>
           )}
+          </div>
 
           {showZeroLocations &&
             zeroCards.map(card => (
@@ -413,48 +411,10 @@ export default function LocationVisitSection({
               </div>
             </div>
           </div>
+
+          {children && <div className="col-span-full">{children}</div>}
         </div>
 
-        {/* 우측 Live 피드 */}
-        <aside className="flex-1 min-w-[280px] max-w-full lg:max-w-[340px] bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
-            <span className="text-[14px] font-extrabold text-[#1a1d2e]">Live 피드</span>
-            <span className="ml-auto text-[10.5px] text-[#9a9486]">
-              최신 성과 · {liveFeedItems.length}건
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-3.5 mt-3.5 max-h-[560px] overflow-y-auto pr-1">
-            {liveFeedItems.length === 0 ? (
-              <div className="py-12 text-center text-[12px] text-[#9a9486]">피드 데이터가 없습니다.</div>
-            ) : (
-              liveFeedItems.map((feed, i) => (
-                <div key={i} className="flex gap-2.5 items-start">
-                  <span
-                    className="w-[7px] h-[7px] rounded-full border-2 mt-1.5 shrink-0"
-                    style={{ borderColor: feed.borderColor }}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5 text-[10.5px] text-[#9a9486]">
-                      {feed.date}
-                      <span
-                        className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-[6px]"
-                        style={{ color: feed.badgeColor, backgroundColor: feed.badgeBg }}
-                      >
-                        {feed.badge}
-                      </span>
-                    </span>
-                    <span
-                      className="block text-[12.5px] leading-relaxed text-[#2a2d3e] mt-1"
-                      dangerouslySetInnerHTML={{ __html: feed.textHtml }}
-                    />
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </aside>
       </div>
     </section>
   )

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import type { Content } from '@/lib/types'
-import { contentViews, contentViewsDisplay, aggregateEmv } from '@/lib/content-views'
+import { contentViews, contentViewsDisplay } from '@/lib/content-views'
 import { formatViews, V2_CH_COLORS, V2_LOC_COLORS, V2_MONTHS } from '@/lib/v2-analytics'
 
 interface ReportPrintV2Props {
@@ -33,7 +33,6 @@ export default function ReportPrintV2({
     const totalSaves = contents.reduce((s, c) => s + (c.saves ?? 0), 0)
     const totalEngage = totalLikes + totalComments + totalSaves
     const avgEngageRate = totalViews > 0 ? ((totalEngage / totalViews) * 100).toFixed(2) : '0'
-    const adValue = Math.round(aggregateEmv(contents).total / 10000) // EMV 기준 (만원)
 
     const locSet = new Set(contents.map(c => c.location).filter(Boolean))
     const calculatedLocCount = locationCount ?? locSet.size
@@ -48,7 +47,6 @@ export default function ReportPrintV2({
       totalSaves,
       totalEngage,
       avgEngageRate,
-      adValue,
       locationCount: calculatedLocCount,
     }
   }, [contents, locationCount])
@@ -176,7 +174,7 @@ export default function ReportPrintV2({
         <div className="text-[12px] font-bold tracking-wider text-[#9a9486] mb-2 uppercase">
           01 · 핵심 성과 요약 (KEY METRICS)
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {/* 총 조회수 */}
           <div className="border border-[#e2e8f0] bg-[#fafafa] rounded-xl p-3.5">
             <div className="text-[11px] font-semibold text-[#64748b]">총 누적 조회수</div>
@@ -185,17 +183,6 @@ export default function ReportPrintV2({
             </div>
             <div className="text-[10.5px] text-[#16a34a] font-bold mt-1">
               {formatViews(metrics.totalViews)} 뷰 달성
-            </div>
-          </div>
-
-          {/* EMV(통합 마케팅 가치) */}
-          <div className="border border-[#fed7aa] bg-[#fffaf5] rounded-xl p-3.5">
-            <div className="text-[11px] font-semibold text-[#c2410c]">EMV(통합 마케팅 가치)</div>
-            <div className="text-[22px] font-extrabold text-[#ea580c] mt-1">
-              {metrics.adValue.toLocaleString()}<span className="text-[13px] font-bold ml-0.5">만원</span>
-            </div>
-            <div className="text-[10.5px] text-[#9a3412] mt-1">
-              조회·좋아요·저장·댓글 통합 환산
             </div>
           </div>
 
