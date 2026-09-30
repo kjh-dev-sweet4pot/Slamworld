@@ -10,11 +10,14 @@ import {
   normalizeLocationName,
 } from '@/lib/v2-analytics'
 import { contentViews, contentViewsDisplay } from '@/lib/content-views'
+import MarketingInsightRail from '@/components/v2/MarketingInsightRail'
+import { isSeedingLocation } from '@/lib/posted-date'
 
 interface LocationVisitSectionProps {
   contents?: Content[]
   onSelectInfluencer?: (name: string) => void
   onSelectLocation?: (location: string) => void
+  partnerBrand?: string | null
   /** 중앙 영역 KPI 아래에 붙는 콘텐츠 (핵심 성과 요약) */
   children?: ReactNode
 }
@@ -23,6 +26,7 @@ export default function LocationVisitSection({
   contents = [],
   onSelectInfluencer,
   onSelectLocation,
+  partnerBrand,
   children,
 }: LocationVisitSectionProps) {
   // 실제 데이터에 존재하는 지점 탭 목록
@@ -72,9 +76,12 @@ export default function LocationVisitSection({
 
   // 8 Location Cards
   const locationCards = useMemo(() => {
-    return V2_ORDERED_LOCATIONS.map(locName => {
-      const meta = V2_LOC_META[locName] || { tag: '', highlight: '' }
-      const color = V2_LOC_COLORS[locName] || '#6b6558'
+    // 시딩(국내·해외·기자단)은 지점 옆에 별도 카드로 붙인다
+    const seedingLocs = [...new Set(contents.map(c => normalizeLocationName(c.location)).filter(isSeedingLocation))].sort()
+    return [...V2_ORDERED_LOCATIONS, ...seedingLocs].map(locName => {
+      const seeding = isSeedingLocation(locName)
+      const meta = V2_LOC_META[locName] || { tag: seeding ? '시딩' : '', highlight: '' }
+      const color = V2_LOC_COLORS[locName] || (seeding ? '#f59e0b' : '#6b6558')
 
       const rows = contents.filter(c => normalizeLocationName(c.location) === locName)
       const influencers = new Set(rows.map(r => r.influencer_name)).size
@@ -147,7 +154,7 @@ export default function LocationVisitSection({
 
   return (
     <section className="mb-8">
-      <div className="text-[12.5px] font-bold tracking-[0.14em] text-[#a89a80] py-3.5 px-1">
+      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] py-3.5 px-1">
         지점별 방문 현황
       </div>
 
@@ -160,7 +167,7 @@ export default function LocationVisitSection({
               🏆 조회수 TOP 3
             </div>
             <div className="text-[11px] text-[#9a9486] mt-1">
-              전체 기간 · 역산 포함
+              전체 기간
             </div>
             <div className="flex gap-1 mt-2.5 bg-[#f7f4ec] rounded-[10px] p-[3px] overflow-x-auto">
               {availableTabs.map(tab => (
@@ -245,6 +252,32 @@ export default function LocationVisitSection({
         {/* 중앙 지점 카드 그리드 & 누적 KPI */}
         <div className="flex-[4_1_430px] min-w-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div className="col-span-full flex flex-wrap gap-3 items-stretch">
+          {/* 전체 지점 합계 */}
+          {activeCards.length > 1 && (
+            <div
+              className="flex-1 min-w-[240px] bg-[#1a1d2e] text-white rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.12)] p-4"
+              style={{ borderTop: '4px solid #1a1d2e' }}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="w-[9px] h-[9px] rounded-full bg-white" />
+                <span className="text-[13.5px] font-extrabold">전체 지점 합계</span>
+                <span className="ml-auto text-[10.5px] text-white/60">{activeCards.length}개 구분</span>
+              </div>
+              <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight mt-3">
+                {activeCards.reduce((sum, c) => sum + c.viewsRaw, 0).toLocaleString()}
+              </div>
+              <div className="text-[11px] text-white/60 mt-1">조회수</div>
+              <div className="h-px bg-white/15 my-3" />
+              <div className="flex items-center gap-3">
+                <span className="text-[11.5px] text-white/70 whitespace-nowrap">
+                  <b className="text-[13px] text-white">{kpiData.influencers}</b>명
+                </span>
+                <span className="text-[11.5px] text-white/70 whitespace-nowrap">
+                  <b className="text-[13px] text-white">{activeCards.reduce((sum, c) => sum + c.uploaded, 0)}</b>건
+                </span>
+              </div>
+            </div>
+          )}
           {activeCards.map(card => (
             <div
               key={card.name}
@@ -365,7 +398,7 @@ export default function LocationVisitSection({
           <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-1">
             <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#4f8cff] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
               <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
-                🧍 누적 방문 인플루언서
+                🧍 등록 인플루언서 수
               </div>
               <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
                 {kpiData.influencers}
@@ -377,7 +410,7 @@ export default function LocationVisitSection({
 
             <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#8b5cf6] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
               <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
-                📮 누적 업로드
+                📮 발행량
               </div>
               <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
                 {kpiData.uploaded}
@@ -389,31 +422,30 @@ export default function LocationVisitSection({
 
             <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#06b6d4] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
               <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
-                👀 누적 조회수
+                👀 조회수
               </div>
               <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
                 {kpiData.viewsFormatted}
               </div>
-              <div className="h-px bg-[#f4efe3] my-2.5" />
-              <div className="text-[11px] text-[#9a9486]">전 채널 · 샤오홍슈 역산 포함</div>
+
             </div>
 
             <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#ec4899] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
               <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
-                ❤️ 누적 좋아요
+                ❤️ 좋아요
               </div>
               <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
                 {kpiData.likes}
               </div>
-              <div className="h-px bg-[#f4efe3] my-2.5" />
-              <div className="text-[11px] text-[#9a9486]">
-                저장 {kpiData.saves} · 댓글 {kpiData.comments}
-              </div>
+
             </div>
           </div>
 
           {children && <div className="col-span-full">{children}</div>}
         </div>
+
+        {/* 우측 최근 30일 마케팅 요약 + 질문 */}
+        <MarketingInsightRail partnerBrand={partnerBrand} />
 
       </div>
     </section>
