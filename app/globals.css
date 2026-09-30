@@ -6,14 +6,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap');
 
 :root {
-  --owm-bg: #eef0f4;
+  /* v2 리포트 톤앤매너 — 따뜻한 크림 배경 + 화이트 카드 */
+  --owm-bg: #fdf6e9;
   --owm-card: #ffffff;
-  --owm-border: #e8eaef;
+  --owm-border: #f2ebdd;
   --owm-text: #1a1d2e;
-  --owm-text2: #6b728a;
-  --owm-text3: #9aa0b3;
-  --owm-blue: #4f8cff;
-  --owm-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --owm-text2: #6b6558;
+  --owm-text3: #9a9486;
+  --owm-blue: #4f7cff;
+  --owm-blue-deep: #2f5fd8;
+  --owm-shadow: 0 4px 16px rgba(30,41,59,.06);
+  --owm-shadow-lg: 0 6px 24px rgba(30,41,59,.09);
 }
 
 html { scroll-behavior: smooth; scroll-padding-top: 112px; }
@@ -21,6 +24,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 112px; }
 body {
   font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
   letter-spacing: -0.01em;
+  background: linear-gradient(180deg,#fdf6e9 0%,#fbeed6 38%,#f6e3bf 62%,#f2dcb2 100%);
+  background-attachment: fixed;
 }
 
 .num, .owm-kpi-amount, .owm-b3-amt-num { font-family: 'Manrope', sans-serif; font-variant-numeric: tabular-nums; }
@@ -38,9 +43,10 @@ body {
 
 @layer components {
   .owm-hdr {
-    @apply sticky top-0 z-50 bg-white border-b px-4 md:px-10 py-3.5 flex flex-wrap items-center justify-between gap-2;
+    @apply sticky top-0 z-50 border-b px-4 md:px-10 py-3.5 flex flex-wrap items-center justify-between gap-2;
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(6px);
     border-color: var(--owm-border);
-    box-shadow: 0 1px 2px rgba(0,0,0,.03);
   }
   .owm-tab-bar {
     @apply sticky top-[63px] z-40 flex gap-1 border-b px-4 md:px-10 py-2.5 overflow-x-auto whitespace-nowrap;
@@ -65,7 +71,7 @@ body {
     background: var(--owm-blue);
   }
   .owm-section {
-    @apply bg-white rounded-[14px] p-4 md:p-5;
+    @apply bg-white rounded-2xl p-4 md:p-5;
     border: 1px solid var(--owm-border);
     box-shadow: var(--owm-shadow);
   }
@@ -90,9 +96,9 @@ body {
     @apply lg:grid-cols-5;
   }
   .owm-kpi-card {
-    @apply bg-white rounded-xl px-4 pt-4 pb-3 relative overflow-hidden;
+    @apply bg-white rounded-[14px] px-4 pt-4 pb-3 relative overflow-hidden;
     border: 1px solid var(--owm-border);
-    border-top-width: 3px;
+    border-top-width: 4px;
     border-top-color: var(--bc, #e8eaef);
     box-shadow: var(--owm-shadow);
   }
@@ -109,8 +115,9 @@ body {
   .owm-kpi-sub { @apply text-[11px] font-medium; color: var(--owm-text2); }
 
   .owm-b3-card {
-    @apply bg-white rounded-2xl border border-[#eef1f6] overflow-hidden w-full;
-    box-shadow: 0 6px 24px rgba(30,41,59,.09);
+    @apply bg-white rounded-2xl overflow-hidden w-full;
+    border: 1px solid var(--owm-border);
+    box-shadow: var(--owm-shadow);
   }
   .owm-b3-head {
     @apply px-3.5 py-3 border-b border-[#f1f4f8] flex items-center gap-2 flex-wrap;
@@ -244,7 +251,7 @@ body {
   .owm-kpi-sub { @apply justify-between; }
 
   .owm-chart-section {
-    @apply bg-white rounded-[14px] p-4 md:p-5;
+    @apply bg-white rounded-2xl p-4 md:p-5;
     border: 1px solid var(--owm-border);
     box-shadow: var(--owm-shadow);
   }
@@ -372,11 +379,6 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media print {
-  @page { size: A4; margin: 10mm; }
-  html { scroll-padding-top: 0; }
-}
-
 .report-print { display: none; }
 
 html.is-printing,
@@ -388,12 +390,21 @@ html.is-printing .report-screen { display: none !important; }
 html.is-printing .report-print { display: block !important; }
 
 @media print {
+  @page { size: A4; margin: 10mm 12mm; }
+  html { scroll-padding-top: 0; }
   .report-screen { display: none !important; }
   .report-print {
     display: block !important;
     color: #1a1d2e;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  .report-print tr { break-inside: avoid; }
+  .report-print * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .report-print tr,
+  .report-print section {
+    break-inside: avoid;
+  }
 }

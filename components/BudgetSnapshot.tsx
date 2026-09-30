@@ -17,6 +17,7 @@ import {
   fmtBudgetManwon,
   fmtBudgetRange,
   isLatePayment,
+  isAvailableBudget,
   LATE_UPLOAD_NOTE,
   availableBudgetRows,
   kpiCompanyRows,
@@ -839,10 +840,10 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
   const month = currentBudgetMonth()
   const monthNo = Number(month.slice(5))
   const rows = budgetsForBrand(brand, budgets ?? [])
-  const available = rows.filter(b => b.payment === '입금 완료' && b.useStatus !== '기 소진').reduce((s, b) => s + budgetMid(b), 0)
-  const sepAvailable = rows.filter(b => b.payment === '입금 완료' && b.useStatus !== '기 소진' && b.marketingMonth === month).reduce((s, b) => s + budgetMid(b), 0)
+  const available = rows.filter(isAvailableBudget).reduce((s, b) => s + budgetMid(b), 0)
+  const sepAvailable = rows.filter(b => isAvailableBudget(b) && b.marketingMonth === month).reduce((s, b) => s + budgetMid(b), 0)
   const unreceived = rows
-    .filter(b => b.stage === '확정 및 진행' && b.payment !== '입금 완료')
+    .filter(b => b.payment === '입금 지연')
     .reduce((s, b) => s + budgetMid(b), 0)
   const spent = rows.filter(b => b.useStatus === '기 소진').reduce((s, b) => s + budgetMid(b), 0)
   const planned = rows.filter(b => b.useStatus === '사용 예정').reduce((s, b) => s + budgetMid(b), 0)

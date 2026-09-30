@@ -1,129 +1,35 @@
 'use client'
+
 import { useEffect, useMemo, useState } from 'react'
-import SnapshotBar from '@/components/SnapshotBar'
-import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
-import SideTopCard from '@/components/SideTopCard'
-import SideLiveFeed from '@/components/SideLiveFeed'
-import ContentCard from '@/components/ContentCard'
-import MonthlyBarChart from '@/components/MonthlyBarChart'
-import { aggregateByMonth, toCumulative } from '@/lib/monthly-performance'
-import {
-  goalForNow,
-  goalMonthKey,
-  recentUploadsDisplay,
-  type MonthlyGoal,
-  type PlannedUpload,
-  type RecentUpload,
-} from '@/lib/monthly-goal'
-import ChannelDonut from '@/components/ChannelDonut'
-import RegionDonut from '@/components/RegionDonut'
-import BrandPipeline from '@/components/BrandPipeline'
-import LocationStatus from '@/components/LocationStatus'
-import ReportPrint from '@/components/ReportPrint'
 import LoginGate from '@/components/LoginGate'
-import type { Content, Summary, LocationSummary } from '@/lib/types'
-import { channelSummaryFromContents } from '@/lib/channel-summary'
-import { contentViews, contentViewsDisplay } from '@/lib/content-views'
-import { contentMatchesBrand, CONTENT_FILTER_BRANDS } from '@/lib/brand-content'
-import { AUGUST_2026_PINNED, mergePinnedRows, PERF_PINNED } from '@/lib/content-priority'
 import { useAccess } from '@/lib/access-context'
+import HeaderV2 from '@/components/v2/HeaderV2'
+import PeriodNavV2, { AVAILABLE_MONTHS, type PeriodMode } from '@/components/v2/PeriodNavV2'
+import LocationVisitSection from '@/components/v2/LocationVisitSection'
+import ExecutionSummarySection from '@/components/v2/ExecutionSummarySection'
+import OverallTotalsSection from '@/components/v2/OverallTotalsSection'
+import TrendAnalysisSection from '@/components/v2/TrendAnalysisSection'
+import CompositionSection from '@/components/v2/CompositionSection'
+import FormatAnalysisSection from '@/components/v2/FormatAnalysisSection'
+import PopularContentSection from '@/components/v2/PopularContentSection'
+import ReportPrintV2 from '@/components/v2/ReportPrintV2'
+import SectionPeriodScope, { GlobalPeriodContext } from '@/components/v2/SectionPeriodScope'
+import ExecutiveSummarySection from '@/components/v2/ExecutiveSummarySection'
+import UploadGallerySection from '@/components/v2/UploadGallerySection'
+import ChannelSummaryCard from '@/components/v2/ChannelSummaryCard'
+import PipelineCountCard from '@/components/v2/PipelineCountCard'
+import ProductAnalysisSection from '@/components/v2/ProductAnalysisSection'
+import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
+import type { Content } from '@/lib/types'
 import {
   downloadInfluencerXlsx,
   influencerXlsxFilename,
   printReportPdf,
   reportPdfTitle,
 } from '@/lib/export-report'
-
-type Tab = 'perf' | 'month' | 'all'
-
-const CAMPAIGNS = ['전체','9월_방문','명동오픈_0811','남포오픈','신사메가_6월','6월_중화권','6월_영미권','4_5월_영미권','3월_영미권']
-const LOCATIONS = ['전체','명동점','남포점','신사점','이태원점','성수점','북촌점','종각점','강남점']
-const CHANNELS  = ['전체','샤오홍슈','인스타그램','틱톡','도우인','웨이보']
-const PERF_PREVIEW_COUNT = 9
-const PERF_MORE_COUNT = 6
-
-const CHANNEL_SHORT: Record<string, string> = {
-  '샤오홍슈': '샤오홍슈',
-  '인스타그램': '인스타',
-  '틱톡': '틱톡',
-  '도우인': '도우인',
-  '웨이보': '웨이보',
-}
-
-function channelRankTags(rows: Content[]): Map<number, string[]> {
-  const tags = new Map<number, string[]>()
-  const add = (id: number, tag: string) => {
-    const list = tags.get(id) ?? []
-    if (!list.includes(tag)) list.push(tag)
-    tags.set(id, list)
-  }
-  const metrics = [
-    { key: 'views' as const, label: '조회수' },
-    { key: 'likes' as const, label: '좋아요' },
-    { key: 'saves' as const, label: '저장수' },
-  ]
-  for (const ch of [...new Set(rows.map(r => r.channel))]) {
-    const group = rows.filter(r => r.channel === ch)
-    const short = CHANNEL_SHORT[ch] ?? ch
-    for (const { key, label } of metrics) {
-      let winner: Content | null = null
-      for (const row of group) {
-        const n = row[key]
-        if (n == null || n <= 0) continue
-        if (!winner || n > (winner[key] ?? 0)) winner = row
-      }
-      if (winner) add(winner.id, `#${short} ${label} 1등`)
-    }
-  }
-  return tags
-}
-
-function viewsForSort(c: Content): number {
-  return contentViews(c)
-}
-
-function fmtTableViews(c: Content): string {
-  const { value, estimated } = contentViewsDisplay(c)
-  if (!value) return '—'
-  return estimated ? `~${value.toLocaleString()}` : value.toLocaleString()
-}
-
-function SectionHeader({ no, title, sub, right }: {
-  no: string; title: string; sub?: string; right?: string
-}) {
-  return (
-    <div className="flex items-end gap-3 flex-wrap mb-3 px-0.5">
-      <div>
-        <span className="num text-[11px] text-azure tracking-widest">{no}</span>
-        <h2 className="text-xl font-extrabold tracking-tight mt-1">{title}</h2>
-        {sub && <p className="print-hide text-[12.5px] text-body mt-1 leading-relaxed">{sub}</p>}
-      </div>
-      {right && <span className="print-hide num text-[11px] text-slate ml-auto">{right}</span>}
-    </div>
-  )
-}
-
-function monthLabel(ym: string): string {
-  return `${Number(ym.slice(5))}월`
-}
-
-function collectedLabel(iso: string | null): { short: string; full: string } | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d)
-  const [y, m, day] = parts.split('-')
-  return { short: `${m}.${day}`, full: `${y}.${m}.${day}` }
-}
-
-function monthSub(ym: string): string {
-  return `${ym.replace('-', '.')} 방문 기준`
-}
+import { contentMatchesBrand } from '@/lib/brand-content'
+import { getFallbackContents } from '@/lib/v2-analytics'
+import { contentPeriodDate } from '@/lib/posted-date'
 
 export default function Dashboard() {
   return (
@@ -134,782 +40,254 @@ export default function Dashboard() {
 }
 
 function DashboardInner() {
-  const { showSales, logout, level, partnerBrand } = useAccess()
-  const [summary, setSummary] = useState<Summary | null>(null)
-  const [locations, setLocations] = useState<LocationSummary[]>([])
-  const [monthly, setMonthly] = useState<{ month: string; count: number; views: number; likes: number; saves: number }[]>([])
-  const [monthlyGoals, setMonthlyGoals] = useState<MonthlyGoal[]>([])
-  const [plannedUploads, setPlannedUploads] = useState<PlannedUpload[]>([])
-  const [recentUploads, setRecentUploads] = useState<RecentUpload[]>([])
-  const [metricsUpdatedAt, setMetricsUpdatedAt] = useState<string | null>(null)
-  const [locationMonthly, setLocationMonthly] = useState<{
-    months: string[]
-    series: { location: string; points: { month: string; count: number; cumulative: number }[] }[]
-  }>({ months: [], series: [] })
-  const [cumulativeMonth, setCumulativeMonth] = useState<string | undefined>()
+  const { showSales, logout, partnerBrand } = useAccess()
   const [contents, setContents] = useState<Content[]>([])
-  const [chartContents, setChartContents] = useState<Content[]>([])
-  const [chartLoading, setChartLoading] = useState(true)
-  const [tab, setTab]           = useState<Tab>('perf')
-  const [campaign, setCampaign] = useState('전체')
-  const [location, setLocation] = useState('전체')
-  const [channel, setChannel]   = useState('전체')
-  const [brandFilter, setBrandFilter] = useState<string | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [loadError, setLoadError] = useState('')
-  const [visibleCount, setVisibleCount] = useState(PERF_PREVIEW_COUNT)
-  const [selectedMonth, setSelectedMonth] = useState('2026-08')
-  const [tableSort, setTableSort] = useState<{ key: 'views' | 'likes' | 'saves'; dir: 'asc' | 'desc' }>({
-    key: 'likes',
-    dir: 'desc',
-  })
+  const [, setLoading] = useState(true)
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('monthly')
+  const [currentMonth, setCurrentMonth] = useState<string>(AVAILABLE_MONTHS[AVAILABLE_MONTHS.length - 1])
+  const [selectedInfluencer, setSelectedInfluencer] = useState<string | null>('pada_heli')
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+  const [galleryLocation, setGalleryLocation] = useState<string | null>(null)
+  const [showBudgetCollapse, setShowBudgetCollapse] = useState(false)
 
-  // 요약 데이터
-  useEffect(() => {
-    fetch('/api/summary')
-      .then(r => r.json().then(d => ({ ok: r.ok, d })))
-      .then(({ ok, d }) => {
-        if (!ok || d.error) {
-          setLoadError(d.error ?? '요약 데이터를 불러오지 못했습니다.')
-          return
-        }
-        setSummary(d.summary)
-        setLocations(d.locations ?? [])
-        setMonthly(d.monthly ?? [])
-        setMonthlyGoals(d.monthlyGoals ?? [])
-        setPlannedUploads(d.plannedUploads ?? [])
-        setRecentUploads(d.recentUploads ?? [])
-        setMetricsUpdatedAt(d.metricsUpdatedAt ?? null)
-        setLocationMonthly(d.locationMonthly ?? { months: [], series: [] })
-      })
-      .catch(() => setLoadError('요약 데이터를 불러오지 못했습니다.'))
-  }, [])
-
-  // 콘텐츠 데이터
+  // 콘텐츠 데이터 조회 (Supabase)
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const params = new URLSearchParams({
-      sort: tab === 'all' ? 'date' : 'perf',
-      limit: tab === 'all' ? '300' : '1000',
-    })
-    if (campaign !== '전체') params.set('campaign', campaign)
-    if (location !== '전체') params.set('location', location)
-    if (channel  !== '전체') params.set('channel',  channel)
-    if (tab === 'month') params.set('month', selectedMonth)
-    fetch(`/api/contents?${params}`)
-      .then(r => r.json().then(d => ({ ok: r.ok, d })))
-      .then(({ ok, d }) => {
+
+    fetch('/api/contents?sort=perf&limit=1000')
+      .then(r => r.json())
+      .then(d => {
         if (cancelled) return
-        if (!ok || d.error) {
-          setLoadError(d.error ?? '콘텐츠 데이터를 불러오지 못했습니다.')
-          setContents([])
+        if (d.data && d.data.length > 0) {
+          setContents(d.data)
         } else {
-          setContents(d.data ?? [])
+          setContents(getFallbackContents())
         }
         setLoading(false)
       })
       .catch(() => {
         if (cancelled) return
-        setLoadError('콘텐츠 데이터를 불러오지 못했습니다.')
+        setContents(getFallbackContents())
         setLoading(false)
       })
-    return () => { cancelled = true }
-  }, [tab, campaign, location, channel, selectedMonth])
 
-  // 도넛 차트용 — 성과순·전체는 필터 기준 전체, 월별은 해당 월만
-  useEffect(() => {
-    let cancelled = false
-    setChartLoading(true)
-    const params = new URLSearchParams({ sort: 'date', limit: '1000' })
-    if (campaign !== '전체') params.set('campaign', campaign)
-    if (location !== '전체') params.set('location', location)
-    if (channel !== '전체') params.set('channel', channel)
-    if (tab === 'month') params.set('month', selectedMonth)
-    fetch(`/api/contents?${params}`)
-      .then(r => r.json())
-      .then(d => {
-        if (cancelled) return
-        setChartContents(d.data ?? [])
-        setChartLoading(false)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setChartContents([])
-        setChartLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [tab, campaign, location, channel, selectedMonth])
-
-  useEffect(() => { setVisibleCount(PERF_PREVIEW_COUNT) }, [campaign, location, channel, selectedMonth, brandFilter])
-
-  // 회원사 로그인 — 해당 브랜드로 고정
-  useEffect(() => {
-    if (partnerBrand) setBrandFilter(partnerBrand)
-  }, [partnerBrand])
-
-  const scopedContents = useMemo(() => {
-    if (!brandFilter) return contents
-    return contents.filter(c => contentMatchesBrand(c.brands, brandFilter))
-  }, [contents, brandFilter])
-
-  const scopedChartContents = useMemo(() => {
-    if (!brandFilter) return chartContents
-    return chartContents.filter(c => contentMatchesBrand(c.brands, brandFilter))
-  }, [chartContents, brandFilter])
-
-  const displaySummary = useMemo((): Summary | null => {
-    if (!partnerBrand) return summary
-    const rows = scopedChartContents.length ? scopedChartContents : scopedContents
-    const names = new Set(rows.map(r => r.influencer_name))
-    return {
-      total_rows: rows.length,
-      total_influencers: names.size,
-      uploaded: rows.filter(r => r.upload_url).length,
-      total_views: rows.reduce((s, c) => s + contentViews(c), 0),
-      total_likes: rows.reduce((s, c) => s + (c.likes ?? 0), 0),
-      total_saves: rows.reduce((s, c) => s + (c.saves ?? 0), 0),
-      total_comments: rows.reduce((s, c) => s + (c.comments ?? 0), 0),
+    return () => {
+      cancelled = true
     }
-  }, [partnerBrand, summary, scopedChartContents, scopedContents])
+  }, [])
 
-  const monthGoal = goalForNow(monthlyGoals)
-  const visiblePlanned = useMemo(() => {
-    const month = monthGoal?.month ?? goalMonthKey()
-    return plannedUploads.filter(p => {
-      if (!p.visitDate.startsWith(month)) return false
-      if (brandFilter && !contentMatchesBrand(p.brands, brandFilter)) return false
-      return true
-    })
-  }, [plannedUploads, monthGoal, brandFilter])
+  // 회원사 전용 필터 적용
+  const scopedContents = useMemo(() => {
+    if (!partnerBrand) return contents
+    return contents.filter(c => contentMatchesBrand(c.brands, partnerBrand))
+  }, [contents, partnerBrand])
 
-  const visibleRecent = useMemo(() => {
-    const rows = recentUploads.filter(p => !brandFilter || contentMatchesBrand(p.brands, brandFilter))
-    return recentUploadsDisplay(rows)
-  }, [recentUploads, brandFilter])
+  // 지점 필터 (전 섹션 공통)
+  const locationContents = useMemo(() => {
+    if (!selectedLocation) return scopedContents
+    return scopedContents.filter(c => c.location === selectedLocation)
+  }, [scopedContents, selectedLocation])
 
-  function handleViewBrandContent(brand: string) {
-    if (partnerBrand && brand !== partnerBrand) return
-    setBrandFilter(brand)
-    setTab('perf')
-    setCampaign('전체')
-    setLocation('전체')
-    setChannel('전체')
-    setVisibleCount(PERF_PREVIEW_COUNT)
-    requestAnimationFrame(() => {
-      document.getElementById('s1')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
+  // 상단 기간 내비(전체/월별) — §1 지점별 방문 현황 영역에만 적용. 나머지 섹션은 각자 기간 선택기 사용
+  const filteredContents = useMemo(() => {
+    if (periodMode !== 'monthly') return locationContents
+    return locationContents.filter(c => contentPeriodDate(c)?.startsWith(currentMonth))
+  }, [locationContents, periodMode, currentMonth])
+
+  // 고유 지점 수 (회원사 기준)
+  const locationCount = useMemo(() => {
+    return new Set(scopedContents.map(c => c.location).filter(Boolean)).size
+  }, [scopedContents])
+
+  const handlePrintPdf = () => {
+    printReportPdf(reportPdfTitle(partnerBrand))
   }
 
-  useEffect(() => {
-    if (tab === 'perf' || tab === 'all') setCumulativeMonth(undefined)
-  }, [tab, campaign, location, channel, chartContents])
+  const handleDownloadExcel = () => {
+    downloadInfluencerXlsx(filteredContents, influencerXlsxFilename(partnerBrand))
+  }
 
-  const chartChannels = useMemo(() => channelSummaryFromContents(scopedChartContents), [scopedChartContents])
-  const filteredMonthly = useMemo(() => aggregateByMonth(scopedChartContents), [scopedChartContents])
-  const cumulativeData = useMemo(() => toCumulative(filteredMonthly), [filteredMonthly])
-  const chartScopeLabel = tab === 'month' ? `${monthLabel(selectedMonth)} 기준` : '전체 기준'
-  const chartAnimKey = `${tab}-${selectedMonth}-${campaign}-${location}-${channel}-${brandFilter ?? ''}`
-
-  const rankTags = channelRankTags(scopedContents)
-
-  const cardContents = useMemo(() => {
-    if (tab === 'perf') {
-      return mergePinnedRows(scopedContents, scopedChartContents, PERF_PINNED)
+  const handleSelectInfluencer = (name: string) => {
+    setSelectedInfluencer(name)
+    const el = document.getElementById('section-popular')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
-    if (tab === 'month' && selectedMonth === '2026-08') {
-      return mergePinnedRows(scopedContents, scopedChartContents, AUGUST_2026_PINNED)
+  }
+
+  // 지점 카드 클릭 → 전역 필터 대신 업로드 목록을 해당 지점으로 좁혀서 보여준다
+  const handleSelectLocation = (locName: string) => {
+    setGalleryLocation(prev => (prev === locName ? null : locName))
+    document.getElementById('section-uploads')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+
+  // 실제 최종 수집 시각 기준. 동기화 크론은 매일 00:00 UTC(09:00 KST)
+  const collectedLabel = useMemo(() => {
+    const latest = contents.reduce((max, c) => {
+      const t = c.metrics_updated_at ? Date.parse(c.metrics_updated_at) : NaN
+      return Number.isFinite(t) && t > max ? t : max
+    }, 0)
+    if (!latest) return '자동 수집'
+    const fmt = (t: number) => {
+      const d = new Date(t + 9 * 3600_000)
+      return `${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}`
     }
-    return scopedContents
-  }, [scopedContents, scopedChartContents, tab, selectedMonth])
-
-  // 전체 탭용 테이블
-  const tableContents = [...scopedContents].sort((a, b) => {
-    const av = tableSort.key === 'views' ? viewsForSort(a) : (a[tableSort.key] ?? 0)
-    const bv = tableSort.key === 'views' ? viewsForSort(b) : (b[tableSort.key] ?? 0)
-    return tableSort.dir === 'desc' ? bv - av : av - bv
-  }).slice(0, 100)
-
-  const NAV = partnerBrand
-    ? ([
-        ['예산', '#s-budget'] as const,
-        ['누적 성과', '#s-summary'] as const,
-        ['콘텐츠 성과', '#s1'] as const,
-        ['진행 현황', '#s-brands'] as const,
-      ])
-    : ([
-        ...(showSales ? [['예산', '#s-budget'] as const] : []),
-        ['누적 성과', '#s-summary'] as const,
-        ['방문형 성과', '#s1'] as const,
-        ['확정·진행', '#s-brands'] as const,
-        ['준비 중', '#s-prep'] as const,
-        ['계약 예정', '#s-pipeline'] as const,
-        ['지점 현황', '#s2'] as const,
-        ['자료', '#s3'] as const,
-      ])
-
-  const collected = collectedLabel(metricsUpdatedAt)
-
-  const sideCards = (
-    <>
-      <SideTopCard
-        title={tab === 'month' ? `${monthLabel(selectedMonth)} 좋아요 TOP 3` : '좋아요 TOP 3'}
-        emoji="🏆"
-        sub={tab === 'month' ? monthSub(selectedMonth) : '전체 기간'}
-        metric="likes"
-        items={scopedChartContents}
-      />
-      <SideTopCard
-        title={tab === 'month' ? `${monthLabel(selectedMonth)} 조회수 TOP 3` : '조회수 TOP 3'}
-        emoji="👀"
-        sub={tab === 'month' ? `${monthSub(selectedMonth)} · 역산 포함` : '전체 기간 · 역산 포함'}
-        metric="views"
-        items={scopedChartContents}
-      />
-    </>
-  )
+    return `${fmt(latest)} 수집 기준 · 자동 수집 · 다음 ${fmt(Date.now() + 24 * 3600_000)}`
+  }, [contents])
 
   return (
     <>
-    <div className="report-screen">
-      <header className="owm-hdr">
-        <div>
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight">
-            <b className="text-[#2f1c13]">OWM</b>
-            <i className="not-italic text-owm-text3 font-normal mx-1">×</i>
-            {partnerBrand ? `${partnerBrand} 리포트` : '브랜드슬램 인플루언서 리포트'}
-            <span className="print-hide align-middle text-[11px] text-owm-blue bg-[#eef3ff] px-2.5 py-0.5 rounded-[10px] ml-2 font-semibold">
-              v1.0.0
-            </span>
-          </h1>
-          <div className="text-[11px] text-owm-text2 mt-1 flex flex-wrap gap-1">
-            <span>{collected ? `${collected.short} 기준` : '수집 전'}</span><span className="text-[#bbb]">·</span>
-            <span>자동 수집</span>
-            {partnerBrand && (
-              <>
-                <span className="text-[#bbb]">·</span>
-                <span>{partnerBrand} 전용</span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {level === 'meeting' && (
-            <span className="text-[10.5px] font-semibold text-owm-text2 bg-[#f0f2f7] px-2.5 py-1 rounded-2xl border border-owm-border">
-              미팅 보기
-            </span>
-          )}
-          {partnerBrand && (
-            <span className="text-[10.5px] font-semibold text-azure-deep bg-[#eef3ff] px-2.5 py-1 rounded-2xl border border-azure/20">
-              회원사 · {partnerBrand}
-            </span>
-          )}
-          {!partnerBrand && (
-            <span className="text-xs text-owm-text2 bg-[#f0f2f7] px-3.5 py-1.5 rounded-2xl border border-owm-border">
-              8개 지점
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => printReportPdf(reportPdfTitle(partnerBrand))}
-            className="no-print text-[11px] font-semibold text-owm-text hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white"
-            title="인쇄 대화상자에서 대상을 PDF로 저장하세요"
-          >
-            PDF 저장
-          </button>
-          <button
-            type="button"
-            onClick={() => downloadInfluencerXlsx(scopedChartContents, influencerXlsxFilename(partnerBrand))}
-            disabled={scopedChartContents.length === 0}
-            className="no-print text-[11px] font-semibold text-owm-text hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white disabled:opacity-40"
-            title="현재 필터 기준 참여 인플루언서 목록"
-          >
-            엑셀 저장
-          </button>
-          <button
-            type="button"
-            onClick={logout}
-            className="no-print text-[11px] font-semibold text-owm-text2 hover:text-owm-text px-2.5 py-1.5 rounded-2xl border border-owm-border bg-white"
-          >
-            로그아웃
-          </button>
-        </div>
-      </header>
+      <div className="report-screen font-sans min-h-screen pb-16 bg-gradient-to-b from-[#fdf6e9] via-[#fbeed6] via-[38%] via-[#f6e3bf] via-[62%] to-[#f2dcb2] text-[#1a1d2e]">
+      {/* ── 헤더 + 기간 내비 (스크롤해도 상단 고정) ── */}
+      <div className="sticky top-0 z-50 print:static">
+      <HeaderV2
+        collectedLabel={collectedLabel}
+        partnerBrand={partnerBrand}
+        locationCount={locationCount}
+        onPrintPdf={handlePrintPdf}
+        onDownloadExcel={handleDownloadExcel}
+        onLogout={logout}
+      />
 
-      <nav className="owm-tab-bar">
-        {NAV.map(([label, href]) => (
-          <a key={href} href={href} className="owm-tab-btn">{label}</a>
-        ))}
-      </nav>
-
-      <div className="owm-dashboard-grid max-w-[1920px] mx-auto px-3 sm:px-5 lg:px-8 py-4 pb-24">
-          {/* 좌측 사이드 */}
-          <aside className="print-hide owm-side-col hidden xl:flex flex-col gap-4 sticky top-28 self-start">
-            {sideCards}
-          </aside>
-
-          {/* 메인 */}
-          <main className="min-w-0 w-full">
-      {loadError && (
-        <div className="owm-info-box mb-3 text-amber-ink border-amber/30 bg-amber/10">
-          {loadError}
-          <span className="block text-[12px] text-body mt-1">
-            Supabase RLS 정책이 막혀 있으면 SQL Editor에서 <code className="text-[11px]">supabase/enable-public-read.sql</code> 을 실행하세요.
-          </span>
-        </div>
-      )}
-      {!loadError && summary && summary.total_rows === 0 && (
-        <div className="owm-info-box mb-3 text-amber-ink border-amber/30 bg-amber/10">
-          Supabase <code className="text-[11px]">contents</code> 테이블에 데이터가 없습니다.
-          SQL Editor에서 <code className="text-[11px]">supabase/seed.sql</code> 을 실행해 주세요. (329건)
-        </div>
-      )}
-      {showSales && <BudgetSnapshot onViewBrandContent={handleViewBrandContent} />}
-      {partnerBrand && <PartnerBudgetSnapshot brand={partnerBrand} />}
-
-      <section id="s-summary" className="scroll-mt-28 mb-3">
-        <div className="owm-sec-title">
-          <span className="owm-sec-no">00</span>
-          {partnerBrand ? `${partnerBrand} 누적 성과` : '누적 성과'}
-          <span className="text-xs font-normal text-owm-text2">
-            {partnerBrand ? '회원사 콘텐츠 기준' : '8개 지점'}
-          </span>
-        </div>
-        <SnapshotBar
-          summary={displaySummary}
-          monthGoal={partnerBrand ? null : goalForNow(monthlyGoals)}
-          plannedUploads={visiblePlanned}
-          recentUploads={visibleRecent}
+      {/* ── 기간 내비: 화살표 월간 전환 + 전체/월별 토글 (필탭 제거) ── */}
+      <div className="bg-[#fdf6e9]/90 backdrop-blur border-b border-[#f0e6d2]">
+        <PeriodNavV2
+          mode={periodMode}
+          onModeChange={setPeriodMode}
+          currentMonth={currentMonth}
+          onMonthChange={setCurrentMonth}
         />
-        <div className="owm-info-box">
-          <b className="text-owm-text">수치 기준 —</b> 샤오홍슈·도우인 조회수는 좋아요·저장·댓글로 역산했으며
-          상단 누적 조회수에 반영됩니다. 도우인은 실측 조회수가 있으면 실측을 우선합니다.
-          지표는 자동 수집이며 마지막 갱신은 {collected ? `${collected.full}입니다` : '아직 없습니다.'}
-        </div>
-      </section>
-
-      {/* 모바일·태블릿: 사이드 카드 */}
-      <div className="print-hide xl:hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        {sideCards}
-        <SideLiveFeed />
+      </div>
       </div>
 
-      {/* ── §1 콘텐츠 현황 ── */}
-      <section id="s1" className="mb-10 scroll-mt-20">
-        <SectionHeader no="01" title={partnerBrand ? `${partnerBrand} 콘텐츠 성과` : 'OWM 방문형 콘텐츠 성과'}
-          sub={partnerBrand
-            ? '해당 회원사 콘텐츠만 표시됩니다.'
-            : '브랜드·캠페인·지점·채널로 필터해 성과를 확인할 수 있습니다.'}
-          right={tab === 'perf'
-            ? `${Math.min(visibleCount, scopedContents.length)}건`
-            : `${scopedContents.length}건`}
-        />
-
-        <p className="print-only hidden text-[11px] text-slate -mt-1 mb-3">
-          {[
-            partnerBrand ?? (brandFilter ? `브랜드 ${brandFilter}` : null),
-            campaign !== '전체' ? campaign : null,
-            location !== '전체' ? location : null,
-            channel !== '전체' ? channel : null,
-            tab === 'month' ? monthSub(selectedMonth) : '전체 기간',
-            `${scopedChartContents.length}건`,
-          ].filter(Boolean).join(' · ')}
-        </p>
-
-        {/* 탭 */}
-        <div className="print-hide flex gap-1 bg-white/55 border border-white/75 rounded p-0.5 w-fit mb-3">
-          {([['perf','성과순'],['month','월별'],['all','전체']] as [Tab,string][]).map(([t,label]) => (
-            <button key={t} onClick={() => {
-                if (t !== tab) setLoading(true)
-                setTab(t)
-              }}
-              className={`text-[12.5px] font-semibold px-4 py-2 rounded transition-all
-                ${tab===t
-                  ? 'bg-azure text-white shadow-[0_2px_8px_rgba(24,104,240,.28)]'
-                  : 'text-slate hover:text-azure-deep'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* 필터 */}
-        <div className="print-hide flex gap-2 flex-wrap mb-4">
-          {!partnerBrand && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-slate font-semibold">브랜드</span>
-            <select
-              value={brandFilter ?? '전체'}
-              onChange={e => setBrandFilter(e.target.value === '전체' ? null : e.target.value)}
-              className="text-[12px] bg-white/70 border border-mist rounded px-2 py-1.5
-                text-ink focus:outline-none focus:border-azure"
+      {/* B2B 회원사 또는 세일즈 권한 시 예산 정보 (토글 가능) */}
+      {(showSales || partnerBrand) && (
+        <div className="max-w-[1880px] mx-auto px-4 sm:px-7 mt-3">
+          <div className="flex items-center justify-between bg-white/70 border border-[#f0e6d2] rounded-xl px-4 py-2.5">
+            <span className="text-xs font-bold text-[#6b6558]">
+              💼 {partnerBrand ? `${partnerBrand} 예산 및 집행 현황` : 'B2B 브랜드 예산 현황'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowBudgetCollapse(!showBudgetCollapse)}
+              className="text-xs font-semibold text-[#2f5fd8] hover:underline"
             >
-              <option>전체</option>
-              {CONTENT_FILTER_BRANDS.map(b => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </div>
-          )}
-          {([
-            ['캠페인', CAMPAIGNS, campaign, setCampaign],
-            ['지점',   LOCATIONS, location, setLocation],
-            ['채널',   CHANNELS,  channel,  setChannel],
-          ] as [string, string[], string, (v:string)=>void][]).map(([label, opts, val, setter]) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className="text-[11px] text-slate font-semibold">{label}</span>
-              <select value={val} onChange={e => setter(e.target.value)}
-                className="text-[12px] bg-white/70 border border-mist rounded px-2 py-1.5
-                  text-ink focus:outline-none focus:border-azure">
-                {opts.map(o => <option key={o}>{o}</option>)}
-              </select>
-            </div>
-          ))}
-          {(campaign !== '전체' || location !== '전체' || channel !== '전체' || (!partnerBrand && brandFilter)) && (
-            <button onClick={() => {
-              setCampaign('전체')
-              setLocation('전체')
-              setChannel('전체')
-              if (!partnerBrand) setBrandFilter(null)
-            }}
-              className="text-[11.5px] font-semibold text-slate border border-mist rounded
-                px-2.5 py-1.5 hover:border-sky hover:text-azure-deep transition-colors">
-              초기화
+              {showBudgetCollapse ? '접기 ▲' : '열기 ▼'}
             </button>
+          </div>
+          {showBudgetCollapse && (
+            <div className="mt-3">
+              {partnerBrand ? (
+                <PartnerBudgetSnapshot brand={partnerBrand} />
+              ) : (
+                <BudgetSnapshot />
+              )}
+            </div>
           )}
         </div>
-
-        {(tab === 'perf' || tab === 'all') && (
-          <div className="glass p-5 mb-4">
-            <span className="num text-[10.5px] text-slate tracking-widest uppercase">누적 성과</span>
-            <p className="text-[11px] text-slate mt-1">
-              필터 기준 · 누적 업로드(막대) · 누적 조회·좋아요·저장(선)
-            </p>
-            {chartLoading ? (
-              <div className="h-48 mt-4 rounded-lg bg-mist/40 animate-pulse" />
-            ) : (
-              <MonthlyBarChart
-                variant="cumulative"
-                data={cumulativeData}
-                highlightMonth={cumulativeMonth ?? cumulativeData[cumulativeData.length - 1]?.month}
-                onSelectMonth={setCumulativeMonth}
-              />
-            )}
-          </div>
-        )}
-
-        <div className="print-s1-body grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-4 items-start">
-          <div className="print-s1-main min-w-0">
-        {/* ── 성과순 ── */}
-        {tab === 'perf' && (
-          <>
-            {loading ? (
-              <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                {[...Array(PERF_PREVIEW_COUNT)].map((_, i) => (
-                  <div key={i} className="glass-solid h-40 animate-pulse" />
-                ))}
-              </div>
-            ) : scopedContents.length > 0 ? (
-              <>
-                <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                  {cardContents.slice(0, visibleCount).map(c => (
-                    <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
-                  ))}
-                </div>
-                {(cardContents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
-                  <div className="print-hide mt-3 flex items-center justify-between gap-3 px-1">
-                    <p className="text-[12px] text-slate">
-                      {visibleCount}건 표시 중
-                      {cardContents.length > visibleCount && (
-                        <> · 남은 {cardContents.length - visibleCount}건</>
-                      )}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      {visibleCount > PERF_PREVIEW_COUNT && (
-                        <button
-                          type="button"
-                          onClick={() => setVisibleCount(PERF_PREVIEW_COUNT)}
-                          className="text-[12px] font-semibold text-slate hover:text-azure-deep transition-colors whitespace-nowrap"
-                        >
-                          접기
-                        </button>
-                      )}
-                      {cardContents.length > visibleCount && (
-                        <button
-                          type="button"
-                          onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
-                          className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
-                        >
-                          {Math.min(PERF_MORE_COUNT, cardContents.length - visibleCount)}개 더 보기
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="glass px-5 py-10 text-center text-[13px] text-slate">
-                필터 조건에 맞는 콘텐츠가 없습니다.
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── 월별 ── */}
-        {tab === 'month' && (
-          <>
-            <div className="glass p-5">
-              <span className="num text-[10.5px] text-slate tracking-widest uppercase">월별 성과</span>
-              <p className="text-[11px] text-slate mt-1">업로드 건수(막대) · 조회·좋아요·저장(선)</p>
-              <MonthlyBarChart
-                variant="monthly"
-                data={monthly}
-                highlightMonth={selectedMonth}
-                onSelectMonth={m => {
-                  if (m === selectedMonth) return
-                  setLoading(true)
-                  setSelectedMonth(m)
-                }}
-              />
-              <p className="text-[12.5px] text-body leading-relaxed pt-4 mt-4 border-t border-mist">
-                <b className="text-azure-deep">
-                  {Number(selectedMonth.slice(5))}월 {monthly.find(m => m.month === selectedMonth)?.count ?? scopedContents.length}건.
-                </b>
-                {selectedMonth === '2026-08'
-                  ? ' 명동점 오픈(8/11) 122건과 남포점 오픈 47건이 같은 달에 진행됐습니다.'
-                  : ' 아래에서 해당 월 콘텐츠를 볼 수 있습니다.'}
-              </p>
-            </div>
-            {loading ? (
-              <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
-                {[...Array(PERF_PREVIEW_COUNT)].map((_, i) => (
-                  <div key={i} className="glass-solid h-40 animate-pulse" />
-                ))}
-              </div>
-            ) : scopedContents.length > 0 ? (
-              <>
-                <div className="print-hide grid grid-cols-2 md:grid-cols-3 gap-2.5 mt-4">
-                  {cardContents.slice(0, visibleCount).map(c => (
-                    <ContentCard key={c.id} c={c} tags={rankTags.get(c.id)} />
-                  ))}
-                </div>
-                {(cardContents.length > visibleCount || visibleCount > PERF_PREVIEW_COUNT) && (
-                  <div className="print-hide mt-3 flex items-center justify-between gap-3 px-1">
-                    <p className="text-[12px] text-slate">
-                      {visibleCount}건 표시 중
-                      {cardContents.length > visibleCount && (
-                        <> · 남은 {cardContents.length - visibleCount}건</>
-                      )}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      {visibleCount > PERF_PREVIEW_COUNT && (
-                        <button
-                          type="button"
-                          onClick={() => setVisibleCount(PERF_PREVIEW_COUNT)}
-                          className="text-[12px] font-semibold text-slate hover:text-azure-deep transition-colors whitespace-nowrap"
-                        >
-                          접기
-                        </button>
-                      )}
-                      {cardContents.length > visibleCount && (
-                        <button
-                          type="button"
-                          onClick={() => setVisibleCount(n => n + PERF_MORE_COUNT)}
-                          className="text-[12px] font-semibold text-azure-deep hover:text-azure transition-colors whitespace-nowrap"
-                        >
-                          {Math.min(PERF_MORE_COUNT, cardContents.length - visibleCount)}개 더 보기
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="glass px-5 py-10 text-center text-[13px] text-slate mt-4">
-                {Number(selectedMonth.slice(5))}월에 해당하는 콘텐츠가 없습니다.
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── 전체 테이블 ── */}
-        {tab === 'all' && (
-          <div className="print-hide glass overflow-hidden">
-            <div className="grid grid-cols-7 gap-3 px-4 py-2.5 bg-white/40
-              num text-[10.5px] text-slate uppercase tracking-wider items-center">
-              <div>지점</div><div>인플루언서</div><div>채널</div>
-              {([
-                ['views', '조회수'],
-                ['likes', '좋아요'],
-                ['saves', '저장'],
-              ] as const).map(([key, label]) => {
-                const active = tableSort.key === key
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setTableSort(s =>
-                      s.key === key
-                        ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' }
-                        : { key, dir: 'desc' }
-                    )}
-                    className={`text-left transition-colors
-                      ${active ? 'text-azure-deep font-semibold' : 'hover:text-azure-deep'}`}
-                    title={`${label} ${active && tableSort.dir === 'asc' ? '오름차순' : '내림차순'} 정렬`}
-                  >
-                    {label}{active ? (tableSort.dir === 'desc' ? ' ↓' : ' ↑') : ''}
-                  </button>
-                )
-              })}
-              <div />
-            </div>
-            {tableContents.map(c => (
-              <div
-                key={c.id}
-                className={`grid grid-cols-7 gap-3 px-4 py-3 text-[12.5px]
-                  border-t border-mist transition-colors
-                  ${!c.upload_url ? 'opacity-60' : ''}`}
-              >
-                <div className="font-bold text-azure-deep">{c.location}</div>
-                <div>{c.influencer_name}</div>
-                <div className="text-slate">{c.channel}</div>
-                <div className="num">{fmtTableViews(c)}</div>
-                <div className="num">{c.likes?.toLocaleString() ?? '—'}</div>
-                <div className="num">{c.saves?.toLocaleString() ?? '—'}</div>
-                <div className="flex justify-end">
-                  {c.upload_url ? (
-                    <a
-                      href={c.upload_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] text-azure-deep
-                        hover:text-azure transition-colors whitespace-nowrap"
-                    >
-                      컨텐츠 보러가기
-                      <span className="num text-[10px]">↗</span>
-                    </a>
-                  ) : (
-                    <span className="text-[11px] text-slate">—</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-          </div>
-
-          <aside className="print-s1-charts flex flex-col gap-2.5 w-full shrink-0 lg:sticky lg:top-16 self-start">
-            <ChannelDonut
-              data={chartChannels}
-              scopeLabel={chartScopeLabel}
-              animationKey={chartAnimKey}
-              loading={chartLoading}
-            />
-            <RegionDonut
-              data={chartChannels}
-              scopeLabel={chartScopeLabel}
-              animationKey={chartAnimKey}
-              loading={chartLoading}
-            />
-          </aside>
-        </div>
-      </section>
-
-      <BrandPipeline onViewBrandContent={handleViewBrandContent} />
-
-      {!partnerBrand && (
-        <LocationStatus locations={locations} locationMonthly={locationMonthly} />
       )}
 
-      {/* ── §3 자료 ── */}
-      {!partnerBrand && (
-      <section id="s3" className="print-hide scroll-mt-20">
-        <SectionHeader no="07" title="자료 및 향후 개선"/>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-          <div className="glass p-5">
-            <h3 className="font-bold text-[13.5px] mb-1">관련 링크</h3>
-            <p className="text-[11px] text-slate mb-3">원본 데이터</p>
-            {[
-              ['OWM 명동 본시트','#'],
-              ['브랜드슬램 × OWM 종합','#'],
-              ['콘텐츠 원본 드라이브','#'],
-            ].map(([label, href]) => (
-              <a key={label} href={href}
-                className="flex items-center gap-2 text-[12.5px] text-body
-                  px-2 py-2 rounded transition-colors hover:bg-white/85 hover:text-azure-deep">
-                {label}
-                <span className="num text-[10.5px] text-slate ml-auto">↗</span>
-              </a>
-            ))}
+      {/* ── 본문 영역 (max-width: 1880px) ── */}
+      <GlobalPeriodContext.Provider value={{ mode: periodMode, month: currentMonth }}>
+      <main className="max-w-[1880px] mx-auto px-4 sm:px-7 mt-2">
+        {/* 선택된 지점 필터 해제 바 */}
+        {selectedLocation && (
+          <div className="flex items-center gap-2 mb-3 bg-white/80 border border-[#f0e6d2] rounded-xl px-4 py-2 text-xs text-[#1a1d2e]">
+            <span>현재 <b>{selectedLocation}</b> 필터가 적용되어 있습니다.</span>
+            <button
+              type="button"
+              onClick={() => setSelectedLocation(null)}
+              className="ml-auto text-xs font-bold text-[#e03131] hover:underline"
+            >
+              필터 해제 ✕
+            </button>
           </div>
-          <div className="glass p-5">
-            <h3 className="font-bold text-[13.5px] mb-1">인플루언서 가이드라인</h3>
-            <p className="text-[11px] text-slate mb-3">최종 수정 2026.08.01</p>
-            {[
-              ['촬영 가이드 (구도 · 조명)', 'https://slam-pick-three.vercel.app/'],
-              ['필수 해시태그 · 멘션', 'https://slam-pick-three.vercel.app/'],
-              ['유료 광고 표기 규정','#'],
-            ].map(([label, href]) => (
-              <a key={label} href={href}
-                {...(href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                className="flex items-center gap-2 text-[12.5px] text-body
-                  px-2 py-2 rounded transition-colors hover:bg-white/85 hover:text-azure-deep">
-                {label}
-                <span className="num text-[10.5px] text-slate ml-auto">↗</span>
-              </a>
-            ))}
-          </div>
-          <div className="glass p-5">
-            <h3 className="font-bold text-[13.5px] mb-1">향후 개선</h3>
-            <p className="text-[11px] text-slate mb-3">다음에 열릴 기능</p>
-            <div className="relative pl-4 border-l border-mist space-y-3">
-              {[
-                ['9월 2주','샤오홍슈 추정 조회수 자동 계산 ✓'],
-                ['9월 4주','브랜드별 상세 리포트 · 리드타임 시각화'],
-                ['10월',  '채널 지표 자동 수집 · 기간 비교'],
-              ].map(([q, t], i) => (
-                <div key={q} className="relative">
-                  <div className={`absolute -left-[21px] top-1 w-2 h-2 rounded-[2px] border-2
-                    ${i===0 ? 'border-azure shadow-[0_0_0_3px_rgba(24,104,240,.15)] bg-white' : 'border-sky bg-white'}`}/>
-                  <div className="num text-[10px] text-azure tracking-wider">{q}</div>
-                  <div className="text-[12.5px] text-body mt-0.5">{t}</div>
-                </div>
-              ))}
-            </div>
+        )}
+
+        {/* ══ §1 지점별 방문 현황 ══ */}
+        <LocationVisitSection
+          contents={filteredContents}
+          onSelectInfluencer={handleSelectInfluencer}
+          onSelectLocation={handleSelectLocation}
+          partnerBrand={partnerBrand}
+        >
+          {/* 핵심 성과 요약 — KPI 아래 빈 공간을 채우도록 중앙 영역에 배치 */}
+          <ExecutiveSummarySection contents={locationContents} showRoi={!partnerBrand} />
+        </LocationVisitSection>
+
+        {/* ══ 업로드 인플루언서 | 인플루언서 현황 + 채널별 성과 ══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <UploadGallerySection
+            contents={filteredContents}
+            location={galleryLocation}
+            onLocationChange={setGalleryLocation}
+            onSelectInfluencer={handleSelectInfluencer}
+          />
+          <div className="min-w-0">
+            <PipelineCountCard contents={scopedContents} partnerBrand={partnerBrand} />
+            <ChannelSummaryCard contents={filteredContents} />
           </div>
         </div>
 
-        <div className="mt-4 px-5 py-4 text-[12.5px] text-body leading-relaxed
-          bg-white/50 border-l-[3px] border-azure rounded-r-[6px]">
-          <b className="text-azure-deep">참고사항 —</b>{' '}
-          조회수 합계는 샤오홍슈·도우인 역산을 반영한 값이며,{' '}
-          <b className="text-azure-deep">실제 노출과 차이가 있을 수 있습니다.</b>
-        </div>
-      </section>
-      )}
+        {/* ══ 인기 상품 분석 ══ */}
+        <SectionPeriodScope contents={locationContents}>
+          {list => <ProductAnalysisSection contents={list} />}
+        </SectionPeriodScope>
 
-          </main>
 
-          <aside className="print-hide owm-side-col hidden xl:block sticky top-28 self-start">
-            <SideLiveFeed />
-          </aside>
+        {/* ══ §2 실행 성과 요약 ══ */}
+        <SectionPeriodScope contents={locationContents}>
+          {list => <ExecutionSummarySection contents={list} />}
+        </SectionPeriodScope>
+
+        {/* ══ §3 전체 합계 ══ */}
+        <SectionPeriodScope contents={locationContents}>
+          {(list, period) => (
+            <OverallTotalsSection contents={list} period={period} isPartner={!!partnerBrand} />
+          )}
+        </SectionPeriodScope>
+
+        {/* ══ §4 추이 분석 ══ */}
+        <SectionPeriodScope contents={locationContents}>
+          {(list, period) => <TrendAnalysisSection contents={list} period={period} />}
+        </SectionPeriodScope>
+
+        {/* ══ §5 구성비 분석 ══ */}
+        <SectionPeriodScope contents={locationContents}>
+          {list => <CompositionSection contents={list} />}
+        </SectionPeriodScope>
+
+        {/* ══ §6 콘텐츠 형식 분석 ══ */}
+        <SectionPeriodScope contents={locationContents}>
+          {list => <FormatAnalysisSection contents={list} />}
+        </SectionPeriodScope>
+
+        {/* ══ §7 인기 콘텐츠 분석 ══ */}
+        <div id="section-popular">
+          <SectionPeriodScope contents={locationContents}>
+            {list => (
+              <PopularContentSection
+                contents={list}
+                selectedInfluencerName={selectedInfluencer}
+                onSelectInfluencer={setSelectedInfluencer}
+              />
+            )}
+          </SectionPeriodScope>
         </div>
+      </main>
+      </GlobalPeriodContext.Provider>
     </div>
-    <ReportPrint
+
+    {/* ── PDF 인쇄 전용 핵심 요약 보고서 (화면에는 숨김, 인쇄 시 자동 표시) ── */}
+    <ReportPrintV2
       partnerBrand={partnerBrand}
-      scope={[
-        partnerBrand ?? (brandFilter ? `브랜드 ${brandFilter}` : null),
-        campaign !== '전체' ? campaign : null,
-        location !== '전체' ? location : null,
-        channel !== '전체' ? channel : null,
-      ].filter(Boolean).join(' · ')}
-      summary={displaySummary}
-      monthly={filteredMonthly}
-      channels={chartChannels}
-      rows={scopedChartContents}
-      monthGoal={partnerBrand ? null : monthGoal}
-      plannedUploads={visiblePlanned}
-      asOf={collected?.full ?? null}
+      contents={filteredContents}
+      periodMode={periodMode}
+      currentMonth={currentMonth}
+      locationCount={locationCount}
     />
-    </>
+  </>
   )
 }

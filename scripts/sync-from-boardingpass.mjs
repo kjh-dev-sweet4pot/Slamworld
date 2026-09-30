@@ -53,7 +53,8 @@ export function urlKey(url) {
   if (tt) return `tt:${tt[1]}`
   const xhs = u.match(/(?:explore|item|discovery\/item)\/([0-9a-f]{16,})/i)
   if (xhs) return `xhs:${xhs[1].toLowerCase()}`
-  const short = u.match(/xhslink\.com\/(?:a\/)?([^/?]+)/)
+  // xhslink.com/o/<code>, /a/<code>, /<code> — 코드는 대소문자 구분이라 원문에서 뽑는다
+  const short = String(url).match(/xhslink\.(?:com|cn)\/(?:[ao]\/)?([A-Za-z0-9]+)/i)
   if (short) return `xhss:${short[1]}`
   return u
 }
@@ -138,9 +139,10 @@ export function chooseVisitDate(visit, published, url) {
 }
 
 async function fillPlaceholderPostedDates(rows) {
-  const pending = rows.filter(row => row.visit_date === PLACEHOLDER_VISIT && /xhslink\.(com|cn)/i.test(row.upload_url || ''))
+  // 방문일이 없는 건(시딩·기자단 등)과 placeholder 는 단축링크를 풀어 게시일로 채운다
+  const pending = rows.filter(row => (!row.visit_date || row.visit_date === PLACEHOLDER_VISIT) && !postedDayFromUrl(row.upload_url))
   await mapPool(pending, 4, async row => {
-    const posted = await resolveXhsShort(row.upload_url)
+    const posted = await resolveXhsShort(row.upload_url) || await resolveTiktokShort(row.upload_url)
     if (posted) row.visit_date = posted
   })
 }
@@ -190,6 +192,49 @@ async function resolveXhsShort(url) {
   } catch {
     return ''
   }
+}
+
+const TIKTOK_SHORT = /(?:vm\.|vt\.)tiktok\.com\/|tiktok\.com\/(?:t\/)?Z[A-Za-z0-9]+/i
+
+/** 틱톡 단축링크 → 실제 video URL 의 발행일 */
+async function resolveTiktokShort(url) {
+  if (!TIKTOK_SHORT.test(url || '')) return ''
+  // tiktok.com/Z…, tiktok.com/t/Z… 는 www 로 가면 404 — vm.tiktok.com 으로 보내야 video URL 로 풀린다
+  const code = String(url).match(/tiktok\.com\/(?:t\/)?(Z[A-Za-z0-9]+)/i)?.[1]
+  const href = code ? `https://vm.tiktok.com/${code}/` : /^https?:\/\//i.test(url) ? url : `https://${url.replace(/^\/+/, '')}`
+  try {
+    let cur = href
+    for (let hop = 0; hop < 5; hop += 1) {
+      const res = await fetch(cur, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0' } })
+      const loc = res.headers.get('location')
+      if (!loc) break
+      cur = new URL(loc, cur).toString()
+      const posted = postedDayFromUrl(cur)
+      if (posted) return posted
+    }
+  } catch {
+    // 네트워크 실패는 게시일 미상으로 둔다
+  }
+  return ''
+}
+
+/** 게시일: URL 역산 → 단축링크 해석. published_at 은 수집 시각이 섞여 있어 쓰지 않는다 */
+export async function resolvePostedDay(url) {
+  return postedDayFromUrl(url) || await resolveXhsShort(url) || await resolveTiktokShort(url)
+}
+
+async function fillPostedDates(rows) {
+  await mapPool(rows, 6, async row => {
+    const posted = await resolvePostedDay(row.upload_url)
+    if (posted) row.posted_date = posted
+  })
+}
+
+async function hasColumn(base, key, column) {
+  const res = await fetch(`${base}/rest/v1/contents?select=${column}&limit=1`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  })
+  return res.ok
 }
 
 const BP_AVATAR_BUCKET = 'influencer-avatars'
@@ -245,6 +290,36 @@ export function branchLocation(name) {
   return t
 }
 
+/** 공동 배정 건의 상품명도 누적한다. 상품명에 콤마가 있을 수 있어 ' | ' 로 구분 */
+export function mergeProduct(row, product) {
+  if (!product) return
+  const parts = String(row.product || '').split(' | ').map(s => s.trim()).filter(Boolean)
+  if (parts.includes(product)) return
+  row.product = [...parts, product].join(' | ')
+}
+
+/** 같은 링크(콘텐츠)가 여러 회원사에 공동 배정된 협업 건 — 회원사명을 콤마로 누적한다. */
+export function mergeBrand(row, brand) {
+  if (!brand) return
+  const parts = String(row.brands || '').split(/[,，、]/).map(s => s.trim()).filter(Boolean)
+  if (parts.includes(brand)) return
+  row.brands = [...parts, brand].join(',')
+}
+
+/** 조회수 역산 기준 참여율(ER). 조회수 = (좋아요+저장+댓글+공유) / ER */
+export const VIEW_ER = 0.012
+const ESTIMATED_CHANNELS = new Set(['샤오홍슈', '도우인'])
+
+export function estimateViewsFromEr({ likes, saves, comments, shares }) {
+  const total = (likes || 0) + (saves || 0) + (comments || 0) + (shares || 0)
+  if (total <= 0) return null
+  return {
+    views_estimated: Math.round(total / VIEW_ER),
+    views_est_low: Math.round(total / (VIEW_ER * 1.2)),
+    views_est_high: Math.round(total / (VIEW_ER * 0.8)),
+  }
+}
+
 export function toContent(link) {
   const status = publishStatusOf(link)
   if (!status) return null
@@ -255,7 +330,13 @@ export function toContent(link) {
   const influencer = link.influencers || {}
   const name = (influencer.name || '').trim()
   if (!name) return null
-  const views = posInt(link.views)
+  const channel = channelOf(link.platform, href)
+  const likes = posInt(link.likes)
+  const saves = posInt(link.saves)
+  const comments = posInt(link.comments)
+  // 샤오홍슈·도우인은 조회수 비공개 — 보딩패스 값도 추정치라 버리고 ER 로 역산한다
+  const measured = ESTIMATED_CHANNELS.has(channel) ? null : posInt(link.views)
+  const est = measured ? null : estimateViewsFromEr({ likes, saves, comments, shares: posInt(link.shares) })
   return {
     key,
     photoPath: avatarObjectPath(influencer.profile_image_path),
@@ -266,17 +347,23 @@ export function toContent(link) {
       influencer_name: name,
       sns_id: influencer.instagram_handle || null,
       profile_url: influencer.sns_url || null,
-      channel: channelOf(link.platform, href),
+      channel,
       follower_count: posInt(influencer.followers),
       visit_date: chooseVisitDate(alloc.visit_date, link.published_at, href),
-      product: alloc.products?.name || null,
+      // 회사 미지정 공용 상품(예: 'OWM 시딩')은 배정 회사 이름으로 — 화면에서 그 회사 제품으로 묶인다
+      product: alloc.products?.name
+        ? (alloc.products.company_id || !alloc.companies?.name ? alloc.products.name : alloc.companies.name)
+        : null,
       upload_url: href,
       publish_status: status,
-      views,
-      likes: posInt(link.likes),
-      saves: posInt(link.saves),
-      comments: posInt(link.comments),
-      views_source: views ? 'measured' : 'none',
+      views: measured,
+      likes,
+      saves,
+      comments,
+      views_estimated: est?.views_estimated ?? null,
+      views_est_low: est?.views_est_low ?? null,
+      views_est_high: est?.views_est_high ?? null,
+      views_source: measured ? 'measured' : est ? 'estimated' : 'none',
       metrics_updated_at: link.metrics_collected_at || null,
     },
   }
@@ -300,7 +387,7 @@ const LINK_SELECT = [
   'url', 'publish_url', 'platform', 'content_status', 'status',
   'published_at', 'views', 'likes', 'comments', 'saves', 'metrics_collected_at',
   'influencers(name,sns_url,instagram_handle,followers,profile_image_path)',
-  'allocations(visit_date,stores(name),companies(name,login_id),campaigns(name),products(name))',
+  'allocations(visit_date,stores(name),companies(name,login_id),campaigns(name),products(name,company_id))',
 ].join(',')
 
 const COMPANY_SELECT = 'id,name,login_id,aliases,is_active,contract_stage,budget_amount,spent_amount,first_meet_on,planned_start_on,planned_end_on'
@@ -512,9 +599,12 @@ async function copyBoardingpassPhotos(bpUrl, bpKey, swUrl, swKey, jobs, { writeU
 function patchFrom(row, existingCampaign) {
   const patch = { ...row }
   if (patch.campaign === '미지정') patch.campaign = existingCampaign || '미지정'
-  for (const k of ['views', 'likes', 'saves', 'comments', 'follower_count', 'metrics_updated_at', 'brands', 'product', 'sns_id', 'profile_url', 'visit_date']) {
+  const clearViews = patch.views_source === 'estimated'
+  for (const k of ['views', 'likes', 'saves', 'comments', 'follower_count', 'metrics_updated_at', 'brands', 'product', 'sns_id', 'profile_url', 'visit_date', 'posted_date']) {
     if (patch[k] == null) delete patch[k]
   }
+  if (clearViews) patch.views = null
+  if (patch.views_source === 'none') delete patch.views_source
   return patch
 }
 
@@ -564,6 +654,8 @@ export async function runBoardingpassSync({ apply = false } = {}) {
     const prev = mappedByKey.get(item.key)
     if (prev) {
       if (item.photoPath && !prev.photoPath) prev.photoPath = item.photoPath
+      mergeBrand(prev.row, item.row.brands)
+      mergeProduct(prev.row, item.row.product)
       skipped += 1
       continue
     }
@@ -571,6 +663,10 @@ export async function runBoardingpassSync({ apply = false } = {}) {
     mapped.push(item)
   }
   await fillPlaceholderPostedDates(mapped.map(item => item.row))
+
+  const swReadKeyEarly = swKey || swEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const postedColumn = await hasColumn(swUrl, swReadKeyEarly, 'posted_date')
+  if (postedColumn) await fillPostedDates(mapped.map(item => item.row))
 
   const swReadKey = swKey || swEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const existing = await allRows(swUrl, swReadKey, 'contents', 'id,upload_url,campaign')
@@ -602,6 +698,12 @@ export async function runBoardingpassSync({ apply = false } = {}) {
   if (skippedTest) console.log(`테스트 회원사 콘텐츠 ${skippedTest}건 제외`)
   if (!photoRows) console.log('profile_image_url 컬럼 없음 — Storage by-id 로만 복사합니다. supabase/add-profile-image.sql 을 실행하면 행에도 URL이 붙습니다.')
   console.log(`프로필 사진 ${photoPlan.jobs.size}명 · 빈 행 ${photoPlan.rows} · 신규 ${photoPlan.pendingInserts}`)
+  if (postedColumn) {
+    const known = mapped.filter(item => item.row.posted_date).length
+    console.log(`게시일 ${known}/${mapped.length}건 확인 (미상 ${mapped.length - known})`)
+  } else {
+    console.log('posted_date 컬럼 없음 — supabase/add-posted-date.sql 을 실행하면 게시일이 저장됩니다.')
+  }
   console.log('링크 없는 방문(예정)은 넣지 않습니다. 보딩패스에만 있는 기존 행도 지우지 않습니다.')
 
   const summary = {

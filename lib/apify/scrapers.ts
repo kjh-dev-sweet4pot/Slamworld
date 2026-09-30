@@ -132,17 +132,38 @@ function parseXhsItem(item: Record<string, unknown>): ScrapedMetrics | null {
   }
 }
 
+/** xhslink 단축 링크 → 노트 전체 URL (xsec_token 포함). 스크래퍼가 단축 링크를 못 읽는다. 실패하면 원본 */
+async function resolveXhsShortLink(url: string): Promise<string> {
+  if (!/xhslink\.(com|cn)/i.test(url)) return url
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)' },
+      signal: AbortSignal.timeout(15000),
+    })
+    const html = await res.text()
+    const m = html.match(/xiaohongshu\.com\/(?:discovery\/item|explore)\/([a-f0-9]{24})[^"'<>\s]*/i)
+    if (!m) return url
+    const token = m[0].replace(/&amp;/g, '&').match(/xsec_token=([^&]+)/)
+    return `https://www.xiaohongshu.com/discovery/item/${m[1]}${token ? `?xsec_token=${token[1]}&xsec_source=app_share` : ''}`
+  } catch {
+    return url
+  }
+}
+
 export async function scrapeXiaohongshuBatch(
   urls: string[],
 ): Promise<Map<string, ScrapedMetrics>> {
   if (!urls.length) return new Map()
 
-  const index = buildUrlIndex(urls)
+  // DB 링크는 그대로 두고 스크래핑용으로만 푼다 (보딩패스 동기화가 링크로 행을 매칭하므로)
+  const resolved = await Promise.all(urls.map(resolveXhsShortLink))
+  const toOriginal = new Map(resolved.map((r, i) => [r, urls[i]]))
+  const index = buildUrlIndex(resolved)
   const out = new Map<string, ScrapedMetrics>()
 
   const items = await runActor(APIFY_ACTORS.xiaohongshu, {
     mode: 'post',
-    noteUrls: urls,
+    noteUrls: resolved,
     maxResultsPerInput: 1,
   })
 
@@ -157,10 +178,10 @@ export async function scrapeXiaohongshuBatch(
       item.sourceUrl as string,
       noteId ? `https://www.xiaohongshu.com/discovery/item/${noteId}` : '',
     ].filter(Boolean)
-    const original = findOriginalUrl(index, candidates)
-    if (!original) continue
+    const hit = findOriginalUrl(index, candidates)
+    if (!hit) continue
     const metrics = parseXhsItem(item)
-    if (metrics) out.set(original, metrics)
+    if (metrics) out.set(toOriginal.get(hit) ?? hit, metrics)
   }
 
   return out

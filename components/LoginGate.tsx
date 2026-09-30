@@ -42,7 +42,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="min-h-screen grid place-items-center bg-owm-bg text-owm-text2 text-sm">
+      <div className="min-h-screen grid place-items-center bg-gradient-to-b from-[#fdf6e9] via-[#fbeed6] to-[#f2dcb2] text-[#6b6558] text-sm font-semibold">
         불러오는 중…
       </div>
     )
@@ -50,23 +50,26 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return (
-      <div className="min-h-screen grid place-items-center bg-owm-bg px-4">
+      <div className="min-h-screen grid place-items-center bg-gradient-to-b from-[#fdf6e9] via-[#fbeed6] via-[38%] via-[#f6e3bf] via-[62%] to-[#f2dcb2] px-4">
         <form
           onSubmit={onSubmit}
-          className="w-full max-w-[360px] rounded-[14px] border border-owm-border bg-white p-7 shadow-[var(--owm-shadow)]"
+          className="w-full max-w-[380px] rounded-2xl border border-[#f0e6d2] bg-white/90 backdrop-blur-md p-8 shadow-[0_8px_30px_rgba(30,41,59,0.08)]"
         >
-          <p className="text-[11px] font-semibold tracking-widest text-owm-blue uppercase">
-            OWM × 브랜드슬램
-          </p>
-          <h1 className="mt-2 text-[22px] font-extrabold tracking-tight text-owm-text">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold tracking-[0.14em] text-[#9a3412] bg-[#ffedd5] px-2.5 py-0.5 rounded-[7px] uppercase">
+              OWM × 브랜드슬램
+            </span>
+            <span className="text-[10.5px] font-bold text-[#9a3412] bg-[#ffedd5] px-2 py-0.5 rounded-[7px]">v1.0.0</span>
+          </div>
+          <h1 className="mt-3 text-[23px] font-extrabold tracking-tight text-[#1a1d2e]">
             리포트 로그인
           </h1>
-          <p className="mt-1.5 text-[12.5px] text-owm-text2 leading-relaxed">
-            관리자·미팅·회원사 비밀번호로 입장할 수 있습니다.
+          <p className="mt-1.5 text-[13px] text-[#6b6558] leading-relaxed">
+            관리자 · 미팅 · 회원사 비밀번호로 입장할 수 있습니다.
           </p>
 
           <label className="mt-6 block">
-            <span className="text-[11px] font-semibold text-owm-text2">비밀번호</span>
+            <span className="text-[12px] font-bold text-[#6b6558]">비밀번호</span>
             <input
               type="password"
               autoFocus
@@ -76,20 +79,22 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
                 setPassword(e.target.value)
                 if (error) setError('')
               }}
-              className="mt-1.5 w-full rounded-lg border border-owm-border bg-[#f8f9fb] px-3.5 py-2.5
-                text-[14px] text-owm-text outline-none focus:border-owm-blue focus:bg-white"
+              className="mt-1.5 w-full rounded-xl border border-[#e8dfcf] bg-[#fbf9f4] px-4 py-3
+                text-[14px] text-[#1a1d2e] placeholder-[#b5ad9c] outline-none transition
+                focus:border-[#c2410c] focus:bg-white focus:ring-2 focus:ring-[#c2410c]/10"
               placeholder="비밀번호 입력"
             />
           </label>
 
           {error && (
-            <p className="mt-2 text-[12px] font-medium text-[#DC2626]">{error}</p>
+            <p className="mt-2 text-[12px] font-semibold text-[#dc2626]">{error}</p>
           )}
 
           <button
             type="submit"
-            className="mt-5 w-full rounded-lg bg-azure py-2.5 text-[13.5px] font-bold text-white
-              shadow-[0_2px_8px_rgba(24,104,240,.28)] hover:brightness-105 transition"
+            className="mt-6 w-full rounded-xl bg-[#c2410c] py-3 text-[14px] font-extrabold text-white
+              shadow-[0_4px_14px_rgba(194,65,12,0.28)] hover:bg-[#9a3412] hover:shadow-[0_6px_18px_rgba(194,65,12,0.34)]
+              active:scale-[0.99] transition-all cursor-pointer"
           >
             입장
           </button>

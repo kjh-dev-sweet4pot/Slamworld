@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'OWM × 브랜드슬램 인플루언서 리포트',
+  title: 'SLAM 인플루언서 리포트 v1.0.0',
   description: '캠페인 성과 대시보드',
 }
 
