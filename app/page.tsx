@@ -13,10 +13,12 @@ import CompositionSection from '@/components/v2/CompositionSection'
 import FormatAnalysisSection from '@/components/v2/FormatAnalysisSection'
 import PopularContentSection from '@/components/v2/PopularContentSection'
 import ReportPrintV2 from '@/components/v2/ReportPrintV2'
-import SectionPeriodScope from '@/components/v2/SectionPeriodScope'
+import SectionPeriodScope, { GlobalPeriodContext } from '@/components/v2/SectionPeriodScope'
 import ExecutiveSummarySection from '@/components/v2/ExecutiveSummarySection'
 import UploadGallerySection from '@/components/v2/UploadGallerySection'
 import ChannelSummaryCard from '@/components/v2/ChannelSummaryCard'
+import PipelineCountCard from '@/components/v2/PipelineCountCard'
+import ProductAnalysisSection from '@/components/v2/ProductAnalysisSection'
 import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
 import type { Content } from '@/lib/types'
 import {
@@ -138,7 +140,8 @@ function DashboardInner() {
   return (
     <>
       <div className="report-screen font-sans min-h-screen pb-16 bg-gradient-to-b from-[#fdf6e9] via-[#fbeed6] via-[38%] via-[#f6e3bf] via-[62%] to-[#f2dcb2] text-[#1a1d2e]">
-      {/* ── 헤더 ── */}
+      {/* ── 헤더 + 기간 내비 (스크롤해도 상단 고정) ── */}
+      <div className="sticky top-0 z-50 print:static">
       <HeaderV2
         collectedLabel={collectedLabel}
         partnerBrand={partnerBrand}
@@ -149,12 +152,15 @@ function DashboardInner() {
       />
 
       {/* ── 기간 내비: 화살표 월간 전환 + 전체/월별 토글 (필탭 제거) ── */}
-      <PeriodNavV2
-        mode={periodMode}
-        onModeChange={setPeriodMode}
-        currentMonth={currentMonth}
-        onMonthChange={setCurrentMonth}
-      />
+      <div className="bg-[#fdf6e9]/90 backdrop-blur border-b border-[#f0e6d2]">
+        <PeriodNavV2
+          mode={periodMode}
+          onModeChange={setPeriodMode}
+          currentMonth={currentMonth}
+          onMonthChange={setCurrentMonth}
+        />
+      </div>
+      </div>
 
       {/* B2B 회원사 또는 세일즈 권한 시 예산 정보 (토글 가능) */}
       {(showSales || partnerBrand) && (
@@ -184,6 +190,7 @@ function DashboardInner() {
       )}
 
       {/* ── 본문 영역 (max-width: 1880px) ── */}
+      <GlobalPeriodContext.Provider value={{ mode: periodMode, month: currentMonth }}>
       <main className="max-w-[1880px] mx-auto px-4 sm:px-7 mt-2">
         {/* 선택된 지점 필터 해제 바 */}
         {selectedLocation && (
@@ -204,12 +211,13 @@ function DashboardInner() {
           contents={filteredContents}
           onSelectInfluencer={handleSelectInfluencer}
           onSelectLocation={handleSelectLocation}
+          partnerBrand={partnerBrand}
         >
           {/* 핵심 성과 요약 — KPI 아래 빈 공간을 채우도록 중앙 영역에 배치 */}
           <ExecutiveSummarySection contents={locationContents} showRoi={!partnerBrand} />
         </LocationVisitSection>
 
-        {/* ══ 업로드 인플루언서 | 채널별 성과 ══ */}
+        {/* ══ 업로드 인플루언서 | 인플루언서 현황 + 채널별 성과 ══ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <UploadGallerySection
             contents={filteredContents}
@@ -217,8 +225,16 @@ function DashboardInner() {
             onLocationChange={setGalleryLocation}
             onSelectInfluencer={handleSelectInfluencer}
           />
-          <ChannelSummaryCard contents={filteredContents} />
+          <div className="min-w-0">
+            <PipelineCountCard contents={scopedContents} partnerBrand={partnerBrand} />
+            <ChannelSummaryCard contents={filteredContents} />
+          </div>
         </div>
+
+        {/* ══ 인기 상품 분석 ══ */}
+        <SectionPeriodScope contents={locationContents}>
+          {list => <ProductAnalysisSection contents={list} />}
+        </SectionPeriodScope>
 
 
         {/* ══ §2 실행 성과 요약 ══ */}
@@ -261,6 +277,7 @@ function DashboardInner() {
           </SectionPeriodScope>
         </div>
       </main>
+      </GlobalPeriodContext.Provider>
     </div>
 
     {/* ── PDF 인쇄 전용 핵심 요약 보고서 (화면에는 숨김, 인쇄 시 자동 표시) ── */}
