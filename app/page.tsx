@@ -43,7 +43,7 @@ function DashboardInner() {
   const { showSales, logout, partnerBrand } = useAccess()
   const [contents, setContents] = useState<Content[]>([])
   const [, setLoading] = useState(true)
-  const [periodMode, setPeriodMode] = useState<PeriodMode>('monthly')
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('all')
   const [currentMonth, setCurrentMonth] = useState<string>(AVAILABLE_MONTHS[AVAILABLE_MONTHS.length - 1])
   const [selectedInfluencer, setSelectedInfluencer] = useState<string | null>('pada_heli')
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)

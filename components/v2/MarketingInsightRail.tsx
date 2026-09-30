@@ -24,7 +24,7 @@ type Links = Record<string, { content: string | null; profile: string | null }>
 
 /** 문장 속 인플루언서 이름 → 콘텐츠 링크 + 프로필 링크 */
 function LinkedText({ text, links }: { text: string; links: Links }) {
-  const names = Object.keys(links).filter(n => n.length >= 2 && text.includes(n)).sort((a, b) => b.length - a.length)
+  const names = Object.keys(links).filter(n => n.length >= 2 && !/^[\d\s.,]+$/.test(n) && text.includes(n)).sort((a, b) => b.length - a.length)
   if (!names.length) return <>{text}</>
   const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const parts = text.split(new RegExp(`(${escaped.join('|')})`, 'g'))

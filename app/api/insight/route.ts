@@ -98,10 +98,8 @@ async function buildContext(brand: string | null) {
 async function ask(context: Record<string, unknown>, prompt: string): Promise<string> {
   const client = new Anthropic()
   const response = await client.beta.messages.create({
-    model: 'claude-opus-5',
+    model: 'claude-sonnet-5',
     max_tokens: 4000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
     output_config: { effort: 'low' },
     system: SYSTEM,
     messages: [
