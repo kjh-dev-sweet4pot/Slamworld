@@ -6,6 +6,21 @@ import { V2_LOC_COLORS, V2_ORDERED_LOCATIONS, V2_MONTHS, formatViews, normalizeL
 import { contentViews } from '@/lib/content-views'
 import { useChartTooltip } from '@/components/v2/ChartTooltip'
 import type { SectionPeriod } from '@/components/v2/SectionPeriodScope'
+import { contentPeriodDate, isSeedingLocation } from '@/lib/posted-date'
+
+/** 운영 지점(고정 순서) + 시딩(국내·기자단 등, 이름순) */
+function trendLocations(contents: Content[]): string[] {
+  const set = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
+  const seeding = [...set].filter(isSeedingLocation).sort()
+  return [...V2_ORDERED_LOCATIONS.filter(l => set.has(l)), ...seeding]
+}
+
+const SEEDING_COLORS = ['#f59e0b', '#fb923c', '#fbbf24', '#d97706']
+function locColor(loc: string): string {
+  if (V2_LOC_COLORS[loc]) return V2_LOC_COLORS[loc]
+  if (isSeedingLocation(loc)) return SEEDING_COLORS[[...loc].reduce((h, ch) => h + ch.charCodeAt(0), 0) % SEEDING_COLORS.length]
+  return '#6b6558'
+}
 
 interface TrendAnalysisSectionProps {
   contents?: Content[]
@@ -30,13 +45,12 @@ export default function TrendAnalysisSection({
 
   // 실제 데이터가 있는 지점들 순서 정렬
   const matrixData = useMemo(() => {
-    const locSet = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
-    const locations = V2_ORDERED_LOCATIONS.filter(l => locSet.has(l))
+    const locations = trendLocations(contents)
 
     return locations.map(locName => {
       const locRows = contents.filter(c => normalizeLocationName(c.location) === locName)
       const counts = buckets.map(b => {
-        return locRows.filter(c => b.match(c.visit_date)).length
+        return locRows.filter(c => b.match(contentPeriodDate(c))).length
       })
 
       const total = counts.reduce((a, b) => a + b, 0)
@@ -47,8 +61,8 @@ export default function TrendAnalysisSection({
       const maxMonthIdx = counts.indexOf(maxCount)
 
       return {
-        name: locName.replace('점', ''),
-        color: V2_LOC_COLORS[locName] || '#6b6558',
+        name: locName.replace(/점$/, ''),
+        color: locColor(locName),
         views: locRows.reduce((s, c) => s + contentViews(c), 0),
         counts,
         maxMonthIdx: maxCount > 0 ? maxMonthIdx : -1,
@@ -60,8 +74,7 @@ export default function TrendAnalysisSection({
 
   // 지점별 콘텐츠 효율
   const efficiencyData = useMemo(() => {
-    const locSet = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
-    const locations = V2_ORDERED_LOCATIONS.filter(l => locSet.has(l))
+    const locations = trendLocations(contents)
 
     const list = locations.map(locName => {
       const locRows = contents.filter(c => normalizeLocationName(c.location) === locName)
@@ -70,8 +83,8 @@ export default function TrendAnalysisSection({
       const avgViews = count > 0 ? Math.round(views / count) : 0
 
       return {
-        name: locName.replace('점', ''),
-        color: V2_LOC_COLORS[locName] || '#6b6558',
+        name: locName.replace(/점$/, ''),
+        color: locColor(locName),
         avgViews,
         count,
         views,
