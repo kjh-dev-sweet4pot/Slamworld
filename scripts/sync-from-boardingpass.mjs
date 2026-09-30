@@ -139,9 +139,10 @@ export function chooseVisitDate(visit, published, url) {
 }
 
 async function fillPlaceholderPostedDates(rows) {
-  const pending = rows.filter(row => row.visit_date === PLACEHOLDER_VISIT && /xhslink\.(com|cn)/i.test(row.upload_url || ''))
+  // 방문일이 없는 건(시딩·기자단 등)과 placeholder 는 단축링크를 풀어 게시일로 채운다
+  const pending = rows.filter(row => (!row.visit_date || row.visit_date === PLACEHOLDER_VISIT) && !postedDayFromUrl(row.upload_url))
   await mapPool(pending, 4, async row => {
-    const posted = await resolveXhsShort(row.upload_url)
+    const posted = await resolveXhsShort(row.upload_url) || await resolveTiktokShort(row.upload_url)
     if (posted) row.visit_date = posted
   })
 }
@@ -289,12 +290,34 @@ export function branchLocation(name) {
   return t
 }
 
+/** 공동 배정 건의 상품명도 누적한다. 상품명에 콤마가 있을 수 있어 ' | ' 로 구분 */
+export function mergeProduct(row, product) {
+  if (!product) return
+  const parts = String(row.product || '').split(' | ').map(s => s.trim()).filter(Boolean)
+  if (parts.includes(product)) return
+  row.product = [...parts, product].join(' | ')
+}
+
 /** 같은 링크(콘텐츠)가 여러 회원사에 공동 배정된 협업 건 — 회원사명을 콤마로 누적한다. */
 export function mergeBrand(row, brand) {
   if (!brand) return
   const parts = String(row.brands || '').split(/[,，、]/).map(s => s.trim()).filter(Boolean)
   if (parts.includes(brand)) return
   row.brands = [...parts, brand].join(',')
+}
+
+/** 조회수 역산 기준 참여율(ER). 조회수 = (좋아요+저장+댓글+공유) / ER */
+export const VIEW_ER = 0.012
+const ESTIMATED_CHANNELS = new Set(['샤오홍슈', '도우인'])
+
+export function estimateViewsFromEr({ likes, saves, comments, shares }) {
+  const total = (likes || 0) + (saves || 0) + (comments || 0) + (shares || 0)
+  if (total <= 0) return null
+  return {
+    views_estimated: Math.round(total / VIEW_ER),
+    views_est_low: Math.round(total / (VIEW_ER * 1.2)),
+    views_est_high: Math.round(total / (VIEW_ER * 0.8)),
+  }
 }
 
 export function toContent(link) {
@@ -307,7 +330,13 @@ export function toContent(link) {
   const influencer = link.influencers || {}
   const name = (influencer.name || '').trim()
   if (!name) return null
-  const views = posInt(link.views)
+  const channel = channelOf(link.platform, href)
+  const likes = posInt(link.likes)
+  const saves = posInt(link.saves)
+  const comments = posInt(link.comments)
+  // 샤오홍슈·도우인은 조회수 비공개 — 보딩패스 값도 추정치라 버리고 ER 로 역산한다
+  const measured = ESTIMATED_CHANNELS.has(channel) ? null : posInt(link.views)
+  const est = measured ? null : estimateViewsFromEr({ likes, saves, comments, shares: posInt(link.shares) })
   return {
     key,
     photoPath: avatarObjectPath(influencer.profile_image_path),
@@ -318,17 +347,23 @@ export function toContent(link) {
       influencer_name: name,
       sns_id: influencer.instagram_handle || null,
       profile_url: influencer.sns_url || null,
-      channel: channelOf(link.platform, href),
+      channel,
       follower_count: posInt(influencer.followers),
       visit_date: chooseVisitDate(alloc.visit_date, link.published_at, href),
-      product: alloc.products?.name || null,
+      // 회사 미지정 공용 상품(예: 'OWM 시딩')은 배정 회사 이름으로 — 화면에서 그 회사 제품으로 묶인다
+      product: alloc.products?.name
+        ? (alloc.products.company_id || !alloc.companies?.name ? alloc.products.name : alloc.companies.name)
+        : null,
       upload_url: href,
       publish_status: status,
-      views,
-      likes: posInt(link.likes),
-      saves: posInt(link.saves),
-      comments: posInt(link.comments),
-      views_source: views ? 'measured' : 'none',
+      views: measured,
+      likes,
+      saves,
+      comments,
+      views_estimated: est?.views_estimated ?? null,
+      views_est_low: est?.views_est_low ?? null,
+      views_est_high: est?.views_est_high ?? null,
+      views_source: measured ? 'measured' : est ? 'estimated' : 'none',
       metrics_updated_at: link.metrics_collected_at || null,
     },
   }
@@ -352,7 +387,7 @@ const LINK_SELECT = [
   'url', 'publish_url', 'platform', 'content_status', 'status',
   'published_at', 'views', 'likes', 'comments', 'saves', 'metrics_collected_at',
   'influencers(name,sns_url,instagram_handle,followers,profile_image_path)',
-  'allocations(visit_date,stores(name),companies(name,login_id),campaigns(name),products(name))',
+  'allocations(visit_date,stores(name),companies(name,login_id),campaigns(name),products(name,company_id))',
 ].join(',')
 
 const COMPANY_SELECT = 'id,name,login_id,aliases,is_active,contract_stage,budget_amount,spent_amount,first_meet_on,planned_start_on,planned_end_on'
@@ -564,9 +599,12 @@ async function copyBoardingpassPhotos(bpUrl, bpKey, swUrl, swKey, jobs, { writeU
 function patchFrom(row, existingCampaign) {
   const patch = { ...row }
   if (patch.campaign === '미지정') patch.campaign = existingCampaign || '미지정'
+  const clearViews = patch.views_source === 'estimated'
   for (const k of ['views', 'likes', 'saves', 'comments', 'follower_count', 'metrics_updated_at', 'brands', 'product', 'sns_id', 'profile_url', 'visit_date', 'posted_date']) {
     if (patch[k] == null) delete patch[k]
   }
+  if (clearViews) patch.views = null
+  if (patch.views_source === 'none') delete patch.views_source
   return patch
 }
 
@@ -617,6 +655,7 @@ export async function runBoardingpassSync({ apply = false } = {}) {
     if (prev) {
       if (item.photoPath && !prev.photoPath) prev.photoPath = item.photoPath
       mergeBrand(prev.row, item.row.brands)
+      mergeProduct(prev.row, item.row.product)
       skipped += 1
       continue
     }

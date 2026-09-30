@@ -43,3 +43,8 @@ export function contentPeriodDate(c: Pick<Content, 'upload_url' | 'visit_date'> 
   if (c.upload_url) return contentPostedDate(c) || c.visit_date
   return c.visit_date
 }
+
+/** 시딩(배송·기자단) 여부 — 보딩패스 지점명이 '기자단(시딩)', '국내시딩(배송)' 등 */
+export function isSeedingLocation(location: string | null | undefined): boolean {
+  return /시딩/.test(location || '')
+}

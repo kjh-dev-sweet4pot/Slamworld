@@ -28,7 +28,8 @@ const R_ENG: Record<XhsContentType, { low: number; mid: number; high: number }> 
 }
 
 // ponytail: 명동 캘리브 n=4 역산 — interaction/views ≈ 2.3%. guide 7%는 과소추정·순서 뒤집힘 유발
-const R_ENG_CALIBRATED = { low: 0.020, mid: 0.023, high: 0.026 }
+// 운영 기준 ER 1.2% (scripts/sync-from-boardingpass.mjs VIEW_ER 와 동일). low/high 는 ±20%
+const R_ENG_CALIBRATED = { low: 0.0096, mid: 0.012, high: 0.0144 }
 
 const RATES = {
   like: 0.025,
@@ -56,7 +57,8 @@ function round(v: number): number {
 
 function rEngBand(type: XhsContentType, hasShares: boolean) {
   const band = type === 'guide' ? R_ENG_CALIBRATED : R_ENG[type]
-  const adj = hasShares ? 0 : SHARE_MISSING_ADJ
+  // 운영 기준 ER 은 공유 유무와 무관하게 고정
+  const adj = hasShares || type === 'guide' ? 0 : SHARE_MISSING_ADJ
   return {
     low: band.low - adj,
     mid: band.mid - adj,
