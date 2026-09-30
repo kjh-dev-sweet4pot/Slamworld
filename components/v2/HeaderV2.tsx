@@ -24,7 +24,7 @@ export default function HeaderV2({
           <span className="text-lg sm:text-[20px] font-extrabold tracking-tight text-[#1a1d2e]">
             {partnerBrand ? `${partnerBrand} 인플루언서 리포트` : 'SLAM 인플루언서 리포트'}
           </span>
-          <span className="text-[11px] font-bold text-[#2f5fd8] bg-[#eef3ff] px-2.5 py-1 rounded-[9px]">
+          <span className="text-[11px] font-bold text-[#9a3412] bg-[#ffedd5] px-2.5 py-1 rounded-[9px]">
             v1.0.0
           </span>
         </div>

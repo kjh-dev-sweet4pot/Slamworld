@@ -125,6 +125,7 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
         <span className="text-[14px] font-extrabold text-[#1a1d2e]">최근 30일 마케팅 요약</span>
+        <span className="text-[9.5px] font-extrabold tracking-wider text-[#7c3aed] bg-[#f3e8ff] px-1.5 py-0.5 rounded-[6px]">BETA</span>
         <button
           type="button"
           onClick={() => load(true)}
