@@ -135,7 +135,7 @@ export default function CompositionSection({
 
   return (
     <section className="mb-8">
-      <div className="text-[12.5px] font-bold tracking-[0.14em] text-[#a89a80] pt-6 pb-2.5 px-1">
+      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-6 pb-2.5 px-1">
         구성비 분석
       </div>
 

@@ -110,9 +110,9 @@ export default function PopularContentSection({
 
   return (
     <section className="mb-10">
-      <div className="text-[12.5px] font-bold tracking-[0.14em] text-[#a89a80] pt-6 pb-2.5 px-1">
+      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-6 pb-2.5 px-1">
         인기 콘텐츠 분석{' '}
-        <span className="font-semibold tracking-normal text-[#b5ab96]">
+        <span className="text-[13px] font-semibold tracking-normal text-[#9a9486]">
           ( ※ 콘텐츠 클릭 시 상세 표시 )
         </span>
       </div>

@@ -108,159 +108,66 @@ export default function ExecutionSummarySection({
   }, [contents])
 
   return (
-    <section className="mb-8">
-      <div className="text-[12.5px] font-bold tracking-[0.14em] text-[#a89a80] pt-6 pb-2.5 px-1">
+    <section className="mb-6">
+      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-4 pb-2.5 px-1">
         실행 성과 요약
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* 2. 실행 신뢰도 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
-          <div className="flex items-center gap-2">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
-              ✅ 실행 신뢰도
+      {/* 실행 신뢰도 + 구매의향을 한 박스에 압축 */}
+      <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5 grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-0 md:divide-x md:divide-[#f4efe3]">
+        {/* 실행 신뢰도 */}
+        <div className="md:pr-5">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[13.5px] font-extrabold text-[#1a1d2e]">✅ 실행 신뢰도</span>
+            <span className="text-[11px] text-[#9a9486]">약속 대비 발행</span>
+            <span className="ml-auto text-[26px] font-extrabold tracking-tight text-[#15803d] leading-none">
+              {metrics.publishRate}<span className="text-[14px] font-bold ml-0.5">%</span>
             </span>
-            <span className="ml-auto text-[10.5px] font-bold text-[#166534] bg-[#dcfce7] rounded-[8px] px-2 py-1 whitespace-nowrap">
-              누적 집행
-            </span>
           </div>
-          <div className="text-[11px] text-[#9a9486] mt-1.5">
-            약속한 콘텐츠가 실제로 발행된 비율
+          <div className="h-2.5 rounded-full bg-[#f4efe3] overflow-hidden mt-2.5">
+            <span className="block h-full bg-[#22c55e] rounded-full transition-all" style={{ width: `${metrics.publishRate}%` }} />
           </div>
-
-          <div className="flex items-end gap-3 mt-3.5">
-            <div>
-              <div className="text-[34px] sm:text-[38px] font-extrabold tracking-tight text-[#15803d]">
-                {metrics.publishRate}
-                <span className="text-[17px] font-bold ml-0.5">%</span>
-              </div>
-              <div className="text-[11.5px] text-[#6b6558] mt-1.5 whitespace-nowrap">
-                {metrics.totalRows}건 중 {metrics.uploaded}건 발행
-              </div>
-            </div>
-            <div className="ml-auto text-right">
-              <div className="text-[11px] text-[#9a9486]">미발행</div>
-              <div className="text-[20px] font-extrabold text-[#1a1d2e] mt-1">
-                {metrics.unreleased}
-                <span className="text-[12px] font-bold text-[#9a9486] ml-0.5">건</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-3.5 rounded-full bg-[#f4efe3] overflow-hidden mt-3.5 flex">
-            <span
-              className="block h-full bg-[#22c55e] rounded-full transition-all"
-              style={{ width: `${metrics.publishRate}%` }}
-            />
-          </div>
-
-          <div className="h-px bg-[#f4efe3] my-3.5" />
-
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-[#fbf9f4] rounded-xl p-2.5">
-              <div className="text-[11px] text-[#9a9486]">현장 진행일</div>
-              <div className="text-[20px] sm:text-[22px] font-extrabold text-[#1a1d2e] mt-1.5">
-                {metrics.activeDays}<span className="text-[12px] font-bold text-[#9a9486] ml-0.5">일</span>
-              </div>
-              <div className="text-[10px] text-[#9a9486] mt-1 truncate">실집행 기준</div>
-            </div>
-            <div className="bg-[#fbf9f4] rounded-xl p-2.5">
-              <div className="text-[11px] text-[#9a9486]">방문 응대</div>
-              <div className="text-[20px] sm:text-[22px] font-extrabold text-[#1a1d2e] mt-1.5">
-                {metrics.uniqueInfluencers}<span className="text-[12px] font-bold text-[#9a9486] ml-0.5">명</span>
-              </div>
-              <div className="text-[10px] text-[#9a9486] mt-1 truncate">{metrics.locationsCount}지점 {metrics.campaignsCount}캠페인</div>
-            </div>
-            <div className="bg-[#fbf9f4] rounded-xl p-2.5">
-              <div className="text-[11px] text-[#9a9486]">최다 집행일</div>
-              <div className="text-[20px] sm:text-[22px] font-extrabold text-[#1a1d2e] mt-1.5">
-                {metrics.maxDateCount}<span className="text-[12px] font-bold text-[#9a9486] ml-0.5">건</span>
-              </div>
-              <div className="text-[10px] text-[#9a9486] mt-1 truncate">{metrics.maxDateLabel}</div>
-            </div>
-          </div>
-
-          <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl p-3 mt-3.5">
-            <p className="text-[11px] leading-relaxed text-[#166534]">
-              {metrics.activeDays > 0 ? (
-                <>
-                  {metrics.activeDays}일 현장 진행으로 <b>하루 평균 {metrics.avgDailyCount}건</b>을 집행했고, 최다 집행일에는 하루 {metrics.maxDateCount}건을 소화했습니다.
-                </>
-              ) : (
-                '집행 대기 중입니다.'
-              )}
-            </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-[11.5px] text-[#6b6558]">
+            <span>{metrics.totalRows}건 중 <b className="text-[#1a1d2e]">{metrics.uploaded}건</b> 발행</span>
+            <span>미발행 <b className="text-[#1a1d2e]">{metrics.unreleased}건</b></span>
+            <span>현장 <b className="text-[#1a1d2e]">{metrics.activeDays}일</b></span>
+            <span>응대 <b className="text-[#1a1d2e]">{metrics.uniqueInfluencers}명</b></span>
+            <span>최다 <b className="text-[#1a1d2e]">{metrics.maxDateCount}건</b> ({metrics.maxDateLabel})</span>
           </div>
         </div>
 
-        {/* 3. 구매의향 지표 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
-          <div className="flex items-center gap-2">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
-              🔖 구매의향 지표
+        {/* 구매의향 지표 */}
+        <div className="md:pl-5">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[13.5px] font-extrabold text-[#1a1d2e]">🔖 구매의향</span>
+            <span className="text-[11px] text-[#9a9486]">저장 수</span>
+            <span className="ml-auto text-[26px] font-extrabold tracking-tight text-[#1d4ed8] leading-none">
+              {metrics.saves.toLocaleString()}
             </span>
-            <span className="ml-auto text-[10.5px] font-bold text-[#1e40af] bg-[#dbeafe] rounded-[8px] px-2 py-1 whitespace-nowrap">
-              저장 기준
-            </span>
           </div>
-          <div className="text-[11px] text-[#9a9486] mt-1.5">
-            저장은 &quot;나중에 사러 오겠다&quot;는 신호입니다
-          </div>
-
-          <div className="flex items-end gap-3 mt-3.5">
-            <div>
-              <div className="text-[34px] sm:text-[38px] font-extrabold tracking-tight text-[#1d4ed8]">
-                {metrics.saves.toLocaleString()}
-              </div>
-              <div className="text-[11.5px] text-[#6b6558] mt-1.5 whitespace-nowrap">
-                누적 저장 수
-              </div>
-            </div>
-            <div className="ml-auto text-right">
-              <div className="text-[11px] text-[#9a9486]">저장 발생 콘텐츠</div>
-              <div className="text-[20px] font-extrabold text-[#1a1d2e] mt-1">
-                {metrics.contentsWithSaves}<span className="text-[12px] font-bold text-[#9a9486] ml-1">건 · {metrics.savesRate}%</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-[#f4efe3] my-3.5" />
-          <div className="text-[11px] font-semibold text-[#9a9486]">지점별 저장 수</div>
-
-          <div className="flex flex-col gap-2.5 mt-2.5">
+          <div className="flex flex-col gap-1.5 mt-2.5">
             {metrics.locSaves.length === 0 ? (
-              <div className="text-center py-4 text-[12px] text-[#9a9486]">저장 데이터가 없습니다.</div>
+              <div className="text-[11.5px] text-[#9a9486]">저장 데이터가 없습니다.</div>
             ) : (
-              metrics.locSaves.slice(0, 5).map(item => {
-                const widthPct = metrics.maxLocSaves > 0 ? Math.max(3, Math.round((item.saves / metrics.maxLocSaves) * 100)) : 0
-                return (
-                  <div key={item.name} className="flex items-center gap-2.5">
-                    <span className="w-12 text-[12px] font-bold text-[#1a1d2e]">{item.name}</span>
-                    <span className="flex-1 h-3 rounded-full bg-[#f4efe3] overflow-hidden">
-                      <span
-                        className="block h-full rounded-full transition-all"
-                        style={{ width: `${widthPct}%`, backgroundColor: item.color }}
-                      />
-                    </span>
-                    <span className="w-14 text-right text-[12.5px] font-extrabold text-[#1a1d2e]">
-                      {item.saves.toLocaleString()}
-                    </span>
-                  </div>
-                )
-              })
+              metrics.locSaves.slice(0, 3).map(item => (
+                <div key={item.name} className="flex items-center gap-2.5">
+                  <span className="w-10 text-[11.5px] font-bold text-[#1a1d2e]">{item.name}</span>
+                  <span className="flex-1 h-2.5 rounded-full bg-[#f4efe3] overflow-hidden">
+                    <span
+                      className="block h-full rounded-full transition-all"
+                      style={{
+                        width: `${metrics.maxLocSaves > 0 ? Math.max(3, Math.round((item.saves / metrics.maxLocSaves) * 100)) : 0}%`,
+                        backgroundColor: item.color,
+                      }}
+                    />
+                  </span>
+                  <span className="w-12 text-right text-[12px] font-extrabold text-[#1a1d2e]">{item.saves.toLocaleString()}</span>
+                </div>
+              ))
             )}
           </div>
-
-          <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-xl p-3 mt-3.5">
-            <p className="text-[11px] leading-relaxed text-[#1e40af]">
-              {metrics.topLocSave && metrics.topLocSave.saves > 0 ? (
-                <>
-                  <b>{metrics.topLocSave.name}점</b>에서 총 저장 <b>{metrics.topLocSave.saves.toLocaleString()}건</b>을 기록하며 높은 구매 전환 의향을 나타냈습니다.
-                </>
-              ) : (
-                '저장 반응 데이터를 수집 중입니다.'
-              )}
-            </p>
+          <div className="text-[11.5px] text-[#6b6558] mt-2.5">
+            저장 발생 콘텐츠 <b className="text-[#1a1d2e]">{metrics.contentsWithSaves}건</b> · {metrics.savesRate}%
           </div>
         </div>
       </div>

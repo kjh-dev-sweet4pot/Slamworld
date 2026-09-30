@@ -34,7 +34,7 @@ export default function ChannelSummaryCard({ contents }: { contents: Content[] }
 
   return (
     <section className="mb-8">
-      <div className="text-[12.5px] font-bold tracking-[0.14em] text-[#a89a80] pt-3 pb-2.5 px-1">
+      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-3 pb-2.5 px-1">
         채널별 성과
       </div>
       <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">

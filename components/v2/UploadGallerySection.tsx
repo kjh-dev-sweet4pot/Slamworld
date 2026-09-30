@@ -58,14 +58,17 @@ export default function UploadGallerySection({
   onSelectInfluencer,
 }: UploadGallerySectionProps) {
   const [channel, setChannel] = useState(ALL)
-  const [sort, setSort] = useState<SortMode>('recent')
+  const [sort, setSort] = useState<SortMode>('views')
   const [count, setCount] = useState(PAGE)
 
   const uploaded = useMemo(() => contents.filter(c => c.upload_url), [contents])
 
   const locOptions = useMemo(() => {
-    const set = new Set(uploaded.map(c => normalizeLocationName(c.location)))
-    return V2_ORDERED_LOCATIONS.filter(l => set.has(l))
+    const set = new Set(uploaded.map(c => normalizeLocationName(c.location)).filter(Boolean))
+    const ordered = V2_ORDERED_LOCATIONS.filter(l => set.has(l))
+    // 시딩(기자단·배송) 등 지점 목록에 없는 구분은 뒤에 붙인다
+    const rest = [...set].filter(l => !ordered.includes(l) && l !== '미지정').sort()
+    return [...ordered, ...rest]
   }, [uploaded])
 
   const channelOptions = useMemo(
@@ -95,9 +98,9 @@ export default function UploadGallerySection({
 
   return (
     <section id="section-uploads" className="mb-8 scroll-mt-24 min-w-0">
-      <div className="text-[12.5px] font-bold tracking-[0.14em] text-[#a89a80] pt-2 pb-2.5 px-1">
+      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-2 pb-2.5 px-1">
         업로드 인플루언서{' '}
-        <span className="font-semibold tracking-normal text-[#b5ab96]">( {rows.length}건 )</span>
+        <span className="text-[13px] font-semibold tracking-normal text-[#9a9486]">( {rows.length}건 )</span>
       </div>
 
       <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
@@ -122,7 +125,7 @@ export default function UploadGallerySection({
               ))}
             </select>
             <div className="flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
-              {(['recent', 'views'] as const).map(m => (
+              {(['views', 'recent'] as const).map(m => (
                 <button
                   key={m}
                   type="button"

@@ -114,9 +114,9 @@ export default function ExecutiveSummarySection({ contents = [], showRoi = false
 
   return (
     <section>
-      <div className="text-[12.5px] font-bold tracking-[0.14em] text-[#a89a80] pt-3 pb-2.5 px-1">
+      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-3 pb-2.5 px-1">
         핵심 성과 요약{' '}
-        <span className="font-semibold tracking-normal text-[#b5ab96]">
+        <span className="text-[13px] font-semibold tracking-normal text-[#9a9486]">
           ( 누적 · 증감은 {data.curLabel} vs {data.prevLabel} )
         </span>
       </div>
