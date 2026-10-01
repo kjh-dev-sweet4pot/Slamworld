@@ -6,7 +6,7 @@ import { V2_MONTHS, formatViews } from '@/lib/v2-analytics'
 import { aggregateEmv, contentEmv, contentViews, contentViewsDisplay } from '@/lib/content-views'
 import { BRAND_BUDGETS } from '@/lib/brand-budget'
 import { canonicalBrand, contentMatchesBrand } from '@/lib/brand-content'
-import { contentPeriodDate } from '@/lib/posted-date'
+import { contentPeriodDate, inPerformanceMonth } from '@/lib/posted-date'
 
 interface ExecutiveSummarySectionProps {
   contents?: Content[]
@@ -46,11 +46,11 @@ export default function ExecutiveSummarySection({ contents = [], showRoi = false
     const total = monthStats(contents)
 
     // 데이터가 있는 마지막 달 vs 그 전달
-    const monthsWithData = V2_MONTHS.filter(m => contents.some(c => contentPeriodDate(c)?.startsWith(m)))
+    const monthsWithData = V2_MONTHS.filter(m => contents.some(c => inPerformanceMonth(contentPeriodDate(c), m)))
     const curMonth = monthsWithData[monthsWithData.length - 1] ?? V2_MONTHS[V2_MONTHS.length - 1]
     const prevMonth = V2_MONTHS[V2_MONTHS.indexOf(curMonth) - 1]
-    const cur = monthStats(contents.filter(c => contentPeriodDate(c)?.startsWith(curMonth)))
-    const prev = monthStats(prevMonth ? contents.filter(c => contentPeriodDate(c)?.startsWith(prevMonth)) : [])
+    const cur = monthStats(contents.filter(c => inPerformanceMonth(contentPeriodDate(c), curMonth)))
+    const prev = monthStats(prevMonth ? contents.filter(c => inPerformanceMonth(contentPeriodDate(c), prevMonth)) : [])
 
     // ROI — 브랜드별 기 소진 예산 합 vs 해당 브랜드 전체 기간 콘텐츠.
     // 다브랜드 콘텐츠는 태그된 브랜드 수로 N분의 1 배분 (합계 중복 없음)

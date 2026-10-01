@@ -14,20 +14,20 @@ type Links = Record<string, { content: string | null; profile: string | null }>
 const summaryCache = new Map<string, { at: number; text: string; links: Links }>()
 
 const SYSTEM = `너는 인플루언서 마케팅 대시보드(SLAM · OWM 명동점 등)의 분석 담당이다.
-주어진 JSON 은 최근 30일 집행 데이터다. 데이터에 없는 사실은 만들지 말고, 모르면 모른다고 답한다.
+주어진 JSON 은 집행 데이터다(기간은 period 참고). 데이터에 없는 사실은 만들지 말고, 모르면 모른다고 답한다.
 절대 말하지 말 것: 조회수를 어떻게 산출·추정·역산했는지(참여율·ER·추정치 여부 포함), 마진·원가·단가·비용·예산·수익 등 돈과 관련된 내용. 이런 질문을 받으면 "해당 정보는 제공하지 않습니다"라고만 답한다.
 데이터 품질·집계 방식·중복 집계 가능성·누락·정합성 등 내부 작업이나 데이터 처리 과정은 절대 언급하지 않는다. 읽는 사람은 회원사(고객)이므로 성과만 긍정적이고 담백하게 전달한다.
 조회수는 그냥 조회수로 말한다. 인플루언서를 언급할 때는 데이터의 influencer 이름을 그대로 쓴다.
 한국어로, 숫자는 천 단위 콤마, 짧고 구체적으로. 마크다운(굵게·제목·표·링크) 없이 평문으로.`
 
-type Row = Pick<Content, 'influencer_name' | 'channel' | 'location' | 'brands' | 'upload_url' | 'profile_url' | 'visit_date' | 'views' | 'views_estimated' | 'likes' | 'saves' | 'comments' | 'publish_status'> & { posted_date?: string | null }
+type Row = Pick<Content, 'influencer_name' | 'channel' | 'location' | 'brands' | 'upload_url' | 'profile_url' | 'visit_date' | 'views' | 'views_estimated' | 'likes' | 'saves' | 'comments' | 'publish_status' | 'product'> & { posted_date?: string | null }
 
-/** 최근 30일 콘텐츠를 Claude 에 넘길 요약 통계로 압축 */
-async function buildContext(brand: string | null) {
+/** 콘텐츠를 Claude 에 넘길 요약 통계로 압축 — allTime 이면 전체 기간, 아니면 최근 30일 */
+async function buildContext(brand: string | null, allTime = false) {
   const supabase = createServerSupabase()
   const { data, error } = await supabase
     .from('contents')
-    .select('influencer_name,channel,location,brands,upload_url,profile_url,visit_date,views,views_estimated,likes,saves,comments,publish_status')
+    .select('influencer_name,channel,location,brands,upload_url,profile_url,visit_date,views,views_estimated,likes,saves,comments,publish_status,product')
     .limit(5000)
   if (error) throw new Error(error.message)
 
@@ -36,14 +36,19 @@ async function buildContext(brand: string | null) {
   const rows = ((data ?? []) as Row[]).filter(c => {
     if (brand && !contentMatchesBrand(c.brands, brand)) return false
     const d = contentPeriodDate(c)
+    if (allTime) return true
     return !!d && d >= from && d <= today
   })
   const posts = rows.filter(c => c.upload_url && c.publish_status !== '예정')
 
-  const group = (key: (c: Row) => string) => {
+  // 한 게시물에 여러 상품이 ' | ' 로 누적 — 상품별로 각각 합산
+  const productsOf = (c: Row) =>
+    [...new Set(String(c.product || '').split(' | ').map(s => s.trim()).filter(p => p && !/데모|목업|테스트|test/i.test(p)))]
+
+  const group = (key: (c: Row) => string | string[]) => {
     const m = new Map<string, { posts: number; views: number; likes: number; saves: number; comments: number }>()
-    for (const c of posts) {
-      const k = key(c) || '미지정'
+    for (const c of posts) for (const raw of [key(c)].flat()) {
+      const k = raw || '미지정'
       const g = m.get(k) ?? { posts: 0, views: 0, likes: 0, saves: 0, comments: 0 }
       g.posts += 1
       g.views += contentViews(c)
@@ -64,7 +69,7 @@ async function buildContext(brand: string | null) {
 
   return {
     links,
-    period: `${from} ~ ${today}`,
+    period: allTime ? `전체 기간 ~ ${today}` : `${from} ~ ${today}`,
     brand: brand ?? '전체',
     totals: {
       rows: rows.length,
@@ -80,6 +85,7 @@ async function buildContext(brand: string | null) {
     by_type: group(c => (isSeedingLocation(c.location) ? '시딩' : '방문')),
     by_type_channel: group(c => `${isSeedingLocation(c.location) ? '시딩' : '방문'}·${c.channel}`),
     by_location: group(c => c.location),
+    by_product: group(productsOf),
     top_posts: [...posts]
       .sort((a, b) => contentViews(b) - contentViews(a))
       .slice(0, 10)
@@ -87,6 +93,7 @@ async function buildContext(brand: string | null) {
         influencer: c.influencer_name,
         channel: c.channel,
         location: c.location,
+        products: productsOf(c),
         date: contentPeriodDate(c),
         views: contentViews(c),
         likes: c.likes ?? 0,
@@ -124,7 +131,7 @@ const SUMMARY_PROMPT = `최근 30일 마케팅 집행 내역을 요약해줘.
 
 /**
  * POST { brand?, question?, refresh? }
- * question 이 없으면 최근 30일 요약 (3시간 캐시, refresh 면 새로), 있으면 그 질문에 답한다.
+ * question 이 없으면 최근 30일 요약 (3시간 캐시, refresh 면 새로), 있으면 전체 기간 누적 데이터로 답한다.
  */
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -140,7 +147,7 @@ export async function POST(req: NextRequest) {
     if (!question && !body.refresh && cached && Date.now() - cached.at < CACHE_MS) {
       return NextResponse.json({ text: cached.text, links: cached.links, updatedAt: cached.at })
     }
-    const context = await buildContext(brand)
+    const context = await buildContext(brand, !!question)
     if (!question && context.totals.rows === 0) {
       return NextResponse.json({ text: '- 최근 30일 집행 데이터가 없습니다.', links: {}, updatedAt: Date.now() })
     }

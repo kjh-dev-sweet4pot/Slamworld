@@ -29,7 +29,7 @@ import {
 } from '@/lib/export-report'
 import { contentMatchesBrand } from '@/lib/brand-content'
 import { getFallbackContents } from '@/lib/v2-analytics'
-import { contentPeriodDate } from '@/lib/posted-date'
+import { contentPeriodDate, inPerformanceMonth } from '@/lib/posted-date'
 
 export default function Dashboard() {
   return (
@@ -92,7 +92,7 @@ function DashboardInner() {
   // 상단 기간 내비(전체/월별) — §1 지점별 방문 현황 영역에만 적용. 나머지 섹션은 각자 기간 선택기 사용
   const filteredContents = useMemo(() => {
     if (periodMode !== 'monthly') return locationContents
-    return locationContents.filter(c => contentPeriodDate(c)?.startsWith(currentMonth))
+    return locationContents.filter(c => inPerformanceMonth(contentPeriodDate(c), currentMonth))
   }, [locationContents, periodMode, currentMonth])
 
   // 고유 지점 수 (회원사 기준)

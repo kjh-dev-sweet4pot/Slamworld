@@ -1,5 +1,6 @@
 import { contentViews } from '@/lib/content-views'
 import type { Content } from '@/lib/types'
+import { performanceMonthsOf } from '@/lib/posted-date'
 
 export interface MonthlyPoint {
   month: string
@@ -12,14 +13,14 @@ export interface MonthlyPoint {
 export function aggregateByMonth(contents: Content[]): MonthlyPoint[] {
   const map = new Map<string, MonthlyPoint>()
   for (const c of contents) {
-    if (!c.visit_date) continue
-    const month = c.visit_date.slice(0, 7)
-    const row = map.get(month) ?? { month, count: 0, views: 0, likes: 0, saves: 0 }
-    row.count += 1
-    row.views += contentViews(c)
-    row.likes += c.likes ?? 0
-    row.saves += c.saves ?? 0
-    map.set(month, row)
+    for (const month of performanceMonthsOf(c.visit_date)) {
+      const row = map.get(month) ?? { month, count: 0, views: 0, likes: 0, saves: 0 }
+      row.count += 1
+      row.views += contentViews(c)
+      row.likes += c.likes ?? 0
+      row.saves += c.saves ?? 0
+      map.set(month, row)
+    }
   }
   return [...map.values()].sort((a, b) => a.month.localeCompare(b.month))
 }
@@ -57,10 +58,11 @@ export function buildLocationMonthlySeries(
   const locMap = new Map<string, Map<string, number>>()
 
   for (const row of rows) {
-    const month = row.visit_date.slice(0, 7)
-    monthSet.add(month)
     const byMonth = locMap.get(row.location) ?? new Map<string, number>()
-    byMonth.set(month, (byMonth.get(month) ?? 0) + 1)
+    for (const month of performanceMonthsOf(row.visit_date)) {
+      monthSet.add(month)
+      byMonth.set(month, (byMonth.get(month) ?? 0) + 1)
+    }
     locMap.set(row.location, byMonth)
   }
 
@@ -95,7 +97,7 @@ if (process.env.LOCATION_MONTHLY_SELF_CHECK === '1') {
     throw new Error(`months expected 2026-08,2026-09 got ${sample.months.join(',')}`)
   }
   const myeong = sample.series.find(s => s.location === '명동점')
-  if (myeong?.points[1]?.cumulative !== 2) {
-    throw new Error(`명동점 aug cumulative expected 2, got ${myeong?.points[1]?.cumulative}`)
+  if (myeong?.points[1]?.cumulative !== 3) {
+    throw new Error(`명동점 sep cumulative expected 3, got ${myeong?.points[1]?.cumulative}`)
   }
 }

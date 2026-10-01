@@ -3,7 +3,7 @@
 import { useContext, useEffect, useMemo, useState } from 'react'
 import type { Content } from '@/lib/types'
 import type { PipelineRegistration } from '@/app/api/pipeline/route'
-import { contentPeriodDate, isSeedingLocation } from '@/lib/posted-date'
+import { contentPeriodDate, inPerformanceMonth, isSeedingLocation } from '@/lib/posted-date'
 import { contentMatchesBrand } from '@/lib/brand-content'
 import { V2_MONTHS } from '@/lib/v2-analytics'
 import { GlobalPeriodContext } from '@/components/v2/SectionPeriodScope'
@@ -32,7 +32,7 @@ function inPeriod(date: string | null | undefined, period: Period): boolean {
     const from = new Date(Date.parse(today) - 29 * DAY).toISOString().slice(0, 10)
     return date >= from && date <= today
   }
-  return date.startsWith(period.slice(6))
+  return inPerformanceMonth(date, period.slice(6))
 }
 
 function periodLabel(period: Period): string {

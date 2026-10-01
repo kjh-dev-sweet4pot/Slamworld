@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import type { Content } from '@/lib/types'
 import PeriodNavV2, { AVAILABLE_MONTHS, type PeriodMode } from '@/components/v2/PeriodNavV2'
 import { v2TimeBuckets, type V2TimeBucket } from '@/lib/v2-analytics'
-import { contentPeriodDate } from '@/lib/posted-date'
+import { contentPeriodDate, inPerformanceMonth } from '@/lib/posted-date'
 
 export interface SectionPeriod {
   mode: PeriodMode
@@ -37,7 +37,7 @@ export default function SectionPeriodScope({ contents, children }: SectionPeriod
   const month = global?.month ?? localMonth
 
   const scoped = useMemo(
-    () => (mode === 'monthly' ? contents.filter(c => contentPeriodDate(c)?.startsWith(month)) : contents),
+    () => (mode === 'monthly' ? contents.filter(c => inPerformanceMonth(contentPeriodDate(c), month)) : contents),
     [contents, mode, month],
   )
 

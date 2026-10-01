@@ -1,3 +1,4 @@
+import { performanceMonthsOf } from '@/lib/posted-date'
 import { NextResponse } from 'next/server'
 import { contentViews } from '@/lib/content-views'
 import { buildLocationMonthlySeries } from '@/lib/monthly-performance'
@@ -38,12 +39,13 @@ export async function GET() {
 
   const monthMap: Record<string, { count: number; views: number; likes: number; saves: number }> = {}
   for (const row of monthlyRes.data ?? []) {
-    const m = (row.visit_date as string).slice(0, 7)
-    if (!monthMap[m]) monthMap[m] = { count: 0, views: 0, likes: 0, saves: 0 }
-    monthMap[m].count += 1
-    monthMap[m].likes += row.likes ?? 0
-    monthMap[m].saves += row.saves ?? 0
-    monthMap[m].views += contentViews(row)
+    for (const m of performanceMonthsOf(row.visit_date as string)) {
+      if (!monthMap[m]) monthMap[m] = { count: 0, views: 0, likes: 0, saves: 0 }
+      monthMap[m].count += 1
+      monthMap[m].likes += row.likes ?? 0
+      monthMap[m].saves += row.saves ?? 0
+      monthMap[m].views += contentViews(row)
+    }
   }
   const monthlyData = Object.entries(monthMap)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -88,8 +90,9 @@ export async function GET() {
   if (!planRes.error) {
     for (const row of planRes.data ?? []) {
       if (!row.visit_date || row.publish_status !== '진행중') continue
-      const month = String(row.visit_date).slice(0, 7)
-      inProgressByMonth.set(month, (inProgressByMonth.get(month) ?? 0) + 1)
+      for (const month of performanceMonthsOf(String(row.visit_date))) {
+        inProgressByMonth.set(month, (inProgressByMonth.get(month) ?? 0) + 1)
+      }
     }
   }
   const monthlyGoals: MonthlyGoal[] = goalRes.error
