@@ -1,4 +1,5 @@
 'use client'
+import { inPerformanceMonth } from '@/lib/posted-date'
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Content, LocationSummary } from '@/lib/types'
@@ -77,7 +78,7 @@ export default function LocationStatus({
   const monthly = useMemo(() => aggregateByMonth(contents), [contents])
   const listContents = useMemo(() => {
     if (!chartMonth) return contents
-    return contents.filter(c => c.visit_date?.startsWith(chartMonth))
+    return contents.filter(c => inPerformanceMonth(c.visit_date, chartMonth))
   }, [contents, chartMonth])
 
   const selectedLoc = rows.find(r => r.location === selected)

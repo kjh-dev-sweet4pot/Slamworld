@@ -212,9 +212,19 @@ export function v2TimeBuckets(mode: 'all' | 'monthly', month: string): V2TimeBuc
   const [y, mo] = month.split('-').map(Number)
   const daysInMonth = new Date(y, mo, 0).getDate()
   const buckets: V2TimeBucket[] = []
+  // 전월 20일~말일 누적분
+  const pd = new Date(y, mo - 2, 1)
+  const prev = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`
+  const prevDays = new Date(y, mo - 1, 0).getDate()
+  buckets.push({
+    key: `${month}-prev`,
+    label: `${pd.getMonth() + 1}월 말`,
+    detail: `${pd.getMonth() + 1}/20–${pd.getMonth() + 1}/${prevDays}`,
+    match: d => !!d?.startsWith(prev) && d.slice(8, 10) >= '20',
+  })
   for (let start = 1; start <= daysInMonth; start += 7) {
     const end = Math.min(start + 6, daysInMonth)
-    const week = buckets.length + 1
+    const week = buckets.length
     buckets.push({
       key: `${month}-w${week}`,
       label: `${week}주`,

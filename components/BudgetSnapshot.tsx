@@ -280,7 +280,16 @@ function BudgetCompositionDonut({
   onViewBrandContent?: (brand: string) => void
 }) {
   const { active: hoverBrand, show, hide, setActive: setHoverBrand } = useHoverPopover<string | null>(null)
-  const received = partnerCompanyDonut(budgets).slices.filter(s => s.payment === '입금 완료' && !s.spent)
+  // 같은 회사는 캠페인 합쳐 한 줄로
+  const byBrand = new Map<string, ReturnType<typeof partnerCompanyDonut>['slices'][number]>()
+  for (const s of partnerCompanyDonut(budgets).slices) {
+    if (s.payment !== '입금 완료' || s.spent) continue
+    const brand = s.label.split(' · ')[0]!
+    const prev = byBrand.get(brand)
+    if (prev) prev.weight += s.weight
+    else byBrand.set(brand, { ...s, key: brand, label: brand })
+  }
+  const received = [...byBrand.values()]
   const slices = received
   const totalWeight = received.reduce((sum, s) => sum + s.weight, 0)
   const count = new Set(received.map(s => s.label.split(' · ')[0])).size
@@ -473,8 +482,8 @@ function MonthBars({ rows, maxTotal }: { rows: MonthBar[]; maxTotal: number }) {
   const activeRow = rows.find(r => r.month === hovered)
 
   return (
-    <div className="relative w-full flex flex-col flex-1 min-h-[168px]">
-      <div className="relative flex-1 min-h-[140px]">
+    <div className="relative w-full flex flex-col">
+      <div className="relative h-[180px]">
         {[0.25, 0.5, 0.75, 1].map(ratio => (
           <div
             key={ratio}
@@ -918,19 +927,19 @@ export function PartnerBudgetSnapshot({ brand }: { brand: string }) {
 
           {sepAvailable > 0 && (
             <div
-              className="owm-kpi-card"
+              className="owm-kpi-card ring-2 ring-[#0B47B4]/40 !bg-gradient-to-br from-[#0B47B4] to-[#2563EB] text-white"
               style={{ '--bc': '#0B47B4' } as CSSProperties}
               data-emoji="📅"
             >
               <div className="owm-kpi-header">
-                <span className="owm-kpi-dot" />
-                <span className="owm-kpi-label">{monthNo}월 가용예산</span>
+                <span className="owm-kpi-dot !bg-white" />
+                <span className="owm-kpi-label !text-white font-extrabold">{monthNo}월 가용예산</span>
               </div>
-              <div className="owm-kpi-amount">
-                {fmtBudgetManwon(sepAvailable)}<small>만원</small>
+              <div className="owm-kpi-amount !text-white !text-[32px]">
+                {fmtBudgetManwon(sepAvailable)}<small className="!text-white/80">만원</small>
               </div>
-              <div className="owm-kpi-divider" />
-              <div className="owm-kpi-sub"><span>이번 달 쓸 수 있는 입금</span></div>
+              <div className="owm-kpi-divider !bg-white/25" />
+              <div className="owm-kpi-sub !text-white/85"><span>이번 달 쓸 수 있는 입금</span></div>
             </div>
           )}
 
