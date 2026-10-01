@@ -184,15 +184,15 @@ export default function PopularContentSection({
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-5 mt-4">
           {/* 좌측 랭킹 리스트 */}
           <div>
-            <div className="grid grid-cols-[44px_minmax(110px,1fr)_78px_56px_94px_54px] gap-2 items-center px-2.5 pb-2.5 border-b border-[#eee6d6]">
+            <div className="grid grid-cols-[28px_minmax(0,1fr)_68px_72px] sm:grid-cols-[44px_minmax(110px,1fr)_78px_56px_94px_54px] gap-2 items-center px-2.5 pb-2.5 border-b border-[#eee6d6]">
               <span className="text-[11px] text-[#9a9486] font-semibold text-center">순위</span>
               <span className="text-[11px] text-[#9a9486] font-semibold">인플루언서</span>
               <span className="text-[11px] text-[#9a9486] font-semibold">채널</span>
-              <span className="text-[11px] text-[#9a9486] font-semibold">지점</span>
+              <span className="hidden sm:block text-[11px] text-[#9a9486] font-semibold">지점</span>
               <span className="text-[11px] text-[#9a9486] font-semibold text-right">
                 {metricMode === 'views' ? '조회수' : '좋아요'}
               </span>
-              <span className="text-[11px] text-[#9a9486] font-semibold text-right">비중</span>
+              <span className="hidden sm:block text-[11px] text-[#9a9486] font-semibold text-right">비중</span>
             </div>
 
             <div className="flex flex-col gap-1.5 mt-1.5">
@@ -226,8 +226,15 @@ export default function PopularContentSection({
                 return (
                   <div
                     key={item.influencer_name + idx}
-                    onClick={() => handleSelect(item.influencer_name)}
-                    className={`cursor-pointer grid grid-cols-[44px_minmax(110px,1fr)_78px_56px_94px_54px] gap-2 items-center px-2.5 py-2.5 rounded-xl transition-colors ${
+                    onClick={() => {
+                      // 모바일: 상세 카드 대신 바로 콘텐츠로
+                      if (item.upload_url && window.matchMedia('(max-width: 639px)').matches) {
+                        window.open(item.upload_url, '_blank', 'noopener')
+                        return
+                      }
+                      handleSelect(item.influencer_name)
+                    }}
+                    className={`cursor-pointer grid grid-cols-[28px_minmax(0,1fr)_68px_72px] sm:grid-cols-[44px_minmax(110px,1fr)_78px_56px_94px_54px] gap-2 items-center px-2.5 py-2.5 rounded-xl transition-colors ${
                       isSelected
                         ? 'bg-[#f4f1ff] border border-[#e0dbf5]'
                         : 'hover:bg-[#faf7f0] border-b border-[#f7f2e8] last:border-b-0'
@@ -266,7 +273,7 @@ export default function PopularContentSection({
                       {item.channel}
                     </span>
 
-                    <span className="text-[11.5px] text-[#6b6558] truncate">
+                    <span className="hidden sm:block text-[11.5px] text-[#6b6558] truncate">
                       {item.location.replace('점', '')}
                     </span>
 
@@ -274,7 +281,7 @@ export default function PopularContentSection({
                       {displayVal}
                     </span>
 
-                    <span className="text-[11.5px] text-[#6b6558] text-right">
+                    <span className="hidden sm:block text-[11.5px] text-[#6b6558] text-right">
                       {pct}%
                     </span>
                   </div>
@@ -298,7 +305,7 @@ export default function PopularContentSection({
 
           {/* 우측 선택된 인플루언서 상세 프로필 카드 */}
           {selectedItem && (
-            <div className="bg-[#fbfaf6] border border-[#f2ebdd] rounded-xl p-4 flex flex-col h-fit">
+            <div className="hidden sm:flex bg-[#fbfaf6] border border-[#f2ebdd] rounded-xl p-4 flex-col h-fit">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-bold text-white bg-[#6b6558] rounded-lg px-2.5 py-1">
                   {selectedItem.location}
