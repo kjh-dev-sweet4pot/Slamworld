@@ -82,11 +82,21 @@ export default function UploadGallerySection({
         (!location || normalizeLocationName(c.location) === location) &&
         (channel === ALL || c.channel === channel),
     )
-    return list.sort((a, b) =>
+    list.sort((a, b) =>
       sort === 'views'
         ? contentViews(b) - contentViews(a)
         : (contentPostedDate(b) ?? '').localeCompare(contentPostedDate(a) ?? ''),
     )
+    // 같은 게시물이 전체 링크·단축 링크로 두 번 저장된 경우가 있어 목록에선 하나만 보인다
+    // (DB 행은 그대로, 다른 섹션 합산에도 그대로 포함). 게시일이 있는 행을 우선한다
+    const seen = new Map<string, Content>()
+    for (const c of list) {
+      const key = `${c.influencer_name}|${c.channel}|${normalizeLocationName(c.location)}`
+      const prev = seen.get(key)
+      if (!prev || (!contentPostedDate(prev) && contentPostedDate(c))) seen.set(key, c)
+    }
+    const keep = new Set(seen.values())
+    return list.filter(c => keep.has(c))
   }, [uploaded, location, channel, sort])
 
   useEffect(() => setCount(PAGE), [location, channel, sort, contents])

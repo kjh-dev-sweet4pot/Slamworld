@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import type { Content } from '@/lib/types'
+import { isSeedingLocation } from '@/lib/posted-date'
 import { V2_LOC_COLORS, V2_CH_COLORS, V2_MONTHS, formatViews, normalizeLocationName, v2TimeBuckets } from '@/lib/v2-analytics'
 import { contentViews } from '@/lib/content-views'
 import { useChartTooltip } from '@/components/v2/ChartTooltip'
@@ -38,6 +39,8 @@ function niceMax(value: number): number {
   return 10 * base
 }
 
+const SEEDING_COLORS = ['#f59e0b', '#fbbf24', '#d97706', '#fcd34d']
+
 export default function OverallTotalsSection({
   contents = [],
   isPartner = false,
@@ -56,8 +59,16 @@ export default function OverallTotalsSection({
   // 지점 목록 (데이터에 실제 존재하는 지점만 추출)
   const activeLocations = useMemo(() => {
     const locs = new Set(contents.map(c => normalizeLocationName(c.location)).filter(Boolean))
-    return Object.keys(V2_LOC_COLORS).filter(l => locs.has(l))
+    const known = Object.keys(V2_LOC_COLORS).filter(l => locs.has(l))
+    // 시딩(국내·기자단 등)처럼 색 목록에 없는 구분도 막대에 포함해야 합계와 높이가 맞는다
+    return [...known, ...[...locs].filter(l => !known.includes(l)).sort()]
   }, [contents])
+
+  const locColor = (loc: string) => {
+    if (V2_LOC_COLORS[loc]) return V2_LOC_COLORS[loc]
+    const seeds = activeLocations.filter(isSeedingLocation)
+    return isSeedingLocation(loc) ? SEEDING_COLORS[seeds.indexOf(loc) % SEEDING_COLORS.length] : '#9a9486'
+  }
 
   // 월별 스택 데이터
   const monthlyData = useMemo(() => {
@@ -74,7 +85,7 @@ export default function OverallTotalsSection({
         return {
           location: loc,
           name: loc.replace('점', ''),
-          color: V2_LOC_COLORS[loc] || '#6b6558',
+          color: locColor(loc),
           views: v,
           count: cnt,
         }
@@ -203,7 +214,7 @@ export default function OverallTotalsSection({
             ) : (
               activeLocations.map(loc => (
                 <span key={loc} className="flex items-center gap-1.5 text-[11px] text-[#6b6558]">
-                  <span className="w-[9px] h-[9px] rounded-[3px]" style={{ backgroundColor: V2_LOC_COLORS[loc] }} />
+                  <span className="w-[9px] h-[9px] rounded-[3px]" style={{ backgroundColor: locColor(loc) }} />
                   {loc.replace('점', '')}
                 </span>
               ))

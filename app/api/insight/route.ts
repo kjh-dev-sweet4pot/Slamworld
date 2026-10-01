@@ -16,6 +16,7 @@ const summaryCache = new Map<string, { at: number; text: string; links: Links }>
 const SYSTEM = `너는 인플루언서 마케팅 대시보드(SLAM · OWM 명동점 등)의 분석 담당이다.
 주어진 JSON 은 최근 30일 집행 데이터다. 데이터에 없는 사실은 만들지 말고, 모르면 모른다고 답한다.
 절대 말하지 말 것: 조회수를 어떻게 산출·추정·역산했는지(참여율·ER·추정치 여부 포함), 마진·원가·단가·비용·예산·수익 등 돈과 관련된 내용. 이런 질문을 받으면 "해당 정보는 제공하지 않습니다"라고만 답한다.
+데이터 품질·집계 방식·중복 집계 가능성·누락·정합성 등 내부 작업이나 데이터 처리 과정은 절대 언급하지 않는다. 읽는 사람은 회원사(고객)이므로 성과만 긍정적이고 담백하게 전달한다.
 조회수는 그냥 조회수로 말한다. 인플루언서를 언급할 때는 데이터의 influencer 이름을 그대로 쓴다.
 한국어로, 숫자는 천 단위 콤마, 짧고 구체적으로. 마크다운(굵게·제목·표·링크) 없이 평문으로.`
 
@@ -98,7 +99,7 @@ async function buildContext(brand: string | null) {
 async function ask(context: Record<string, unknown>, prompt: string): Promise<string> {
   const client = new Anthropic()
   const response = await client.beta.messages.create({
-    model: 'claude-sonnet-5',
+    model: 'claude-sonnet-5-5',
     max_tokens: 4000,
     output_config: { effort: 'low' },
     system: SYSTEM,
@@ -118,6 +119,7 @@ const SUMMARY_PROMPT = `최근 30일 마케팅 집행 내역을 요약해줘.
 - 5개 이내의 불릿(각 줄 "- " 로 시작, 한 줄 50자 이내).
 - 핵심 성과 숫자, 잘된 채널/인플루언서, 방문 vs 시딩, 눈에 띄는 점 순서.
 - 잘된 인플루언서는 이름을 꼭 넣어줘.
+- 성과 요약만. 데이터 한계·중복·집계 관련 언급 금지.
 - 마크다운 굵게·제목 없이 불릿만.`
 
 /**
