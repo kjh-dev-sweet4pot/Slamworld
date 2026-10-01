@@ -33,7 +33,14 @@ export default function PopularContentSection({
 
   // 필터링 & 정렬된 랭킹 리스트
   const filteredRows = useMemo(() => {
-    let list = contents ? [...contents] : []
+    // 같은 게시물 중복 행은 하나만 — 링크 또는 이름·채널·조회수가 같으면 중복
+    const seen = new Set<string>()
+    let list = (contents ?? []).filter(c => {
+      const keys = [c.upload_url, `${c.influencer_name}|${c.channel}|${contentViews(c)}`].filter(Boolean) as string[]
+      if (keys.some(k => seen.has(k))) return false
+      keys.forEach(k => seen.add(k))
+      return true
+    })
 
     if (locFilter !== '전체') {
       list = list.filter(c => c.location.includes(locFilter))

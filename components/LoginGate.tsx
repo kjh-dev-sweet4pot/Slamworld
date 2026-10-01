@@ -8,6 +8,7 @@ import {
   type AccessSession,
 } from '@/lib/access'
 import { AccessProvider } from '@/lib/access-context'
+import { APP_VERSION } from '@/lib/changelog'
 
 export default function LoginGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<AccessSession | null>(null)
@@ -59,7 +60,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
             <span className="text-[11px] font-bold tracking-[0.14em] text-[#9a3412] bg-[#ffedd5] px-2.5 py-0.5 rounded-[7px] uppercase">
               OWM × 브랜드슬램
             </span>
-            <span className="text-[10.5px] font-bold text-[#9a3412] bg-[#ffedd5] px-2 py-0.5 rounded-[7px]">v1.0.0</span>
+            <span className="text-[10.5px] font-bold text-[#9a3412] bg-[#ffedd5] px-2 py-0.5 rounded-[7px]">v{APP_VERSION}</span>
           </div>
           <h1 className="mt-3 text-[23px] font-extrabold tracking-tight text-[#1a1d2e]">
             리포트 로그인
