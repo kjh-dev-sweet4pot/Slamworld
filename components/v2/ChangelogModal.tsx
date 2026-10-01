@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { APP_VERSION, CHANGELOG } from '@/lib/changelog'
 
 /** 헤더 버전 뱃지 — 누르면 업데이트 소식 */
@@ -20,7 +21,8 @@ export default function ChangelogBadge({ className }: { className: string }) {
       <button type="button" onClick={() => setOpen(true)} className={`${className} hover:brightness-95`} title="업데이트 소식">
         v{APP_VERSION}
       </button>
-      {open && (
+      {/* 헤더 backdrop-blur 안에선 fixed 가 헤더 기준이 돼서 body 로 뺀다 */}
+      {open && createPortal(
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
           <div
             className="bg-white rounded-2xl shadow-xl w-full max-w-[520px] max-h-[80vh] flex flex-col"
@@ -61,7 +63,8 @@ export default function ChangelogBadge({ className }: { className: string }) {
               })}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
