@@ -194,6 +194,25 @@ async function resolveXhsShort(url) {
   }
 }
 
+/**
+ * 샤오홍슈 단축링크 키(xhss:) → 노트 키(xhs:<noteId>).
+ * 같은 게시물이 전체 링크·단축 링크로 따로 들어와 중복 행이 생기지 않도록 비교 전에 푼다.
+ */
+export async function canonicalizeXhsKeys(keys) {
+  const map = new Map()
+  const shorts = [...new Set(keys.filter(k => k.startsWith('xhss:')))]
+  await mapPool(shorts, 6, async key => {
+    try {
+      const res = await fetch(`https://xhslink.com/o/${key.slice(5)}`, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0' } })
+      const id = (res.headers.get('location') || '').match(/(?:explore|item)\/([0-9a-f]{16,})/i)?.[1]
+      if (id) map.set(key, `xhs:${id.toLowerCase()}`)
+    } catch {
+      // 못 풀면 단축 키 그대로 비교
+    }
+  })
+  return map
+}
+
 const TIKTOK_SHORT = /(?:vm\.|vt\.)tiktok\.com\/|tiktok\.com\/(?:t\/)?Z[A-Za-z0-9]+/i
 
 /** 틱톡 단축링크 → 실제 video URL 의 발행일 */
@@ -670,9 +689,12 @@ export async function runBoardingpassSync({ apply = false } = {}) {
 
   const swReadKey = swKey || swEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const existing = await allRows(swUrl, swReadKey, 'contents', 'id,upload_url,campaign')
+  const canon = await canonicalizeXhsKeys([...mapped.map(item => item.key), ...existing.map(row => urlKey(row.upload_url))])
+  const canonKey = key => canon.get(key) || key
+  console.log(`샤오홍슈 단축링크 노트 ID 확인 ${canon.size}건`)
   const byKey = new Map()
   for (const row of existing) {
-    const key = urlKey(row.upload_url)
+    const key = canonKey(urlKey(row.upload_url))
     if (!key) continue
     if (!byKey.has(key)) byKey.set(key, [])
     byKey.get(key).push(row)
@@ -681,11 +703,13 @@ export async function runBoardingpassSync({ apply = false } = {}) {
   const updates = []
   const inserts = []
   for (const item of mapped) {
-    const hits = byKey.get(item.key)
+    const hits = byKey.get(canonKey(item.key))
     if (hits?.length) updates.push({ ids: hits.map(h => h.id), row: item.row, campaign: hits[0].campaign })
     else inserts.push(item.row)
   }
 
+  const dupes = updates.filter(u => u.ids.length > 1)
+  if (dupes.length) console.log(`같은 게시물 중복 행 ${dupes.length}건 (ids: ${dupes.map(u => u.ids.join('/')).join(', ')}) — 지우지 않고 함께 갱신합니다`)
   const companyPull = await pullCompanies(bpUrl, bpKey)
   const photoRows = await loadContentPhotos(swUrl, swReadKey)
   const photoPlan = photoTargets(mapped, photoRows || existing.map(row => ({ ...row, profile_image_url: null })))
