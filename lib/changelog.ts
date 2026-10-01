@@ -9,6 +9,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.12',
+    date: '2026-10-01',
+    icon: '💰',
+    title: '가성비 리스트 · 업데이트 소식 창 정리',
+    items: [
+      '관리자 전용 가성비 리스트 추가 (조회 1회당 단가)',
+      '가성비 리스트 채널·등급을 인플루언서 아래로 합치고 절반 폭으로',
+      '업데이트 소식 창을 버전 바로 아래 팝업으로',
+    ],
+  },
+  {
     version: '1.0.11',
     date: '2026-10-01',
     icon: '💬',

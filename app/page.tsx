@@ -12,6 +12,7 @@ import TrendAnalysisSection from '@/components/v2/TrendAnalysisSection'
 import CompositionSection from '@/components/v2/CompositionSection'
 import FormatAnalysisSection from '@/components/v2/FormatAnalysisSection'
 import PopularContentSection from '@/components/v2/PopularContentSection'
+import CostEfficiencySection from '@/components/v2/CostEfficiencySection'
 import ReportPrintV2 from '@/components/v2/ReportPrintV2'
 import SectionPeriodScope, { GlobalPeriodContext } from '@/components/v2/SectionPeriodScope'
 import ExecutiveSummarySection from '@/components/v2/ExecutiveSummarySection'
@@ -275,6 +276,11 @@ function DashboardInner() {
               />
             )}
           </SectionPeriodScope>
+          {showSales && (
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <CostEfficiencySection />
+            </div>
+          )}
         </div>
       </main>
       </GlobalPeriodContext.Provider>
