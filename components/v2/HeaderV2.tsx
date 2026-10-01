@@ -1,5 +1,7 @@
 'use client'
 
+import ChangelogBadge from './ChangelogModal'
+
 interface HeaderV2Props {
   collectedLabel?: string
   partnerBrand?: string | null
@@ -24,9 +26,7 @@ export default function HeaderV2({
           <span className="text-lg sm:text-[20px] font-extrabold tracking-tight text-[#1a1d2e]">
             {partnerBrand ? `${partnerBrand} 인플루언서 리포트` : 'SLAM 인플루언서 리포트'}
           </span>
-          <span className="text-[11px] font-bold text-[#9a3412] bg-[#ffedd5] px-2.5 py-1 rounded-[9px]">
-            v1.0.0
-          </span>
+          <ChangelogBadge className="text-[11px] font-bold text-[#9a3412] bg-[#ffedd5] px-2.5 py-1 rounded-[9px]" />
         </div>
         <div className="text-[11.5px] text-[#8b8578] mt-1">
           {collectedLabel}

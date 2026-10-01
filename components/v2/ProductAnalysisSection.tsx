@@ -24,6 +24,7 @@ interface ProductStat {
   comments: number
   byLocation: Map<string, number>
   byChannel: Map<string, number>
+  contents: Content[]
 }
 
 /** 한 게시물에 여러 상품이 함께 나가면 ' | ' 로 누적돼 있다 */
@@ -127,6 +128,7 @@ export default function ProductAnalysisSection({ contents }: { contents: Content
           comments: 0,
           byLocation: new Map(),
           byChannel: new Map(),
+          contents: [] as Content[],
         }
         s.posts += 1
         s.influencers.add(c.influencer_name)
@@ -137,6 +139,7 @@ export default function ProductAnalysisSection({ contents }: { contents: Content
         const w = metric === 'views' ? views : (c.likes ?? 0)
         s.byLocation.set(location || '미지정', (s.byLocation.get(location || '미지정') ?? 0) + w)
         s.byChannel.set(c.channel, (s.byChannel.get(c.channel) ?? 0) + w)
+        s.contents.push(c)
         map.set(name, s)
       }
     }
@@ -291,6 +294,30 @@ export default function ProductAnalysisSection({ contents }: { contents: Content
                   total={[...current.byChannel.values()].reduce((a, b) => a + b, 0)}
                   color={k => V2_CH_COLORS[k] ?? '#9a9486'}
                 />
+
+                <div className="text-[13px] font-extrabold text-[#1a1d2e] mt-5 mb-2.5">{metricLabel} 상위 콘텐츠</div>
+                <div className="flex flex-col gap-1.5">
+                  {[...current.contents]
+                    .sort((a, b) => (metric === 'views' ? contentViews(b) - contentViews(a) : (b.likes ?? 0) - (a.likes ?? 0)))
+                    .slice(0, 3)
+                    .map((c, i) => (
+                      <a
+                        key={c.id}
+                        href={c.upload_url ?? undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-2.5 rounded-xl bg-white border border-[#efe8da] px-3 py-2 hover:border-[#4f7cff] transition-colors"
+                      >
+                        <span className="text-[12px] font-extrabold text-[#9a9486] w-3">{i + 1}</span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: V2_CH_COLORS[c.channel] ?? '#9a9486' }} />
+                        <span className="flex-1 min-w-0 truncate text-[12.5px] font-bold text-[#1a1d2e]">{c.influencer_name}</span>
+                        <span className="text-[11.5px] font-semibold text-[#9a9486]">{c.channel}</span>
+                        <span className="text-[12.5px] font-extrabold text-[#1a1d2e] w-14 text-right">
+                          {formatViews(metric === 'views' ? contentViews(c) : (c.likes ?? 0))}
+                        </span>
+                      </a>
+                    ))}
+                </div>
               </div>
             )}
           </div>

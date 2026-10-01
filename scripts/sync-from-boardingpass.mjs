@@ -773,7 +773,9 @@ export async function runBoardingpassSync({ apply = false } = {}) {
   })
 
   for (let i = 0; i < inserts.length; i += 100) {
-    const chunk = inserts.slice(i, i + 100)
+    // PostgREST 일괄 insert 는 모든 행의 키가 같아야 함 — 빠진 키는 null
+    const keys = [...new Set(inserts.slice(i, i + 100).flatMap(r => Object.keys(r)))]
+    const chunk = inserts.slice(i, i + 100).map(r => Object.fromEntries(keys.map(k => [k, r[k] ?? null])))
     const res = await fetch(`${swUrl}/rest/v1/contents`, {
       method: 'POST',
       headers: {

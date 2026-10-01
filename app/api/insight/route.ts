@@ -9,7 +9,8 @@ import type { Content } from '@/lib/types'
 export const maxDuration = 60
 
 const DAY = 24 * 3600_000
-const CACHE_MS = 3 * 3600_000
+/** 요약은 30분 유지 — 새로고침·다시 요약을 눌러도 토큰 안 씀 */
+const CACHE_MS = 30 * 60_000
 type Links = Record<string, { content: string | null; profile: string | null }>
 const summaryCache = new Map<string, { at: number; text: string; links: Links }>()
 
@@ -18,7 +19,7 @@ const SYSTEM = `너는 인플루언서 마케팅 대시보드(SLAM · OWM 명동
 절대 말하지 말 것: 조회수를 어떻게 산출·추정·역산했는지(참여율·ER·추정치 여부 포함), 마진·원가·단가·비용·예산·수익 등 돈과 관련된 내용. 이런 질문을 받으면 "해당 정보는 제공하지 않습니다"라고만 답한다.
 데이터 품질·집계 방식·중복 집계 가능성·누락·정합성 등 내부 작업이나 데이터 처리 과정은 절대 언급하지 않는다. 읽는 사람은 회원사(고객)이므로 성과만 긍정적이고 담백하게 전달한다.
 조회수는 그냥 조회수로 말한다. 인플루언서를 언급할 때는 데이터의 influencer 이름을 그대로 쓴다.
-한국어로, 숫자는 천 단위 콤마, 짧고 구체적으로. 마크다운(굵게·제목·표·링크) 없이 평문으로.`
+한국어로, 숫자는 천 단위 콤마, 짧고 구체적으로. 굵게(**)·링크는 쓰지 않는다.`
 
 type Row = Pick<Content, 'influencer_name' | 'channel' | 'location' | 'brands' | 'upload_url' | 'profile_url' | 'visit_date' | 'views' | 'views_estimated' | 'likes' | 'saves' | 'comments' | 'publish_status' | 'product'> & { posted_date?: string | null }
 
@@ -86,9 +87,16 @@ async function buildContext(brand: string | null, allTime = false) {
     by_type_channel: group(c => `${isSeedingLocation(c.location) ? '시딩' : '방문'}·${c.channel}`),
     by_location: group(c => c.location),
     by_product: group(productsOf),
-    top_posts: [...posts]
+    top_posts: topPosts(posts, 10),
+    // 시딩·방문 각각 상위 — 전체 상위에 시딩이 안 잡혀도 개인별 답변 가능하게
+    top_seeding_posts: topPosts(posts.filter(c => isSeedingLocation(c.location)), 10),
+    top_visit_posts: topPosts(posts.filter(c => !isSeedingLocation(c.location)), 10),
+  }
+
+  function topPosts(list: Row[], n: number) {
+    return [...list]
       .sort((a, b) => contentViews(b) - contentViews(a))
-      .slice(0, 10)
+      .slice(0, n)
       .map(c => ({
         influencer: c.influencer_name,
         channel: c.channel,
@@ -99,7 +107,7 @@ async function buildContext(brand: string | null, allTime = false) {
         likes: c.likes ?? 0,
         saves: c.saves ?? 0,
         comments: c.comments ?? 0,
-      })),
+      }))
   }
 }
 
@@ -122,6 +130,13 @@ async function ask(context: Record<string, unknown>, prompt: string): Promise<st
     .trim()
 }
 
+const ANSWER_FORMAT = `데이터를 근거로 아래 형식으로 답해줘.
+1) 첫 줄: "## <주제>에 대해 알려드릴게요" (20자 내외 제목)
+2) 한 줄 결론.
+3) 순위·비교가 있으면 표 (| 순위 | 인플루언서 | 채널 | 조회수 | 형식, 최대 5행, 헤더 다음 |---| 줄 포함).
+4) 보충 설명은 "- " 불릿 2~3개, 각 40자 이내.
+블록 사이엔 빈 줄. 문단을 길게 이어 쓰지 말 것.`
+
 const SUMMARY_PROMPT = `최근 30일 마케팅 집행 내역을 요약해줘.
 - 5개 이내의 불릿(각 줄 "- " 로 시작, 한 줄 50자 이내).
 - 핵심 성과 숫자, 잘된 채널/인플루언서, 방문 vs 시딩, 눈에 띄는 점 순서.
@@ -131,7 +146,7 @@ const SUMMARY_PROMPT = `최근 30일 마케팅 집행 내역을 요약해줘.
 
 /**
  * POST { brand?, question?, refresh? }
- * question 이 없으면 최근 30일 요약 (3시간 캐시, refresh 면 새로), 있으면 전체 기간 누적 데이터로 답한다.
+ * question 이 없으면 최근 30일 요약 (30분 캐시, 그 안에선 refresh 도 캐시), 있으면 전체 기간 누적 데이터로 답한다.
  */
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -144,14 +159,14 @@ export async function POST(req: NextRequest) {
   try {
     const cacheKey = brand ?? '*'
     const cached = summaryCache.get(cacheKey)
-    if (!question && !body.refresh && cached && Date.now() - cached.at < CACHE_MS) {
+    if (!question && cached && Date.now() - cached.at < CACHE_MS) {
       return NextResponse.json({ text: cached.text, links: cached.links, updatedAt: cached.at })
     }
     const context = await buildContext(brand, !!question)
     if (!question && context.totals.rows === 0) {
       return NextResponse.json({ text: '- 최근 30일 집행 데이터가 없습니다.', links: {}, updatedAt: Date.now() })
     }
-    const text = await ask(context, question ? `질문: ${question}\n\n데이터를 근거로 3~5문장 이내로 답해줘.` : SUMMARY_PROMPT)
+    const text = await ask(context, question ? `질문: ${question}\n\n${ANSWER_FORMAT}` : SUMMARY_PROMPT)
     if (!question) summaryCache.set(cacheKey, { at: Date.now(), text, links: context.links })
     return NextResponse.json({ text, links: context.links, updatedAt: Date.now() })
   } catch (error) {
