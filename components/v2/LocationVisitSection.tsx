@@ -255,7 +255,7 @@ export default function LocationVisitSection({
           {/* 전체 지점 합계 */}
           {activeCards.length > 1 && (
             <div
-              className="flex-1 min-w-[240px] bg-[#1a1d2e] text-white rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.12)] p-4"
+              className="flex-1 min-w-[240px] bg-[#1a1d2e] text-white rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.12)] px-4 py-3"
               style={{ borderTop: '4px solid #1a1d2e' }}
             >
               <div className="flex items-center gap-1.5">
@@ -263,11 +263,11 @@ export default function LocationVisitSection({
                 <span className="text-[13.5px] font-extrabold">전체 지점 합계</span>
                 <span className="ml-auto text-[10.5px] text-white/60">{activeCards.length}개 구분</span>
               </div>
-              <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight mt-3">
+              <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight mt-1.5">
                 {activeCards.reduce((sum, c) => sum + c.viewsRaw, 0).toLocaleString()}
               </div>
-              <div className="text-[11px] text-white/60 mt-1">조회수</div>
-              <div className="h-px bg-white/15 my-3" />
+              <div className="text-[11px] text-white/60">조회수</div>
+              <div className="h-px bg-white/15 my-2" />
               <div className="flex items-center gap-3">
                 <span className="text-[11.5px] text-white/70 whitespace-nowrap">
                   <b className="text-[13px] text-white">{kpiData.influencers}</b>명
@@ -282,7 +282,7 @@ export default function LocationVisitSection({
             <div
               key={card.name}
               onClick={() => onSelectLocation?.(card.name)}
-              className="flex-1 min-w-[240px] cursor-pointer bg-white border border-[#f2ebdd] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4 hover:shadow-[0_6px_20px_rgba(30,41,59,0.1)] transition-all"
+              className="flex-1 min-w-[240px] cursor-pointer bg-white border border-[#f2ebdd] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] px-4 py-3 hover:shadow-[0_6px_20px_rgba(30,41,59,0.1)] transition-all"
               style={{ borderTop: `4px solid ${card.color}` }}
             >
               <div className="flex items-center gap-1.5">
@@ -297,13 +297,13 @@ export default function LocationVisitSection({
                   {card.tag}
                 </span>
               </div>
-              <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight text-[#1a1d2e] mt-3">
+              <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight text-[#1a1d2e] mt-1.5">
                 {card.views}
               </div>
-              <div className="text-[11px] text-[#9a9486] mt-1">
+              <div className="text-[11px] text-[#9a9486]">
                 조회수
               </div>
-              <div className="h-px bg-[#f4efe3] my-3" />
+              <div className="h-px bg-[#f4efe3] my-2" />
               <div className="flex items-center gap-3">
                 <span className="text-[11.5px] text-[#6b6558] whitespace-nowrap">
                   <b className="text-[13px] text-[#1a1d2e]">{card.influencers}</b>명
@@ -319,8 +319,8 @@ export default function LocationVisitSection({
                 </span>
               </div>
               {activeCards.length <= 2 && card.channels.length > 0 && (
-                <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-3 pt-3 border-t border-[#f4efe3]">
-                  {card.channels.map(ch => (
+                <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 pt-2 border-t border-[#f4efe3]">
+                  {card.channels.filter(ch => ch.views > 0).map(ch => (
                     <span key={ch.name} className="text-[11.5px] text-[#6b6558] whitespace-nowrap">
                       {ch.name} <b className="text-[12.5px] text-[#1a1d2e]">{formatViews(ch.views)}</b>
                       <span className="text-[#a9a294] ml-1">

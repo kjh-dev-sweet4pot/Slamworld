@@ -1,3 +1,4 @@
+import { inPerformanceMonth } from './posted-date'
 import type { Content, Channel, ContentFormat } from '@/lib/types'
 import { contentViews } from '@/lib/content-views'
 import { classifyContentFormat } from '@/lib/content-format'
@@ -204,7 +205,7 @@ export function v2TimeBuckets(mode: 'all' | 'monthly', month: string): V2TimeBuc
       key: m,
       label: `${Number(m.slice(5))}월`,
       detail: m.replace('-', '.'),
-      match: d => !!d?.startsWith(m),
+      match: d => inPerformanceMonth(d, m),
     }))
   }
 

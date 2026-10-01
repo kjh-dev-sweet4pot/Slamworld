@@ -48,3 +48,26 @@ export function contentPeriodDate(c: Pick<Content, 'upload_url' | 'visit_date'> 
 export function isSeedingLocation(location: string | null | undefined): boolean {
   return /시딩/.test(location || '')
 }
+
+/**
+ * 월 성과 포함 여부 (내부 기준). 해당 월 전체 + 전월 20일~말일 누적.
+ * 예) 2026-09 → 08-20 ~ 09-30
+ */
+export function inPerformanceMonth(date: string | null | undefined, month: string): boolean {
+  if (!date || !month) return false
+  if (date.startsWith(month)) return true
+  const [y, m] = month.split('-').map(Number)
+  const p = new Date(y, m - 2, 1)
+  const prev = `${p.getFullYear()}-${String(p.getMonth() + 1).padStart(2, '0')}`
+  return date.startsWith(prev) && date.slice(8, 10) >= '20'
+}
+
+/** 날짜가 포함되는 성과 월 목록. 20일 이후면 다음 달에도 누적 */
+export function performanceMonthsOf(date: string | null | undefined): string[] {
+  if (!date) return []
+  const month = date.slice(0, 7)
+  if (date.slice(8, 10) < '20') return [month]
+  const [y, m] = month.split('-').map(Number)
+  const n = new Date(y, m, 1)
+  return [month, `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`]
+}
