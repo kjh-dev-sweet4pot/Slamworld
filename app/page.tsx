@@ -20,7 +20,6 @@ import UploadGallerySection from '@/components/v2/UploadGallerySection'
 import ChannelSummaryCard from '@/components/v2/ChannelSummaryCard'
 import PipelineCountCard from '@/components/v2/PipelineCountCard'
 import ProductAnalysisSection from '@/components/v2/ProductAnalysisSection'
-import BudgetSnapshot, { PartnerBudgetSnapshot } from '@/components/BudgetSnapshot'
 import type { Content } from '@/lib/types'
 import {
   downloadInfluencerXlsx,
@@ -43,13 +42,12 @@ export default function Dashboard() {
 function DashboardInner() {
   const { showSales, logout, partnerBrand } = useAccess()
   const [contents, setContents] = useState<Content[]>([])
-  const [, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [periodMode, setPeriodMode] = useState<PeriodMode>('all')
   const [currentMonth, setCurrentMonth] = useState<string>(AVAILABLE_MONTHS[AVAILABLE_MONTHS.length - 1])
   const [selectedInfluencer, setSelectedInfluencer] = useState<string | null>('pada_heli')
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
   const [galleryLocation, setGalleryLocation] = useState<string | null>(null)
-  const [showBudgetCollapse, setShowBudgetCollapse] = useState(false)
 
   // 콘텐츠 데이터 조회 (Supabase)
   useEffect(() => {
@@ -163,36 +161,19 @@ function DashboardInner() {
       </div>
       </div>
 
-      {/* B2B 회원사 또는 세일즈 권한 시 예산 정보 (토글 가능) */}
-      {(showSales || partnerBrand) && (
-        <div className="max-w-[1880px] mx-auto px-4 sm:px-7 mt-3">
-          <div className="flex items-center justify-between bg-white/70 border border-[#f0e6d2] rounded-xl px-4 py-2.5">
-            <span className="text-xs font-bold text-[#6b6558]">
-              💼 {partnerBrand ? `${partnerBrand} 예산 및 집행 현황` : 'B2B 브랜드 예산 현황'}
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowBudgetCollapse(!showBudgetCollapse)}
-              className="text-xs font-semibold text-[#2f5fd8] hover:underline"
-            >
-              {showBudgetCollapse ? '접기 ▲' : '열기 ▼'}
-            </button>
-          </div>
-          {showBudgetCollapse && (
-            <div className="mt-3">
-              {partnerBrand ? (
-                <PartnerBudgetSnapshot brand={partnerBrand} />
-              ) : (
-                <BudgetSnapshot />
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── 본문 영역 (max-width: 1880px) ── */}
       <GlobalPeriodContext.Provider value={{ mode: periodMode, month: currentMonth }}>
-      <main className="max-w-[1880px] mx-auto px-4 sm:px-7 mt-2">
+      {loading && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white/95 border border-[#eee6d6] shadow-[0_6px_20px_rgba(30,41,59,0.12)] rounded-full px-4 py-2 text-[12.5px] font-bold text-[#1a1d2e]">
+          <span className="w-4 h-4 rounded-full border-2 border-[#e6dfcf] border-t-[#4f7cff] animate-spin" />
+          데이터를 불러오는 중이에요
+        </div>
+      )}
+      <main
+        className={`max-w-[1880px] mx-auto px-4 sm:px-7 mt-2 transition-opacity ${loading ? 'opacity-40 pointer-events-none animate-pulse' : ''}`}
+        aria-busy={loading}
+      >
         {/* 선택된 지점 필터 해제 바 */}
         {selectedLocation && (
           <div className="flex items-center gap-2 mb-3 bg-white/80 border border-[#f0e6d2] rounded-xl px-4 py-2 text-xs text-[#1a1d2e]">
