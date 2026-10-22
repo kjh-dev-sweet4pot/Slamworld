@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { UpcomingVisit } from '@/app/api/upcoming-visits/route'
 import { contentMatchesBrand } from '@/lib/brand-content'
 import { NEGOTIATIONS } from '@/lib/negotiations'
+import { SHEET_NEGOTIATIONS } from '@/lib/negotiations-sheet'
 
 interface UpcomingVisitsCardProps {
   partnerBrand?: string | null
@@ -238,29 +239,57 @@ export default function UpcomingVisitsCard({ partnerBrand }: UpcomingVisitsCardP
   )
 }
 
+const ALL_NEGOTIATIONS = [...NEGOTIATIONS, ...SHEET_NEGOTIATIONS]
+const NEGOTIATION_GROUPS = ['전체', ...new Set(ALL_NEGOTIATIONS.map(n => n.group ?? '기타'))]
+
+function followerLabel(n: number): string {
+  return n >= 10_000 ? `${Math.round(n / 1_000) / 10}만` : n.toLocaleString()
+}
+
 /** 협상 진행중 리스트 — 보딩패스 배정 전 (내부 전용). 이미 배정된 사람은 숨긴다 */
 function NegotiationPanel({ visits }: { visits: UpcomingVisit[] }) {
+  const [group, setGroup] = useState('전체')
   const key = (s: string) => s.toLowerCase().replace(/\s+/g, '')
   const assigned = new Set(visits.map(v => key(v.influencer_name)))
-  const list = NEGOTIATIONS.filter(n => !assigned.has(key(n.influencer_name)))
+  const open = ALL_NEGOTIATIONS.filter(n => !assigned.has(key(n.influencer_name)))
+  const list = group === '전체' ? open : open.filter(n => (n.group ?? '기타') === group)
   return (
     <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
       <div className="flex items-baseline gap-2">
         <span className="text-[14px] font-extrabold text-[#1a1d2e]">협상 진행중</span>
         <span className="text-[12px] font-bold text-[#9a9486]">{list.length}명</span>
       </div>
+      <div className="flex flex-wrap gap-1 mt-2">
+        {NEGOTIATION_GROUPS.map(g => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setGroup(g)}
+            className={`text-[10.5px] rounded-[12px] px-2 py-1 whitespace-nowrap ${
+              group === g ? 'font-bold text-white bg-[#4f7cff]' : 'font-semibold bg-[#f7f4ec] text-[#6b6558] hover:text-[#1a1d2e]'
+            }`}
+          >
+            {g} {g === '전체' ? open.length : open.filter(n => (n.group ?? '기타') === g).length}
+          </button>
+        ))}
+      </div>
       {list.length === 0 ? (
         <div className="text-[12px] text-[#9a9486] mt-4">협상 중인 인플루언서가 없습니다.</div>
       ) : (
         <div className="mt-3 flex flex-col gap-2 max-h-[640px] overflow-y-auto">
           {list.map(n => (
-            <div key={n.influencer_name} className="rounded-xl bg-[#fbf9f4] border border-[#f4efe3] px-3 py-2.5">
+            <div key={`${n.group}|${n.influencer_name}`} className="rounded-xl bg-[#fbf9f4] border border-[#f4efe3] px-3 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="text-[12.5px] font-bold text-[#1a1d2e] truncate">{n.influencer_name}</span>
+                {n.followers && <span className="ml-auto text-[10.5px] font-semibold text-[#9a9486] whitespace-nowrap">팔로워 {followerLabel(n.followers)}</span>}
               </div>
               <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-[#6b6558]">
+                {group === '전체' && n.group && <Badge tone="gray">{n.group}</Badge>}
                 {n.date_text && <span className="font-semibold">{n.date_text}</span>}
-                {n.store && <Badge tone="gray">{n.store}</Badge>}
+                {n.store && <Badge tone="blue">{n.store}</Badge>}
+                {n.url && (
+                  <a href={n.url} target="_blank" rel="noreferrer" className="text-[#4f7cff] hover:underline">{n.url.includes('instagram') ? 'IG' : 'XHS'}</a>
+                )}
                 {n.tiktok && (
                   <a href={`https://www.tiktok.com/@${n.tiktok}`} target="_blank" rel="noreferrer" className="text-[#4f7cff] hover:underline">TT</a>
                 )}
