@@ -9,6 +9,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.15',
+    date: '2026-10-22',
+    icon: '📋',
+    title: '협상 리스트 확장',
+    items: [
+      '샤오홍슈 왕홍 시트 인원 추가',
+      '출처별 필터 · 팔로워 수 표시',
+    ],
+  },
+  {
     version: '1.0.14',
     date: '2026-10-22',
     icon: '🤝',
@@ -16,7 +26,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       '방문 일정 달력 옆에 협상 진행중 리스트',
       '보딩패스 배정된 사람은 자동으로 숨김',
-      '샤오홍슈 왕홍 시트 인원 추가 · 출처별 필터',
     ],
   },
   {
