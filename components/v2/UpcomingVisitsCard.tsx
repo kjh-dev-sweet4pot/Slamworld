@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { UpcomingVisit } from '@/app/api/upcoming-visits/route'
 import { contentMatchesBrand } from '@/lib/brand-content'
+import { NEGOTIATIONS } from '@/lib/negotiations'
 
 interface UpcomingVisitsCardProps {
   partnerBrand?: string | null
@@ -95,7 +96,8 @@ export default function UpcomingVisitsCard({ partnerBrand }: UpcomingVisitsCardP
           ( 완료 {visits ? counts.완료 : '…'} · 예정 {visits ? counts.예정 : '…'} )
         </span>
       </div>
-      <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+      <div className={`grid gap-4 items-start ${partnerBrand ? '' : 'xl:grid-cols-[minmax(0,1fr)_340px]'}`}>
+      <div className="min-w-0 bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
         <div className="flex items-center gap-1.5 flex-wrap">
           {stores.map(s => (
             <button
@@ -230,6 +232,47 @@ export default function UpcomingVisitsCard({ partnerBrand }: UpcomingVisitsCardP
         )}
         <div className="text-[10.5px] text-[#9a9486] mt-3">※ 보딩패스 배정 기준 · 완료 = 픽업 처리 · 테스트 회원사·취소·시딩·방문일 미정 제외</div>
       </div>
+      {!partnerBrand && <NegotiationPanel visits={visits ?? []} />}
+      </div>
     </section>
+  )
+}
+
+/** 협상 진행중 리스트 — 보딩패스 배정 전 (내부 전용). 이미 배정된 사람은 숨긴다 */
+function NegotiationPanel({ visits }: { visits: UpcomingVisit[] }) {
+  const key = (s: string) => s.toLowerCase().replace(/\s+/g, '')
+  const assigned = new Set(visits.map(v => key(v.influencer_name)))
+  const list = NEGOTIATIONS.filter(n => !assigned.has(key(n.influencer_name)))
+  return (
+    <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+      <div className="flex items-baseline gap-2">
+        <span className="text-[14px] font-extrabold text-[#1a1d2e]">협상 진행중</span>
+        <span className="text-[12px] font-bold text-[#9a9486]">{list.length}명</span>
+      </div>
+      {list.length === 0 ? (
+        <div className="text-[12px] text-[#9a9486] mt-4">협상 중인 인플루언서가 없습니다.</div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2 max-h-[640px] overflow-y-auto">
+          {list.map(n => (
+            <div key={n.influencer_name} className="rounded-xl bg-[#fbf9f4] border border-[#f4efe3] px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[12.5px] font-bold text-[#1a1d2e] truncate">{n.influencer_name}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-[#6b6558]">
+                {n.date_text && <span className="font-semibold">{n.date_text}</span>}
+                {n.store && <Badge tone="gray">{n.store}</Badge>}
+                {n.tiktok && (
+                  <a href={`https://www.tiktok.com/@${n.tiktok}`} target="_blank" rel="noreferrer" className="text-[#4f7cff] hover:underline">TT</a>
+                )}
+                {n.instagram && (
+                  <a href={`https://www.instagram.com/${n.instagram}`} target="_blank" rel="noreferrer" className="text-[#4f7cff] hover:underline">IG</a>
+                )}
+              </div>
+              {n.memo && <div className="text-[11px] text-[#9a9486] mt-1">{n.memo}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
