@@ -19,6 +19,7 @@ import ExecutiveSummarySection from '@/components/v2/ExecutiveSummarySection'
 import UploadGallerySection from '@/components/v2/UploadGallerySection'
 import ChannelSummaryCard from '@/components/v2/ChannelSummaryCard'
 import PipelineCountCard from '@/components/v2/PipelineCountCard'
+import UpcomingVisitsCard from '@/components/v2/UpcomingVisitsCard'
 import ProductAnalysisSection from '@/components/v2/ProductAnalysisSection'
 import type { Content } from '@/lib/types'
 import {
@@ -262,6 +263,11 @@ function DashboardInner() {
               <CostEfficiencySection />
             </div>
           )}
+        </div>
+
+        {/* ══ 방문 일정 인플루언서 ══ */}
+        <div className="mt-4">
+          <UpcomingVisitsCard partnerBrand={partnerBrand} />
         </div>
       </main>
       </GlobalPeriodContext.Provider>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, type ReactNode } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import type { Content } from '@/lib/types'
 import {
   V2_LOC_COLORS,
@@ -106,20 +106,8 @@ export default function LocationVisitSection({
     })
   }, [contents])
 
-  const [showZeroLocations, setShowZeroLocations] = useState(false)
-
-  // 기간 전환 시 더보기 상태 접힘으로 초기화
-  useEffect(() => {
-    setShowZeroLocations(false)
-  }, [contents])
-
   const activeCards = useMemo(
     () => locationCards.filter(c => c.influencers > 0 || c.uploaded > 0 || c.viewsRaw > 0),
-    [locationCards]
-  )
-
-  const zeroCards = useMemo(
-    () => locationCards.filter(c => c.influencers === 0 && c.uploaded === 0 && c.viewsRaw === 0),
     [locationCards]
   )
 
@@ -156,6 +144,51 @@ export default function LocationVisitSection({
     <section className="mb-8">
       <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] py-3.5 px-1">
         지점별 방문 현황
+      </div>
+
+      {/* 지점별 조회수 — 한 줄 카드 */}
+      <div className="text-[12px] font-bold text-[#6b6558] px-1 mb-2">지점별 조회수</div>
+      <div className="flex gap-2 mb-4">
+        {activeCards.length > 1 && (
+          <div
+            className="flex-1 min-w-0 overflow-hidden bg-[#1a1d2e] text-white rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.12)] px-2.5 py-2.5"
+            style={{ borderTop: '4px solid #1a1d2e' }}
+          >
+            <div className="flex items-center gap-1.5 text-[12px] font-bold whitespace-nowrap">
+              <span className="w-[8px] h-[8px] rounded-full bg-white" />
+              전체 합계
+            </div>
+            <div className="text-[clamp(12px,1.1vw,18px)] font-extrabold tracking-tight truncate mt-2 whitespace-nowrap">
+              {activeCards.reduce((sum, c) => sum + c.viewsRaw, 0).toLocaleString()}
+            </div>
+            <div className="text-[10.5px] text-white/60 mt-1 whitespace-nowrap">
+              {kpiData.influencers}명 · {activeCards.reduce((sum, c) => sum + c.uploaded, 0)}건
+            </div>
+          </div>
+        )}
+        {locationCards.map(card => {
+          const empty = card.influencers === 0 && card.uploaded === 0 && card.viewsRaw === 0
+          return (
+            <div
+              key={card.name}
+              onClick={() => onSelectLocation?.(card.name)}
+              className={`flex-1 min-w-0 overflow-hidden cursor-pointer bg-white border border-[#f2ebdd] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] px-2.5 py-2.5 hover:shadow-[0_6px_20px_rgba(30,41,59,0.1)] transition-all ${empty ? 'opacity-60' : ''}`}
+              style={{ borderTop: `4px solid ${card.color}` }}
+            >
+              <div className="flex items-center gap-1.5 text-[12px] font-bold text-[#1a1d2e] whitespace-nowrap">
+                <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: card.color }} />
+                {card.name}
+                <span className="ml-auto text-[10px] font-medium text-[#a9a294] truncate">{card.tag}</span>
+              </div>
+              <div className={`text-[clamp(12px,1.1vw,18px)] font-extrabold tracking-tight truncate text-[#1a1d2e] mt-2 whitespace-nowrap`}>
+                {empty ? '----' : card.views}
+              </div>
+              <div className="text-[10.5px] text-[#9a9486] mt-1 whitespace-nowrap">
+                {card.influencers}명 · {card.uploaded}건
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       <div className="flex flex-wrap gap-4 items-start">
@@ -251,149 +284,6 @@ export default function LocationVisitSection({
 
         {/* 중앙 지점 카드 그리드 & 누적 KPI */}
         <div className="flex-[4_1_430px] min-w-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="col-span-full flex flex-wrap gap-3 items-stretch">
-          {/* 전체 지점 합계 */}
-          {activeCards.length > 1 && (
-            <div
-              className="flex-1 min-w-[240px] bg-[#1a1d2e] text-white rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.12)] px-4 py-3"
-              style={{ borderTop: '4px solid #1a1d2e' }}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="w-[9px] h-[9px] rounded-full bg-white" />
-                <span className="text-[13.5px] font-extrabold">전체 지점 합계</span>
-                <span className="ml-auto text-[10.5px] text-white/60">{activeCards.length}개 구분</span>
-              </div>
-              <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight mt-1.5">
-                {activeCards.reduce((sum, c) => sum + c.viewsRaw, 0).toLocaleString()}
-              </div>
-              <div className="text-[11px] text-white/60">조회수</div>
-              <div className="h-px bg-white/15 my-2" />
-              <div className="flex items-center gap-3">
-                <span className="text-[11.5px] text-white/70 whitespace-nowrap">
-                  <b className="text-[13px] text-white">{kpiData.influencers}</b>명
-                </span>
-                <span className="text-[11.5px] text-white/70 whitespace-nowrap">
-                  <b className="text-[13px] text-white">{activeCards.reduce((sum, c) => sum + c.uploaded, 0)}</b>건
-                </span>
-              </div>
-            </div>
-          )}
-          {activeCards.map(card => (
-            <div
-              key={card.name}
-              onClick={() => onSelectLocation?.(card.name)}
-              className="flex-1 min-w-[240px] cursor-pointer bg-white border border-[#f2ebdd] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] px-4 py-3 hover:shadow-[0_6px_20px_rgba(30,41,59,0.1)] transition-all"
-              style={{ borderTop: `4px solid ${card.color}` }}
-            >
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="w-[9px] h-[9px] rounded-full"
-                  style={{ backgroundColor: card.color }}
-                />
-                <span className="text-[13.5px] font-extrabold text-[#1a1d2e]">
-                  {card.name}
-                </span>
-                <span className="ml-auto text-[10.5px] text-[#a9a294]">
-                  {card.tag}
-                </span>
-              </div>
-              <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight text-[#1a1d2e] mt-1.5">
-                {card.views}
-              </div>
-              <div className="text-[11px] text-[#9a9486]">
-                조회수
-              </div>
-              <div className="h-px bg-[#f4efe3] my-2" />
-              <div className="flex items-center gap-3">
-                <span className="text-[11.5px] text-[#6b6558] whitespace-nowrap">
-                  <b className="text-[13px] text-[#1a1d2e]">{card.influencers}</b>명
-                </span>
-                <span className="text-[11.5px] text-[#6b6558] whitespace-nowrap">
-                  <b className="text-[13px] text-[#1a1d2e]">{card.uploaded}</b>건
-                </span>
-                <span
-                  className="text-[11.5px] font-bold ml-auto truncate"
-                  style={{ color: card.highlightColor }}
-                >
-                  {card.highlight}
-                </span>
-              </div>
-              {activeCards.length <= 2 && card.channels.length > 0 && (
-                <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 pt-2 border-t border-[#f4efe3]">
-                  {card.channels.filter(ch => ch.views > 0).map(ch => (
-                    <span key={ch.name} className="text-[11.5px] text-[#6b6558] whitespace-nowrap">
-                      {ch.name} <b className="text-[12.5px] text-[#1a1d2e]">{formatViews(ch.views)}</b>
-                      <span className="text-[#a9a294] ml-1">
-                        {card.viewsRaw > 0 ? `${Math.round((ch.views / card.viewsRaw) * 100)}%` : ''}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {zeroCards.length > 0 && (
-            <div className="flex items-center">
-              <button
-                type="button"
-                onClick={() => setShowZeroLocations(prev => !prev)}
-                className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold text-[#6b6558] hover:text-[#1a1d2e] bg-white/80 hover:bg-white border border-[#e8dfcf] shadow-xs hover:shadow-sm transition-all"
-              >
-                <span>
-                  {showZeroLocations
-                    ? '수치 0인 지점 접기 ▲'
-                    : `0인 지점 ${zeroCards.length}개 ▼`}
-                </span>
-              </button>
-            </div>
-          )}
-          </div>
-
-          {showZeroLocations &&
-            zeroCards.map(card => (
-              <div
-                key={card.name}
-                onClick={() => onSelectLocation?.(card.name)}
-                className="cursor-pointer bg-white/70 border border-[#f2ebdd] rounded-[14px] shadow-[0_2px_8px_rgba(30,41,59,0.04)] p-4 hover:shadow-[0_4px_16px_rgba(30,41,59,0.08)] transition-all opacity-85 hover:opacity-100"
-                style={{ borderTop: `4px solid ${card.color}` }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="w-[9px] h-[9px] rounded-full"
-                    style={{ backgroundColor: card.color }}
-                  />
-                  <span className="text-[13.5px] font-extrabold text-[#1a1d2e]">
-                    {card.name}
-                  </span>
-                  <span className="ml-auto text-[10.5px] text-[#a9a294]">
-                    {card.tag}
-                  </span>
-                </div>
-                <div className="text-[24px] sm:text-[26px] font-extrabold tracking-tight text-[#8b8578] mt-3">
-                  0
-                </div>
-                <div className="text-[11px] text-[#a9a294] mt-1">
-                  조회수 (집행 없음)
-                </div>
-                <div className="h-px bg-[#f4efe3] my-3" />
-                <div className="flex items-center gap-3">
-                  <span className="text-[11.5px] text-[#8b8578] whitespace-nowrap">
-                    <b className="text-[13px] text-[#8b8578]">0</b>명
-                  </span>
-                  <span className="text-[11.5px] text-[#8b8578] whitespace-nowrap">
-                    <b className="text-[13px] text-[#8b8578]">0</b>건
-                  </span>
-                  <span
-                    className="text-[11.5px] font-bold ml-auto truncate"
-                    style={{ color: card.highlightColor }}
-                  >
-                    {card.highlight}
-                  </span>
-                </div>
-              </div>
-            ))}
-
           {/* 누적 KPI 4종 */}
           <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-1">
             <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#4f8cff] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
