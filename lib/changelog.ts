@@ -16,6 +16,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       '방문 일정 달력 옆에 협상 진행중 리스트',
       '보딩패스 배정된 사람은 자동으로 숨김',
+      '샤오홍슈 왕홍 시트 인원 추가 · 출처별 필터',
     ],
   },
   {

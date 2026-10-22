@@ -10,6 +10,11 @@ export interface Negotiation {
   instagram?: string
   store?: string
   memo?: string
+  /** 출처 구분 (폼 신청 · 시트 탭) */
+  group?: string
+  /** 샤오홍슈 등 프로필 링크 */
+  url?: string
+  followers?: number
 }
 
 const n = (
@@ -18,7 +23,7 @@ const n = (
   tiktok?: string,
   instagram?: string,
   extra: Partial<Negotiation> = {},
-): Negotiation => ({ influencer_name, date_text, tiktok, instagram, ...extra })
+): Negotiation => ({ influencer_name, date_text, tiktok, instagram, group: '폼 신청', ...extra })
 
 export const NEGOTIATIONS: Negotiation[] = [
   n('Ines Wallmen', '9/29 20시', 'lifeofines_', 'life.of.ines_'),
