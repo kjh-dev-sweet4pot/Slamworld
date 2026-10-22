@@ -9,6 +9,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.13',
+    date: '2026-10-14',
+    icon: '📍',
+    title: '지점별 조회수 한 줄 카드',
+    items: [
+      '지점별 조회수를 한 줄 카드로 정리',
+      '집행 없는 지점은 흐리게 표시',
+      '예산 현황 줄 숨김',
+      '데이터 불러오는 중 표시',
+      '방문 일정 인플루언서 (리스트 · 달력)',
+    ],
+  },
+  {
     version: '1.0.12',
     date: '2026-10-01',
     icon: '💰',
