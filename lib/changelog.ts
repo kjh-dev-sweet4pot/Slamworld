@@ -9,6 +9,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.14',
+    date: '2026-10-22',
+    icon: '🤝',
+    title: '협상 진행중 리스트',
+    items: [
+      '방문 일정 달력 옆에 협상 진행중 리스트',
+      '보딩패스 배정된 사람은 자동으로 숨김',
+    ],
+  },
+  {
     version: '1.0.13',
     date: '2026-10-14',
     icon: '📍',
