@@ -9,6 +9,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.16',
+    date: '2026-11-04',
+    icon: '💊',
+    title: 'WORK 홈 개편 · OWM/옵티팜 리포트',
+    items: [
+      '옵티팜 · 전체 브랜드사 콘텐츠 (상단 기간 연동, 이번 주/이번 달)',
+      '요청사항 카드 · 무상 시딩 지급 체크',
+      '자체 약사 콘텐츠 자리',
+      'OWM/옵티팜 리포트 페이지 · 엑셀 · 월요일 주간 메일',
+    ],
+  },
+  {
     version: '1.0.15',
     date: '2026-10-22',
     icon: '📋',

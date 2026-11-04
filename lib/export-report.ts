@@ -52,7 +52,7 @@ function viewsCell(c: Content): { n: number | null; kind: string } {
   return { n: contentViews(c), kind: estimated ? '추정' : '실측' }
 }
 
-function xlsxCell(col: number, row: number, value: string | number | null): string {
+export function xlsxCell(col: number, row: number, value: string | number | null): string {
   const r = `${colLetter(col)}${row}`
   if (typeof value === 'number' && Number.isFinite(value)) {
     return `<c r="${r}"><v>${value}</v></c>`
@@ -128,7 +128,7 @@ function concat(parts: Uint8Array[]): Uint8Array {
 }
 
 /** ponytail: uncompressed ZIP — enough for a one-sheet xlsx, no extra lib */
-function zipStore(files: { name: string; data: Uint8Array }[]): Uint8Array {
+export function zipStore(files: { name: string; data: Uint8Array }[]): Uint8Array {
   const locals: Uint8Array[] = []
   const centrals: Uint8Array[] = []
   let offset = 0
@@ -259,4 +259,39 @@ if (process.env.NODE_ENV !== 'production') {
   if (!text.includes('xl/worksheets/sheet1.xml') || !text.includes('테스트&lt;이름&gt;') || !text.includes('실측')) {
     throw new Error('influencerListXlsx self-check failed')
   }
+}
+
+/** 여러 시트 xlsx — rows[0] 이 헤더 */
+export function multiSheetXlsx(sheets: { name: string; rows: (string | number | null)[][] }[]): Uint8Array {
+  const enc = new TextEncoder()
+  const xml = (s: string) => enc.encode(s)
+  const sheetXmlOf = (rows: (string | number | null)[][]) =>
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows
+      .map((r, i) => `<row r="${i + 1}">${r.map((v, j) => xlsxCell(j, i + 1, v)).join('')}</row>`)
+      .join('')}</sheetData></worksheet>`
+  const n = sheets.length
+  const idx = Array.from({ length: n }, (_, i) => i + 1)
+  return zipStore([
+    { name: '[Content_Types].xml', data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+${idx.map(i => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('\n')}
+</Types>`) },
+    { name: '_rels/.rels', data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`) },
+    { name: 'xl/workbook.xml', data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets>${sheets.map((s, i) => `<sheet name="${xmlEscape(s.name.slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets>
+</workbook>`) },
+    { name: 'xl/_rels/workbook.xml.rels', data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+${idx.map(i => `<Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i}.xml"/>`).join('\n')}
+</Relationships>`) },
+    ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: xml(sheetXmlOf(s.rows)) })),
+  ])
 }

@@ -21,6 +21,7 @@ import ChannelSummaryCard from '@/components/v2/ChannelSummaryCard'
 import PipelineCountCard from '@/components/v2/PipelineCountCard'
 import UpcomingVisitsCard from '@/components/v2/UpcomingVisitsCard'
 import ProductAnalysisSection from '@/components/v2/ProductAnalysisSection'
+import WorkHomeSections from '@/components/v2/WorkHomeSections'
 import type { Content } from '@/lib/types'
 import {
   downloadInfluencerXlsx,
@@ -199,6 +200,10 @@ function DashboardInner() {
           {/* 핵심 성과 요약 — KPI 아래 빈 공간을 채우도록 중앙 영역에 배치 */}
           <ExecutiveSummarySection contents={locationContents} showRoi={!partnerBrand} />
         </LocationVisitSection>
+
+        {/* ══ WORK 홈: 옵티팜 · 전체 브랜드사 · 요청사항 · 약사 콘텐츠 ══ */}
+        <WorkHomeSections contents={scopedContents} />
+
 
         {/* ══ 업로드 인플루언서 | 인플루언서 현황 + 채널별 성과 ══ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
