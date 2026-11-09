@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import type { OwmReport, ReportRow } from '@/lib/owm-report'
+import { monthCells, weekTotals } from '@/lib/calendar-cells'
 
 type Visit = ReportRow & { done: boolean; opti: boolean }
 
@@ -56,11 +57,14 @@ export default function VisitCalendar({ data }: { data: OwmReport }) {
   const [sel, setSel] = useState<string | null>(null)
 
   const [y, m] = ym.split('-').map(Number)
-  const first = new Date(Date.UTC(y, m - 1, 1))
-  const lead = (first.getUTCDay() + 6) % 7
   const days = new Date(Date.UTC(y, m, 0)).getUTCDate()
-  const cells = [...Array(lead).fill(null), ...Array.from({ length: days }, (_, i) => `${ym}-${pad(i + 1)}`)]
-  while (cells.length % 7) cells.push(null)
+  const cells = monthCells(ym)
+  const weeks = weekTotals(
+    cells.map(d => {
+      const l = d ? (byDay.get(d) ?? []) : []
+      return { date: d, visits: l.length, done: l.filter(v => v.done).length, views: l.reduce((a, v) => a + (v.views ?? 0), 0) }
+    }),
+  )
   const inRange = (d: string) => d >= range0 && d <= range1
   const monthCount = shown.filter(v => ymOf(v.visit_date) === ym).length
   // 누적은 보고 있는 달 말일까지 (월별로 넘기면 같이 바뀜)
@@ -119,15 +123,15 @@ export default function VisitCalendar({ data }: { data: OwmReport }) {
         <Stat label={`${m}월 방문`} value={`${monthCount}명`} note="예정 포함" />
       </div>
 
-      <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(84px,120px)] gap-1 mt-3">
+      <div className="grid grid-cols-7 sm:grid-cols-[repeat(7,minmax(0,1fr))_minmax(84px,120px)] gap-1 mt-3">
         {[...WD, '주간 요약'].map(d => (
-          <div key={d} className={`text-center text-[11px] font-bold ${d === '일' ? 'text-[#e03131]' : 'text-[#6b6558]'}`}>
+          <div key={d} className={`${d === '주간 요약' ? 'hidden sm:block ' : ''}text-center text-[11px] font-bold ${d === '일' ? 'text-[#e03131]' : 'text-[#6b6558]'}`}>
             {d}
           </div>
         ))}
         {cells.map((d, i) => {
-          // 한 주(7칸)가 끝나면 오른쪽에 주간 요약 칸
-          const tail = i % 7 === 6 ? <WeekSummary key={`w${i}`} days={cells.slice(i - 6, i + 1)} byDay={byDay} /> : null
+          // 한 주(7칸)가 끝나면 오른쪽(sm+)·아래 한 줄(모바일)에 주간 요약
+          const tail = i % 7 === 6 ? <WeekSummary key={`w${i}`} w={weeks[(i - 6) / 7]} /> : null
           if (!d) return tail ? [<div key={i} />, tail] : <div key={i} />
           const list = byDay.get(d) ?? []
           const done = list.filter(v => v.done).length
@@ -295,18 +299,28 @@ function Stat({ label, value, note, strong }: { label: string; value: string; no
   )
 }
 
-/** 달력 오른쪽 — 그 주 방문 인원 · 조회수 */
-function WeekSummary({ days, byDay }: { days: (string | null)[]; byDay: Map<string, Visit[]> }) {
-  const list = days.flatMap(d => (d ? (byDay.get(d) ?? []) : []))
-  const done = list.filter(v => v.done).length
-  const views = list.reduce((a, v) => a + (v.views ?? 0), 0)
+/** 주간 요약 — sm 이상은 달력 오른쪽 칸, 모바일은 그 주 아래 한 줄 */
+function WeekSummary({ w }: { w: { visits: number; done: number; views: number } }) {
+  const views = w.views ? w.views.toLocaleString('ko-KR') : '–'
+  const plan = w.visits > 0 && w.done < w.visits ? w.visits - w.done : 0
   return (
-    <div className="rounded-[6px] bg-[#1a1d2e] text-white px-2 py-1.5 flex flex-col justify-center min-h-[64px] sm:min-h-[92px]">
-      <div className="text-[10px] text-white/60">방문</div>
-      <div className="text-[14px] sm:text-[15px] font-extrabold tabular-nums">{list.length}명</div>
-      {list.length > 0 && done < list.length && <div className="text-[10px] text-white/60">예정 {list.length - done}</div>}
-      <div className="text-[10px] text-white/60 mt-1">조회수</div>
-      <div className="text-[12px] sm:text-[13px] font-extrabold tabular-nums truncate">{views ? views.toLocaleString('ko-KR') : '–'}</div>
-    </div>
+    <>
+      <div className="hidden sm:flex rounded-[6px] bg-[#1a1d2e] text-white px-2 py-1.5 flex-col justify-center min-h-[92px]">
+        <div className="text-[10px] text-white/60">방문</div>
+        <div className="text-[15px] font-extrabold tabular-nums">{w.visits}명</div>
+        {plan > 0 && <div className="text-[10px] text-white/60">예정 {plan}</div>}
+        <div className="text-[10px] text-white/60 mt-1">조회수</div>
+        <div className="text-[13px] font-extrabold tabular-nums truncate">{views}</div>
+      </div>
+      <div className="sm:hidden col-span-7 flex items-center gap-2 rounded-[6px] bg-[#1a1d2e] text-white px-2 py-1 text-[11px] tabular-nums">
+        <span className="text-white/60">주간</span>
+        <span className="font-extrabold">방문 {w.visits}명</span>
+        {plan > 0 && <span className="text-white/60">예정 {plan}</span>}
+        <span className="ml-auto truncate">
+          <span className="text-white/60">조회수 </span>
+          <span className="font-extrabold">{views}</span>
+        </span>
+      </div>
+    </>
   )
 }

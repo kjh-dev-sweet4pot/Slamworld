@@ -278,7 +278,7 @@ function NegotiationPanel({ visits }: { visits: UpcomingVisit[] }) {
       {list.length === 0 ? (
         <div className="text-[12px] text-[#6b6558] mt-3">협상 중인 인플루언서가 없습니다.</div>
       ) : (
-        <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 max-h-[640px] overflow-y-auto">
+        <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:max-h-[640px] sm:overflow-y-auto">
           {list.map(n => (
             <div key={`${n.group}|${n.influencer_name}`} className="min-w-0 rounded-[6px] border border-[#f0e9da] p-2.5 text-[12px]">
               <div className="font-extrabold text-[#1a1d2e] truncate">{n.influencer_name}</div>

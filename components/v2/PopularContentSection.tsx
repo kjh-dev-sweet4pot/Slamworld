@@ -274,7 +274,7 @@ export default function PopularContentSection({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 xl:grid-cols-5 gap-1.5 mt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-1.5 mt-3">
               {[
                 { l: '조회수', v: contentViews(selectedItem).toLocaleString() },
                 { l: '좋아요', v: (selectedItem.likes ?? 0).toLocaleString() },
