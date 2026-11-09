@@ -13,6 +13,7 @@ const MONTHS = (() => {
   for (let d = new Date(2026, 9, 1); d <= now; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   return out
 })()
+import { toMobileRows } from '@/lib/owm-report-rows'
 import type { Group, OwmReport, ReportRow, ReportTable, Span, Status } from '@/lib/owm-report'
 
 const COLUMNS = ['방문일', '지점', '인플루언서 핸들', '콘텐츠', '업로드일', '조회수']
@@ -57,10 +58,52 @@ function Tile({ label, value, unit, note }: { label: string; value: number; unit
   )
 }
 
+function MobileList({ t }: { t: ReportTable }) {
+  const rows = toMobileRows(t.rows)
+  if (rows.length === 0)
+    return (
+      <p data-testid="owm-empty" className="md:hidden py-10 text-center text-[13px] text-[#9a9384]">
+        데이터 없음
+      </p>
+    )
+  return (
+    <ul data-testid="owm-mobile-list" className="md:hidden flex flex-col gap-2">
+      {rows.map((r, i) => (
+        <li key={i} className="border border-[#f2ebdd] rounded-[6px] px-3 py-2.5 text-[13px] min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-bold truncate min-w-0" title={r.handleLong ? r.handle : undefined}>
+              {r.handle}
+            </span>
+            <span className="ml-auto shrink-0 tabular-nums font-bold">{r.views}</span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[12px] text-[#6b6558] min-w-0">
+            <span className="shrink-0 tabular-nums">{r.visitDate}</span>
+            <span className="truncate min-w-0" title={r.storeLong ? r.store : undefined}>
+              {r.store}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[12px]">
+            <span className="text-[#9a9384] tabular-nums">업로드 {r.postedDate}</span>
+            {r.url ? (
+              <a href={r.url} target="_blank" rel="noreferrer" className="ml-auto text-[#3557d6] py-1">
+                콘텐츠 열기 ↗
+              </a>
+            ) : (
+              <span className="ml-auto text-[#c4bcaa]">-</span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function DataTable({ t }: { t: ReportTable }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-[13px] min-w-[720px]">
+    <>
+    <MobileList t={t} />
+    <div className="hidden md:block overflow-x-auto">
+      <table className="w-full text-[13px] md:min-w-[720px]">
         <thead className="text-[#6b6558] bg-[#faf8f3]">
           <tr>
             {COLUMNS.map(c => (
@@ -99,6 +142,7 @@ function DataTable({ t }: { t: ReportTable }) {
         </tbody>
       </table>
     </div>
+    </>
   )
 }
 
