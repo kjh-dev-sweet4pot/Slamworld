@@ -9,6 +9,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.18',
+    date: '2026-11-09',
+    icon: '🔐',
+    title: 'OWM 리포트 직접 로그인',
+    items: ['/owm-report에서 바로 로그인'],
+  },
+  {
     version: '1.0.17',
     date: '2026-11-06',
     icon: '🐇',
