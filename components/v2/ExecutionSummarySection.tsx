@@ -109,65 +109,64 @@ export default function ExecutionSummarySection({
 
   return (
     <section className="mb-6">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-4 pb-2.5 px-1">
-        실행 성과 요약
-      </div>
-
-      {/* 실행 신뢰도 + 구매의향을 한 박스에 압축 */}
-      <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5 grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-0 md:divide-x md:divide-[#f4efe3]">
+      {/* 실행 신뢰도 2fr + 구매의향 1fr */}
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3.5">
         {/* 실행 신뢰도 */}
-        <div className="md:pr-5">
+        <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-[18px]">
           <div className="flex items-baseline gap-2">
-            <span className="text-[13.5px] font-extrabold text-[#1a1d2e]">✅ 실행 신뢰도</span>
-            <span className="text-[11px] text-[#9a9486]">약속 대비 발행</span>
-            <span className="ml-auto text-[26px] font-extrabold tracking-tight text-[#15803d] leading-none">
-              {metrics.publishRate}<span className="text-[14px] font-bold ml-0.5">%</span>
-            </span>
+            <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">✅ 실행 신뢰도</h3>
+            <span className="text-[12px] text-[#6b6558]">약속 대비 발행</span>
+            <span className="ml-auto text-[18px] font-extrabold text-[#1f7a4d]">{metrics.publishRate}%</span>
           </div>
-          <div className="h-2.5 rounded-full bg-[#f4efe3] overflow-hidden mt-2.5">
-            <span className="block h-full bg-[#22c55e] rounded-full transition-all" style={{ width: `${metrics.publishRate}%` }} />
+          <div className="text-[24px] font-extrabold text-[#1a1d2e] mt-2.5">{metrics.totalRows}건 중 {metrics.uploaded}건 발행</div>
+          <div className="h-2.5 rounded-[5px] bg-[#f2ede2] overflow-hidden mt-2">
+            <span className="block h-full bg-[#1f7a4d] rounded-[5px] transition-all" style={{ width: `${metrics.publishRate}%` }} />
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-[11.5px] text-[#6b6558]">
-            <span>{metrics.totalRows}건 중 <b className="text-[#1a1d2e]">{metrics.uploaded}건</b> 발행</span>
-            <span>미발행 <b className="text-[#1a1d2e]">{metrics.unreleased}건</b></span>
-            <span>현장 <b className="text-[#1a1d2e]">{metrics.activeDays}일</b></span>
-            <span>응대 <b className="text-[#1a1d2e]">{metrics.uniqueInfluencers}명</b></span>
-            <span>최다 <b className="text-[#1a1d2e]">{metrics.maxDateCount}건</b> ({metrics.maxDateLabel})</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
+            {[
+              ['미발행', `${metrics.unreleased}건`],
+              ['현장', `${metrics.activeDays}일`],
+              ['응대', `${metrics.uniqueInfluencers}명`],
+              [`최다 (${metrics.maxDateLabel})`, `${metrics.maxDateCount}건`],
+            ].map(([l, v]) => (
+              <div key={l} className="bg-[#faf8f3] rounded-[6px] p-2.5">
+                <div className="text-[11px] text-[#6b6558] truncate">{l}</div>
+                <div className="text-[16px] font-extrabold text-[#1a1d2e]">{v}</div>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* 구매의향 지표 */}
-        <div className="md:pl-5">
+        <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-[18px]">
           <div className="flex items-baseline gap-2">
-            <span className="text-[13.5px] font-extrabold text-[#1a1d2e]">🔖 구매의향</span>
-            <span className="text-[11px] text-[#9a9486]">저장 수</span>
-            <span className="ml-auto text-[26px] font-extrabold tracking-tight text-[#1d4ed8] leading-none">
-              {metrics.saves.toLocaleString()}
-            </span>
+            <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">🔖 구매의향</h3>
+            <span className="text-[12px] text-[#6b6558]">저장 수</span>
           </div>
-          <div className="flex flex-col gap-1.5 mt-2.5">
+          <div className="text-[30px] font-extrabold text-[#1a1d2e] mt-2.5 leading-tight">{metrics.saves.toLocaleString()}</div>
+          <div className="text-[12px] text-[#4a4538] mt-1">
+            저장 발생 콘텐츠 {metrics.contentsWithSaves}건 · {metrics.savesRate}%
+          </div>
+          <div className="flex flex-col gap-1.5 mt-3">
             {metrics.locSaves.length === 0 ? (
               <div className="text-[11.5px] text-[#9a9486]">저장 데이터가 없습니다.</div>
             ) : (
               metrics.locSaves.slice(0, 3).map(item => (
-                <div key={item.name} className="flex items-center gap-2.5">
-                  <span className="w-10 text-[11.5px] font-bold text-[#1a1d2e]">{item.name}</span>
-                  <span className="flex-1 h-2.5 rounded-full bg-[#f4efe3] overflow-hidden">
+                <div key={item.name} className="flex items-center gap-2 text-[11px]">
+                  <span className="w-10 font-bold text-[#1a1d2e]">{item.name}</span>
+                  <span className="flex-1 h-1.5 rounded-[3px] bg-[#f2ede2] overflow-hidden">
                     <span
-                      className="block h-full rounded-full transition-all"
+                      className="block h-full rounded-[3px] transition-all"
                       style={{
                         width: `${metrics.maxLocSaves > 0 ? Math.max(3, Math.round((item.saves / metrics.maxLocSaves) * 100)) : 0}%`,
                         backgroundColor: item.color,
                       }}
                     />
                   </span>
-                  <span className="w-12 text-right text-[12px] font-extrabold text-[#1a1d2e]">{item.saves.toLocaleString()}</span>
+                  <span className="w-12 text-right font-bold text-[#1a1d2e]">{item.saves.toLocaleString()}</span>
                 </div>
               ))
             )}
-          </div>
-          <div className="text-[11.5px] text-[#6b6558] mt-2.5">
-            저장 발생 콘텐츠 <b className="text-[#1a1d2e]">{metrics.contentsWithSaves}건</b> · {metrics.savesRate}%
           </div>
         </div>
       </div>

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase-server'
+import { sessionFromRequest } from '@/lib/session-cookie'
+import { contentMatchesBrand } from '@/lib/brand-content'
 
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabase()
@@ -44,5 +46,9 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ data })
+  // 회원사 로그인은 자기 브랜드 콘텐츠만
+  const session = await sessionFromRequest(req)
+  const brand = session?.kind === 'partner' ? session.brand ?? '' : null
+  const rows = brand === null ? data : (data ?? []).filter((c: { brands: string | null }) => contentMatchesBrand(c.brands, brand))
+  return NextResponse.json({ data: rows })
 }

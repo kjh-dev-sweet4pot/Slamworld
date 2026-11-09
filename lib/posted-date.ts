@@ -44,9 +44,9 @@ export function contentPeriodDate(c: Pick<Content, 'upload_url' | 'visit_date'> 
   return c.visit_date
 }
 
-/** 시딩(배송·기자단) 여부 — 보딩패스 지점명이 '기자단(시딩)', '국내시딩(배송)' 등 */
+/** 시딩(배송·기자단) 여부 — 보딩패스 지점명이 '기자단(시딩)', '국내시딩(배송)' 등. 「미지정」도 시딩 */
 export function isSeedingLocation(location: string | null | undefined): boolean {
-  return /시딩/.test(location || '')
+  return /시딩/.test(location || '') || (location || '').trim() === '미지정'
 }
 
 /**
@@ -60,6 +60,11 @@ export function inPerformanceMonth(date: string | null | undefined, month: strin
   const p = new Date(y, m - 2, 1)
   const prev = `${p.getFullYear()}-${String(p.getMonth() + 1).padStart(2, '0')}`
   return date.startsWith(prev) && date.slice(8, 10) >= '20'
+}
+
+/** 2026.07 성과월 이전(6/20 미만) 데이터인지 */
+export function isBeforeV2(date: string | null | undefined): boolean {
+  return !!date && date < '2026-06-20'
 }
 
 /** 날짜가 포함되는 성과 월 목록. 20일 이후면 다음 달에도 누적 */

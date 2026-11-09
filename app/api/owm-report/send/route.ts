@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { buildOwmReport, reportFilename, reportRangeLabel, reportSheets } from '@/lib/owm-report'
-import { multiSheetXlsx } from '@/lib/export-report'
+import { buildOwmReport, reportFilename, reportRangeLabel, reportXlsx, tablePeople, findTable } from '@/lib/owm-report'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -28,23 +27,36 @@ export async function GET(req: NextRequest) {
     const site = process.env.REPORT_SITE_URL || `${req.nextUrl.origin}/owm-report`
     const [ws, we] = r.summary.range
 
+    const [cs, ce] = r.cumulative.range
+    const ppl = (g: 'owm' | 'optipharm', st: 'planned' | 'visited', sp: 'weekly' | 'cumulative') =>
+      tablePeople(findTable(r, g, st, sp))
+    const th = 'style="background:#3557d6;color:#fff;padding:8px 10px;font-size:13px"'
+    const td = 'style="border-bottom:1px solid #f2ebdd;padding:8px 10px"'
+    const row = (label: string, o: string, p: string) =>
+      `<tr><td ${td}>${label}</td><td ${td} align="right"><b>${o}</b></td><td ${td} align="right"><b>${p}</b></td></tr>`
     const html = `
-<div style="font-family:-apple-system,sans-serif;color:#1a1d2e;max-width:640px">
+<div style="font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;color:#1a1d2e;max-width:640px">
   <h2 style="margin:0 0 4px">OWM · 옵티팜 주간 리포트</h2>
-  <p style="margin:0 0 16px;color:#6b6558">${ws} ~ ${we} (월~일)</p>
-  <table cellpadding="8" style="border-collapse:collapse;width:100%;font-size:14px">
-    <tr style="background:#f7f4ec"><th align="left">구분</th><th align="right">업로드 콘텐츠</th><th align="right">조회수</th></tr>
-    <tr><td>OWM 전체</td><td align="right">${n(r.summary.owm.uploads)}건</td><td align="right">${n(r.summary.owm.views)}</td></tr>
-    <tr><td>옵티팜</td><td align="right">${n(r.summary.optipharm.uploads)}건</td><td align="right">${n(r.summary.optipharm.views)}</td></tr>
+  <p style="margin:0 0 16px;color:#6b6558;font-size:13px">주간 ${ws} ~ ${we} (월~일) · 누적 ${cs} ~ ${ce}</p>
+  <table cellspacing="0" style="border-collapse:collapse;width:100%;font-size:14px">
+    <tr><th ${th} align="left">항목</th><th ${th} align="right">OWM 전체</th><th ${th} align="right">옵티팜</th></tr>
+    ${row('주간 노출 조회수', n(r.summary.owm.views), n(r.summary.optipharm.views))}
+    ${row('주간 업로드 콘텐츠', `${n(r.summary.owm.uploads)}건`, `${n(r.summary.optipharm.uploads)}건`)}
+    ${row('누적 노출 조회수', n(r.cumulative.owm.views), n(r.cumulative.optipharm.views))}
+    ${row('누적 업로드 콘텐츠', `${n(r.cumulative.owm.uploads)}건`, `${n(r.cumulative.optipharm.uploads)}건`)}
+    ${row('방문예정 · 주간', `${ppl('owm', 'planned', 'weekly')}명`, `${ppl('optipharm', 'planned', 'weekly')}명`)}
+    ${row('방문예정 · 누적', `${ppl('owm', 'planned', 'cumulative')}명`, `${ppl('optipharm', 'planned', 'cumulative')}명`)}
+    ${row('방문 · 주간', `${ppl('owm', 'visited', 'weekly')}명`, `${ppl('optipharm', 'visited', 'weekly')}명`)}
+    ${row('방문 · 누적', `${ppl('owm', 'visited', 'cumulative')}명`, `${ppl('optipharm', 'visited', 'cumulative')}명`)}
   </table>
   <h3 style="margin:20px 0 8px;font-size:15px">테이블 8개</h3>
   <table cellpadding="6" style="border-collapse:collapse;width:100%;font-size:13px">
-    ${r.tables.map(t => `<tr><td>${t.no}. ${esc(t.title)}</td><td style="color:#6b6558">${reportRangeLabel(t)}</td><td align="right">${t.rows.length}건</td></tr>`).join('')}
+    ${r.tables.map(t => `<tr><td>${t.no}. ${esc(t.title)}</td><td style="color:#6b6558">${reportRangeLabel(t)}</td><td align="right">${tablePeople(t)}명 · ${t.rows.length}행</td></tr>`).join('')}
   </table>
-  <p style="margin-top:20px;font-size:13px">첨부 엑셀에 8개 테이블이 있습니다. 메일 오류 시 <a href="${site}">${site}</a> 에서 언제든 받으실 수 있습니다.</p>
+  <p style="margin-top:20px;font-size:13px">첨부 엑셀에 「요약」 시트와 8개 테이블(①~⑧)이 있습니다. 언제든 <a href="${site}">${site}</a> 에서 확인·다운로드하실 수 있습니다.</p>
 </div>`
 
-    const xlsx = Buffer.from(multiSheetXlsx(reportSheets(r))).toString('base64')
+    const xlsx = Buffer.from(reportXlsx(r)).toString('base64')
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },

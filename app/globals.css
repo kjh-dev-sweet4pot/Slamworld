@@ -408,3 +408,26 @@ html.is-printing .report-print { display: block !important; }
     break-inside: avoid;
   }
 }
+
+/* ── 배경 토끼 ── */
+@keyframes bunny-run { from { transform: translateX(-80px) } to { transform: translateX(calc(100vw + 80px)) } }
+@keyframes bunny-hop { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-26px) } }
+.bunny { position: absolute; left: 0; animation: bunny-run linear infinite; }
+.bunny span { display: inline-block; font-size: 26px; opacity: .35; animation: bunny-hop .6s ease-in-out infinite; }
+.bunny-rev { animation-direction: reverse; }
+.bunny-rev span { scale: -1 1; }
+@media (prefers-reduced-motion: reduce) { .bunny-layer { display: none; } }
+
+/* ── 대시보드 박스 모서리 6px 통일 (pill·원형 제외) ── */
+.report-screen :is(.rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl, [class*="rounded-[1"], [class*="rounded-[2"]) {
+  border-radius: 6px;
+}
+
+/* ── PDF 리포트 (v2 디자인) ── */
+.report-print .rp-card { box-shadow: 0 4px 16px rgba(30,41,59,.06); }
+@media print {
+  .report-print .rp-card { break-inside: avoid; box-shadow: none; }
+  .report-print h2 { break-after: avoid; }
+  .bunny-layer, .bunny { display: none !important; }
+  .report-print *, .report-print *::before, .report-print *::after { animation: none !important; transition: none !important; }
+}

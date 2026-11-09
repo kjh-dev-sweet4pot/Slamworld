@@ -1,12 +1,6 @@
 'use client'
 import { useEffect, useState, type FormEvent } from 'react'
-import {
-  accessFromPassword,
-  clearStoredAccess,
-  loadStoredAccess,
-  storeAccess,
-  type AccessSession,
-} from '@/lib/access'
+import type { AccessSession } from '@/lib/access'
 import { AccessProvider } from '@/lib/access-context'
 import { APP_VERSION } from '@/lib/changelog'
 
@@ -15,28 +9,40 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
+  // 로그인 상태는 서버 서명 쿠키 기준
   useEffect(() => {
-    setSession(loadStoredAccess())
-    setReady(true)
+    fetch('/api/session', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => setSession(d.session ?? null))
+      .catch(() => setSession(null))
+      .finally(() => setReady(true))
   }, [])
 
   function logout() {
-    clearStoredAccess()
+    fetch('/api/session', { method: 'DELETE' }).catch(() => {})
     setSession(null)
     setPassword('')
     setError('')
   }
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    const next = accessFromPassword(password)
-    if (!next) {
-      setError('비밀번호가 올바르지 않습니다.')
+    if (busy) return
+    setBusy(true)
+    const res = await fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    }).catch(() => null)
+    setBusy(false)
+    const d = res ? await res.json().catch(() => null) : null
+    if (!res?.ok || !d?.session) {
+      setError(res ? '비밀번호가 올바르지 않습니다.' : '서버에 연결할 수 없습니다.')
       return
     }
-    storeAccess(next)
-    setSession(next)
+    setSession(d.session)
     setError('')
     setPassword('')
   }

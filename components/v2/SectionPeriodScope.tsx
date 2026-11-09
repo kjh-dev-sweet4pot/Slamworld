@@ -58,8 +58,8 @@ export default function SectionPeriodScope({ contents, children }: SectionPeriod
   return (
     <div className="relative">
       {!global && (
-      <div className="flex justify-end pt-4 -mb-3 sm:m-0 sm:p-0 sm:absolute sm:right-1 sm:top-[14px] z-10 print:hidden">
-        <PeriodNavV2 compact mode={mode} onModeChange={setMode} currentMonth={month} onMonthChange={setMonth} />
+      <div className="flex justify-end pt-4 -mb-3 sm:m-0 sm:p-0 sm:absolute sm:right-[18px] sm:top-[14px] z-10 print:hidden">
+        <PeriodNavV2 compact mode={mode} onModeChange={m => setMode(m === 'all' ? 'all' : 'monthly')} currentMonth={month} onMonthChange={setMonth} />
       </div>
       )}
       {children(scoped, period)}

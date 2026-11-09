@@ -113,25 +113,25 @@ export default function TrendAnalysisSection({
 
   return (
     <section className="mb-8">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-6 pb-2.5 px-1">
-        추이 분석
-      </div>
+      {/* 섹션 카드 — 제목 + 2열 */}
+      <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-[18px]">
+      <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">추이 분석</h3>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-[18px] mt-3">
         {/* 1. 지점별 월간 업로드 비교 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
+            <span className="text-[13px] font-extrabold text-[#1a1d2e]">
               지점별 {isMonthly ? '주차별' : '월간'} 업로드 비교
             </span>
-            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
+            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[8px] p-[3px]">
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   viewMode === 'table'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 표
@@ -139,10 +139,10 @@ export default function TrendAnalysisSection({
               <button
                 type="button"
                 onClick={() => setViewMode('chart')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   viewMode === 'chart'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 차트
@@ -151,11 +151,11 @@ export default function TrendAnalysisSection({
           </div>
 
           {matrixData.length === 0 ? (
-            <div className="text-center py-12 text-[12px] text-[#9a9486]">집행된 지점 데이터가 없습니다.</div>
+            <div className="text-center py-12 text-[12px] text-[#6b6558]">집행된 지점 데이터가 없습니다.</div>
           ) : viewMode === 'table' ? (
             <div className="mt-4">
-              <div className="grid gap-1.5 items-center pb-2.5 border-b border-[#eee6d6]" style={gridCols}>
-                <span className="text-[11px] text-[#9a9486] font-semibold">지점</span>
+              <div className="grid gap-1.5 items-center pb-2.5 border-b border-[#efe5d0]" style={gridCols}>
+                <span className="text-[11px] text-[#6b6558] font-normal">지점</span>
                 {buckets.map(({ key, label }, idx) => (
                   <span
                     key={key}
@@ -163,13 +163,13 @@ export default function TrendAnalysisSection({
                     className={
                       idx === LAST_IDX
                         ? 'text-[11px] text-[#e03131] font-bold text-center'
-                        : 'text-[11px] text-[#9a9486] font-semibold text-center'
+                        : 'text-[11px] text-[#6b6558] font-normal text-center'
                     }
                   >
                     {label}{idx === LAST_IDX ? ' ⚡' : ''}
                   </span>
                 ))}
-                <span className="text-[11px] text-[#9a9486] font-semibold text-right">
+                <span className="text-[11px] text-[#6b6558] font-normal text-right">
                   {showAverage ? (isMonthly ? '주평균' : '월평균') : '누적'}
                 </span>
               </div>
@@ -177,7 +177,7 @@ export default function TrendAnalysisSection({
               {matrixData.map(row => (
                 <div
                   key={row.name}
-                  className="grid gap-1.5 items-center py-2.5 border-b border-[#f7f2e8] last:border-b-0"
+                  className="grid gap-1.5 items-center py-2.5 border-b border-[#f4efe4] last:border-b-0"
                   style={gridCols}
                 >
                   <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-[#1a1d2e]">
@@ -215,8 +215,8 @@ export default function TrendAnalysisSection({
                 </div>
               ))}
 
-              <div className="flex items-center gap-2.5 mt-3 pt-3 border-t border-[#eee6d6]">
-                <span className="text-[11px] text-[#9a9486]">※ 실제 업로드 완료 건수 기준 집계</span>
+              <div className="flex items-center gap-2.5 mt-3 pt-3 border-t border-[#efe5d0]">
+                <span className="text-[11px] text-[#6b6558]">※ 실제 업로드 완료 건수 기준 집계</span>
                 <button
                   type="button"
                   onClick={() => setShowAverage(!showAverage)}
@@ -259,25 +259,25 @@ export default function TrendAnalysisSection({
         </div>
 
         {/* 2. 지점별 콘텐츠 효율 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
+            <span className="text-[13px] font-extrabold text-[#1a1d2e]">
               지점별 콘텐츠 효율
             </span>
-            <span className="ml-auto text-[11px] text-[#9a9486]">
+            <span className="ml-auto text-[11px] text-[#6b6558]">
               건당 평균 조회수
             </span>
           </div>
 
-          <div className="flex items-center gap-2 mt-3.5 px-3 py-2 bg-[#fbf9f4] rounded-[10px]">
-            <span className="text-[11.5px] text-[#9a9486]">전체 평균</span>
+          <div className="flex items-center gap-2 mt-3.5 px-3 py-2 bg-[#faf8f3] rounded-[8px]">
+            <span className="text-[11.5px] text-[#6b6558]">전체 평균</span>
             <span className="text-[13px] font-extrabold text-[#e03131]">{efficiencyData.overallAvg}</span>
-            <span className="text-[11.5px] text-[#9a9486]">조회 / 건</span>
+            <span className="text-[11.5px] text-[#6b6558]">조회 / 건</span>
           </div>
 
           <div className="flex flex-col gap-3 mt-4">
             {efficiencyData.list.length === 0 ? (
-              <div className="text-center py-8 text-[12px] text-[#9a9486]">효율 데이터가 없습니다.</div>
+              <div className="text-center py-8 text-[12px] text-[#6b6558]">효율 데이터가 없습니다.</div>
             ) : (
               efficiencyData.list.map(item => (
                 <div
@@ -309,7 +309,7 @@ export default function TrendAnalysisSection({
             )}
           </div>
 
-          <div className="bg-[#fbf9f4] rounded-xl p-3 sm:p-3.5 mt-4 text-[12px] leading-relaxed text-[#4b4a44]">
+          <div className="bg-[#faf8f3] rounded-[8px] px-2.5 py-2 mt-4 text-[12px] leading-relaxed text-[#3b3830]">
             {efficiencyData.topEff ? (
               <>
                 <b>{efficiencyData.topEff.name}점</b>이 건당 평균 {efficiencyData.topEff.avgViews.toLocaleString()}회로 효율 1위를 기록했습니다.
@@ -319,6 +319,7 @@ export default function TrendAnalysisSection({
             )}
           </div>
         </div>
+      </div>
       </div>
       {tooltip.node}
     </section>

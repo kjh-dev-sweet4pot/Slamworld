@@ -1,4 +1,4 @@
-import { inPerformanceMonth } from './posted-date'
+import { inPerformanceMonth, isSeedingLocation } from './posted-date'
 import type { Content, Channel, ContentFormat } from '@/lib/types'
 import { contentViews } from '@/lib/content-views'
 import { classifyContentFormat } from '@/lib/content-format'
@@ -19,6 +19,8 @@ export const V2_LOC_COLORS: Record<string, string> = {
 export function normalizeLocationName(loc: string | null | undefined): string {
   if (!loc) return ''
   if (V2_LOC_COLORS[loc]) return loc
+  // 국내시딩 · 기자단(시딩) · 미지정 · 시딩 → 「시딩」 하나로
+  if (isSeedingLocation(loc)) return '시딩'
   const withSuffix = `${loc}점`
   return V2_LOC_COLORS[withSuffix] ? withSuffix : loc
 }
@@ -169,12 +171,14 @@ export const V2_ORDERED_LOCATIONS = [
   '종각점',
 ]
 
-/** 6개 분석 월 (당월 포함 최근 6개월) */
+/** 리포트 시작 월. 이전 데이터는 「7월 이전 데이터」로 묶는다 */
+export const V2_START_MONTH = '2026-07'
+
+/** 분석 월 (2026.07 ~ 당월) */
 export const V2_MONTHS = (() => {
   const now = new Date()
   const months: string[] = []
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+  for (let d = new Date(2026, 6, 1); d <= now; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
   return months

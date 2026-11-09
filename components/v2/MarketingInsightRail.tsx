@@ -39,7 +39,7 @@ function LinkedText({ text, links }: { text: string; links: Links }) {
         return (
           <span key={i} className="whitespace-nowrap">
             {link.content ? (
-              <a href={link.content} target="_blank" rel="noreferrer" className="font-bold text-[#2f5fd8] hover:underline">
+              <a href={link.content} target="_blank" rel="noreferrer" className="font-bold text-[#3557d6] hover:underline">
                 {part}
               </a>
             ) : (
@@ -275,13 +275,16 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
   const header = (big: boolean) => (
     <div className="flex items-center gap-2">
       <div className={`${big ? 'text-[16px] font-extrabold' : 'text-[12.5px] font-bold'} text-[#1a1d2e]`}>더 궁금한 점이 있으신가요?</div>
-      <button
-        type="button"
-        onClick={() => setExpanded(!big)}
-        className="ml-auto text-[11px] font-bold text-[#6b6558] bg-[#f7f4ec] hover:text-[#1a1d2e] rounded-full px-2.5 py-1 transition-colors whitespace-nowrap"
-      >
-        {big ? '✕ 닫기' : '⤢ 크게 보기'}
-      </button>
+      {/* 크게 보기 버튼은 레일 제목 줄로 이동 */}
+      {big && (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="ml-auto text-[11px] font-medium text-[#3557d6] hover:underline whitespace-nowrap"
+        >
+          ✕ 닫기
+        </button>
+      )}
     </div>
   )
   const chat = (big: boolean) => (
@@ -290,11 +293,11 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
         <div ref={qaBox} className={`relative flex flex-col gap-2.5 mt-2.5 ${big ? 'flex-1 min-h-0' : 'max-h-[320px]'} overflow-y-auto pr-1`}>
           {qa.map((x, i) => (
             <div key={i} ref={i === qa.length - 1 ? lastQa : undefined} className="flex flex-col gap-1.5">
-              <div className={`self-end max-w-[90%] ${big ? 'text-[14px]' : 'text-[11.5px]'} text-white bg-[#4f7cff] rounded-xl rounded-br-sm px-2.5 py-1.5`}>
+              <div className={`self-end max-w-[90%] ${big ? 'text-[14px]' : 'text-[11.5px]'} text-white bg-[#3557d6] rounded-[6px] px-2.5 py-1.5`}>
                 {x.question}
               </div>
               <div
-                className={`self-start max-w-[95%] ${big ? 'text-[14px]' : 'text-[11.5px]'} leading-relaxed rounded-xl rounded-bl-sm px-3 py-2.5 ${
+                className={`self-start max-w-[95%] ${big ? 'text-[14px]' : 'text-[11.5px]'} leading-relaxed rounded-[6px] px-3 py-2.5 ${
                   x.error ? 'text-[#b42318] bg-[#fef2f2]' : 'text-[#2a2d3e] bg-[#fbf9f4]'
                 }`}
               >
@@ -310,12 +313,12 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
           onChange={e => setQuestion(e.target.value)}
           placeholder="예: 시딩 성과가 제일 좋은 채널은?"
           maxLength={500}
-          className="flex-1 min-w-0 text-[12px] text-[#1a1d2e] placeholder-[#a9a294] bg-[#fbf9f4] border border-[#f0e9da] rounded-[10px] px-2.5 py-2 focus:outline-none focus:border-[#4f7cff]"
+          className="flex-1 min-w-0 text-[12px] text-[#1a1d2e] placeholder-[#a9a294] bg-[#fbf9f4] border border-[#f0e9da] rounded-[6px] px-2.5 py-2 focus:outline-none focus:border-[#3557d6]"
         />
         <button
           type="submit"
           disabled={!question.trim() || asking}
-          className="text-[12px] font-bold text-white bg-[#4f7cff] hover:bg-[#3f6cef] disabled:opacity-40 rounded-[10px] px-3 transition-colors"
+          className="text-[12px] font-bold text-white bg-[#1a1d2e] hover:bg-[#2a2d3e] disabled:opacity-40 rounded-[6px] px-3 py-2 transition-colors"
         >
           질문
         </button>
@@ -329,23 +332,31 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
     .filter(Boolean)
 
   return (
-    <aside className="flex-1 min-w-[280px] max-w-full lg:max-w-[340px] bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4 self-start">
+    <aside className="hidden xl:block flex-[0_0_330px] w-[330px] bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4 self-start">
       <div className="flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
-        <span className="text-[14px] font-extrabold text-[#1a1d2e]">최근 30일 마케팅 요약</span>
-        <span className="text-[9.5px] font-extrabold tracking-wider text-[#7c3aed] bg-[#f3e8ff] px-1.5 py-0.5 rounded-[6px]">BETA</span>
+        <span className="text-[17px] font-extrabold text-[#1a1d2e]">최근 30일 마케팅 요약</span>
+        <span className="text-[9.5px] font-extrabold tracking-wider text-[#3557d6] bg-[#eef2ff] px-1.5 py-0.5 rounded-full">BETA</span>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="ml-auto text-[11px] font-medium text-[#3557d6] hover:underline whitespace-nowrap"
+        >
+          ⤢ 크게 보기
+        </button>
+      </div>
+      <div className="flex items-center text-[11px] text-[#6b6558] mt-2.5">
+        {updatedAt && <span>{kstLabel(updatedAt)} 기준</span>}
         <button
           type="button"
           onClick={() => load(true)}
           disabled={loading}
-          className="ml-auto text-[11px] font-bold text-[#4f7cff] bg-[#eef3ff] hover:bg-[#e0ebff] disabled:opacity-50 rounded-full px-2.5 py-1 transition-colors whitespace-nowrap"
+          className="ml-auto text-[11px] font-medium text-[#1a1d2e] bg-white hover:bg-[#faf8f3] border border-[#e3d9c4] disabled:opacity-50 rounded-[6px] px-2 py-1 transition-colors whitespace-nowrap"
         >
           {loading ? '요약 중…' : '↻ 다시 요약'}
         </button>
       </div>
-      {updatedAt && <div className="text-[11px] text-[#9a9486] mt-1">{kstLabel(updatedAt)} 기준</div>}
 
-      <div className="mt-3">
+      <div className="mt-2.5">
         {error ? (
           <div className="py-6 text-center text-[12px] text-[#9a9486]">{error}</div>
         ) : loading && !summary ? (
@@ -355,8 +366,8 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
         ) : (
           <ul className={`flex flex-col gap-2 ${loading ? 'opacity-50' : ''}`}>
             {bullets.map((b, i) => (
-              <li key={i} className="flex gap-2 text-[12px] leading-relaxed text-[#2a2d3e]">
-                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-[#8b5cf6] shrink-0" />
+              <li key={i} className="flex gap-2 text-[12.5px] leading-[1.75] text-[#3b3830]">
+                <span className="mt-[9px] w-1 h-1 rounded-full bg-[#3557d6] shrink-0" />
                 <span>
                   <LinkedText text={b} links={links} />
                 </span>
@@ -366,7 +377,7 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
         )}
       </div>
 
-      <div className="h-px bg-[#f4efe3] my-3.5" />
+      <div className="h-px bg-[#f4efe3] my-3" />
 
       {expanded ? (
         <div className="text-[11.5px] text-[#9a9486] py-2">크게 보기로 대화 중이에요</div>
@@ -379,7 +390,7 @@ export default function MarketingInsightRail({ partnerBrand }: { partnerBrand?: 
       {expanded && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setExpanded(false)}>
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-[860px] h-[85vh] flex flex-col p-5"
+            className="bg-white rounded-[6px] shadow-xl w-full max-w-[860px] h-[85vh] flex flex-col p-5"
             onClick={e => e.stopPropagation()}
           >
             {header(true)}

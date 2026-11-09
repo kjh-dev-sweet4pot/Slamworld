@@ -1,5 +1,6 @@
 import type { Content } from '@/lib/types'
 import { contentViews, contentViewsDisplay } from '@/lib/content-views'
+import { normalizeLocationName } from '@/lib/v2-analytics'
 
 const HEADERS = [
   '지점',
@@ -66,7 +67,7 @@ function sheetXml(rows: Content[]): string {
     const row = idx + 2
     const v = viewsCell(c)
     const vals: (string | number | null)[] = [
-      c.location ?? '',
+      normalizeLocationName(c.location),
       c.influencer_name ?? '',
       c.sns_id ?? '',
       c.channel ?? '',

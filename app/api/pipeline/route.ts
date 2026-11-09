@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sessionFromRequest } from '@/lib/session-cookie'
+import { contentMatchesBrand } from '@/lib/brand-content'
 import { isTestCompany } from '@/lib/test-companies.mjs'
 import { isSeedingLocation } from '@/lib/posted-date'
 
@@ -27,7 +29,7 @@ interface AllocationRow {
 }
 
 /** 진행예정 등록(보딩패스 방문·시딩 배정) 목록 — 발행 수는 contents 로 클라이언트에서 계산 */
-export async function GET() {
+export async function GET(req: Request) {
   const url = process.env.BP_SUPABASE_URL
   const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return NextResponse.json({ error: 'BoardingPass 환경변수 없음' }, { status: 500 })
@@ -62,8 +64,10 @@ export async function GET() {
     })
   }
 
+  const session = await sessionFromRequest(req)
+  const brand = session?.kind === 'partner' ? session.brand ?? '' : null
   return NextResponse.json(
-    { data: registrations },
-    { headers: { 'Cache-Control': 's-maxage=600, stale-while-revalidate=3600' } },
+    { data: brand === null ? registrations : registrations.filter(r => contentMatchesBrand(r.company, brand)) },
+    { headers: { 'Cache-Control': 'private, max-age=600' } },
   )
 }
