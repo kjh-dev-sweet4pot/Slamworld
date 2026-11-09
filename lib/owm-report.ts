@@ -420,18 +420,21 @@ function statusOf(t: ReportTable, x: ReportRow): { label: string; color: string 
 }
 
 /** 「요약」 대시보드 */
-function summarySheet(r: OwmReport): StyledSheet {
+function summarySheet(r: OwmReport, weekly = false): StyledSheet {
   const g = new Grid()
   const W = 11 // A..K
   const kst = new Date(Date.parse(r.generated_at) + KST).toISOString().slice(0, 16).replace('T', ' ')
   const [ws, we] = r.summary.range
   const [cs, ce] = r.cumulative.range
   const ppl = (k: Group, s: Status, sp: Span) => tablePeople(findTable(r, k, s, sp))
+  // 주간 엑셀: 누적 없이 고른 주만
+  const base: Span = weekly ? 'weekly' : 'cumulative'
+  const baseKo = weekly ? '주간' : '누적'
 
   // 타이틀 밴드
   g.box(0, 0, 0, W - 1, 'OWM · 옵티팜 주간 리포트', st.band(C.navy, 16))
   g.h(0, 40)
-  g.box(1, 0, 1, W - 1, `주간 ${ws} ~ ${we} (월~일)   ·   누적 ${cs} ~ ${ce}`, st.bandSub(C.navy))
+  g.box(1, 0, 1, W - 1, weekly ? `주간 ${ws} ~ ${we} (월~일)` : `주간 ${ws} ~ ${we} (월~일)   ·   누적 ${cs} ~ ${ce}`, st.bandSub(C.navy))
   g.box(2, 0, 2, W - 1, `생성 ${kst} (KST)   ·   by 브랜드슬램`, st.bandSub(C.navy))
   g.h(1, 18)
   g.h(2, 18)
@@ -451,6 +454,10 @@ function summarySheet(r: OwmReport): StyledSheet {
       g.box(row + 1, c0 + 2, row + 1, c0 + 3, n2, st.cardNum(fill, color))
     }
     pair(5, '주간 노출 조회수', w.views, '주간 업로드 콘텐츠', w.uploads)
+    if (weekly) {
+      pair(7, '방문예정 인원 · 주간', ppl(k, 'planned', 'weekly'), '방문 인원 · 주간', ppl(k, 'visited', 'weekly'))
+      return
+    }
     pair(7, '누적 노출 조회수', cu.views, '누적 업로드 콘텐츠', cu.uploads)
     const people: [string, number][] = [
       ['방문예정 · 주간', ppl(k, 'planned', 'weekly')],
@@ -474,11 +481,11 @@ function summarySheet(r: OwmReport): StyledSheet {
 
   // 지점별 요약 (누적 방문 기준)
   let R = 13
-  g.box(R, 1, R, 9, '지점별 요약  (누적 방문 기준)', st.section)
+  g.box(R, 1, R, 9, `지점별 요약  (${baseKo} 방문 기준)`, st.section)
   g.h(R, 24)
   R++
-  const vo = findTable(r, 'owm', 'visited', 'cumulative').rows
-  const vp = findTable(r, 'optipharm', 'visited', 'cumulative').rows
+  const vo = findTable(r, 'owm', 'visited', base).rows
+  const vp = findTable(r, 'optipharm', 'visited', base).rows
   const stores = [...new Set([...vo, ...vp].map(x => x.store || '(지점 미상)'))].sort((a, b) => a.localeCompare(b, 'ko'))
   const agg = (rows: ReportRow[], store?: string) => {
     const rs = store === undefined ? rows : rows.filter(x => (x.store || '(지점 미상)') === store)
@@ -517,7 +524,7 @@ function summarySheet(r: OwmReport): StyledSheet {
 
   // 조회수 TOP 5
   R++
-  g.box(R, 1, R, 9, '조회수 TOP 5 콘텐츠  (누적 방문 · OWM 전체)', st.section)
+  g.box(R, 1, R, 9, `조회수 TOP 5 콘텐츠  (${baseKo} 방문 · OWM 전체)`, st.section)
   g.h(R, 24)
   R++
   const optiKeys = new Set(vp.map(x => x.url))
@@ -560,7 +567,7 @@ function summarySheet(r: OwmReport): StyledSheet {
   g.put(R, 8, '콘텐츠', st.th())
   g.put(R, 9, '조회수', st.th())
   R++
-  r.tables.forEach((t, i) => {
+  r.tables.filter(t => !weekly || t.span === 'weekly').forEach((t, i) => {
     const fill = i % 2 ? C.cream : C.white
     g.box(R, 1, R, 3, tableSheetName(t), { ...st.link(fill), h: 'left', indent: 1, font: { u: true, sz: 10, color: groupColor(t.group) } }, { location: sheetRef(tableSheetName(t)) })
     g.box(R, 4, R, 6, fullRange(t), st.td(fill, 'center'))
@@ -659,16 +666,20 @@ function detailSheet(t: ReportTable): StyledSheet {
 }
 
 /** 엑셀 시트: 「요약」 대시보드 + ①~⑧ 상세 */
-export function reportWorkbook(r: OwmReport): StyledSheet[] {
+/** weekly = 고른 주간만 (누적 시트·누적 숫자 제외) — 사이트 엑셀 다운로드용 */
+export function reportWorkbook(r: OwmReport, weekly = false): StyledSheet[] {
   // 지난 기간이면 방문예정 시트는 뺀다
   const now = ymd(Date.now() + KST)
-  return [summarySheet(r), ...r.tables.filter(t => !(t.status === 'planned' && t.range[1] < now)).map(detailSheet)]
+  const tables = r.tables.filter(t => !(t.status === 'planned' && t.range[1] < now) && (!weekly || t.span === 'weekly'))
+  return [summarySheet(r, weekly), ...tables.map(detailSheet)]
 }
 
-export const reportXlsx = (r: OwmReport) => styledXlsx(reportWorkbook(r))
+export const reportXlsx = (r: OwmReport, weekly = false) => styledXlsx(reportWorkbook(r, weekly))
 
-export const reportFilename = (r: OwmReport) =>
-  `OWM-옵티팜-리포트-${r.cumulative.range[0]}~${r.cumulative.range[1]}.xlsx`
+export const reportFilename = (r: OwmReport, weekly = false) =>
+  weekly
+    ? `OWM-옵티팜-주간리포트-${r.summary.range[0]}~${r.summary.range[1]}.xlsx`
+    : `OWM-옵티팜-리포트-${r.cumulative.range[0]}~${r.cumulative.range[1]}.xlsx`
 
 /** 쿼리 → 리포트 옵션 (?month=YYYY-MM 또는 ?from=YYYY-MM-DD&to=YYYY-MM-DD) */
 export const reportOpts = (q: URLSearchParams) => ({
