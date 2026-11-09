@@ -207,11 +207,13 @@ function OwmReportInner() {
   const [data, setData] = useState<OwmReport | null>(null)
   const [error, setError] = useState('')
   // 기간 지정 — 비우면 기본(누적 11/1~오늘, 주간 = 지난주)
-  const [mode, setMode] = useState<'all' | 'month' | 'week'>('week') // 기본 = 이번 주
+  const [mode, setMode] = useState<'all' | 'month' | 'week' | 'range'>('week') // 기본 = 이번 주
   const [mi, setMi] = useState(MONTHS.length - 1)
   const [wi, setWi] = useState(WEEKS.length - 1)
-  const query = mode === 'month' ? `?month=${MONTHS[mi]}` : mode === 'week' ? `?week=${WEEKS[wi].start}` : ''
-  const canPrev = mode === 'all' || (mode === 'month' ? mi > 0 : wi > 0)
+  const [from, setFrom] = useState('2026-09-01')
+  const [to, setTo] = useState(new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10))
+  const query = mode === 'range' ? (from && to && from <= to ? `?from=${from}&to=${to}` : '') : mode === 'month' ? `?month=${MONTHS[mi]}` : mode === 'week' ? `?week=${WEEKS[wi].start}` : ''
+  const canPrev = mode !== 'range' && (mode === 'all' || (mode === 'month' ? mi > 0 : wi > 0))
   const canNext = mode === 'month' ? mi < MONTHS.length - 1 : mode === 'week' ? wi < WEEKS.length - 1 : false
   const step = (n: number) => {
     if (mode === 'all') {
@@ -221,7 +223,9 @@ function OwmReportInner() {
     else setWi(i => i + n)
   }
   const periodText =
-    mode === 'month'
+    mode === 'range'
+      ? `${f(from)}~${f(to)}`
+      : mode === 'month'
       ? `${MONTHS[mi].replace('-', '.')} (${Number(MONTHS[mi].slice(5))}월)`
       : mode === 'week'
         ? `${weekLabel(WEEKS[wi]).replace(/ \(.*\)/, '')} · ${f(WEEKS[wi].start)}~${f(WEEKS[wi].end)}`
@@ -263,12 +267,20 @@ function OwmReportInner() {
             <button type="button" disabled={!canNext} onClick={() => step(1)} className="w-[34px] h-[34px] rounded-[6px] border border-[#e3d9c4] bg-white text-[13px] disabled:opacity-30" aria-label="다음 기간">
               ▶
             </button>
+            {mode === 'range' && (
+              <div className="flex items-center gap-1 text-[12.5px]">
+                <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} className="h-[34px] rounded-[6px] border border-[#e3d9c4] bg-white px-2" aria-label="시작일" />
+                <span>~</span>
+                <input type="date" value={to} min={from} onChange={e => setTo(e.target.value)} className="h-[34px] rounded-[6px] border border-[#e3d9c4] bg-white px-2" aria-label="종료일" />
+              </div>
+            )}
             <div className="flex gap-[3px] bg-[#f7f4ec] rounded-full p-[3px] text-[12.5px]" role="tablist">
               {(
                 [
                   ['all', '전체'],
                   ['month', '월별'],
                   ['week', '주간'],
+                  ['range', '기간'],
                 ] as const
               ).map(([k, l]) => (
                 <button

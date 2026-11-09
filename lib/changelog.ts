@@ -13,7 +13,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-11-09',
     icon: '🔐',
     title: 'OWM 리포트 직접 로그인',
-    items: ['/owm-report에서 바로 로그인', '엑셀 누적 시트 복구 (파일명만 주간)'],
+    items: ['/owm-report에서 바로 로그인', '엑셀 누적 시트 복구 (파일명만 주간)', '방문·주간 = 지난주 기준', '조회 기간 직접 지정 (기간 탭)'],
   },
   {
     version: '1.0.17',

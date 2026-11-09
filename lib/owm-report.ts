@@ -172,6 +172,7 @@ export async function buildOwmReport(opts: { month?: string; from?: string; to?:
   let today = ymd(now + KST)
   let thisWeek: [string, string]
   let lastWeek: [string, string]
+  let visitWeek: [string, string] | undefined
   const isYmd = (d?: string) => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d)
   if (isYmd(opts.week)) {
     // 주차 보기: 주간 = 그 주(월~일), 누적 = 그 달 1일 ~ 그 주 일요일(오늘까지)
@@ -183,6 +184,8 @@ export async function buildOwmReport(opts: { month?: string; from?: string; to?:
     end = wk[1]
     if (today > end) today = end
     thisWeek = lastWeek = wk
+    // 방문·주간 = 그 전주 (방문예정은 그 주)
+    visitWeek = [ymd(mon - 7 * DAY), ymd(mon - DAY)]
   } else if (isYmd(opts.from) && isYmd(opts.to) && opts.from! <= opts.to!) {
     // 기간 지정: 누적 = from~to, 주간 = to 가 속한 주(from 이후)
     start = opts.from!
@@ -202,7 +205,8 @@ export async function buildOwmReport(opts: { month?: string; from?: string; to?:
     lastWeek = [ymd(thisMon - 7 * DAY), ymd(thisMon - DAY)]
   }
 
-  const [visits, contents] = await Promise.all([loadVisits(start), loadContents()])
+  const loadFrom = visitWeek && visitWeek[0] < start ? visitWeek[0] : start
+  const [visits, contents] = await Promise.all([loadVisits(loadFrom), loadContents()])
 
   // 방문 → 콘텐츠 연결: 핸들 또는 이름 + 방문일
   const contentIndex = new Map<string, Content[]>()
@@ -244,7 +248,7 @@ export async function buildOwmReport(opts: { month?: string; from?: string; to?:
   for (const c of contents) {
     if (used.has(c) || !c.upload_url || !c.visit_date || isSeedingLocation(c.location)) continue
     const d = c.visit_date.slice(0, 10)
-    if (d < start || d > end) continue
+    if (d < loadFrom || d > end) continue
     expanded.push({
       visit_date: d,
       store: c.location || '미정',
@@ -276,7 +280,7 @@ export async function buildOwmReport(opts: { month?: string; from?: string; to?:
             : [start, today]
           : status === 'planned'
             ? thisWeek
-            : lastWeek
+            : (visitWeek ?? lastWeek)
       const rows = expanded
         .filter(r => (group === 'owm' || r.opti) && (status === 'visited') === r.done)
         .filter(r => r.visit_date >= range[0] && r.visit_date <= range[1])

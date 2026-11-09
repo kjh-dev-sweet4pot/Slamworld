@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     return new Response(Buffer.from(bytes), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(reportFilename(r, true))}`,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(reportFilename(r, !(q.get('from') && q.get('to'))))}`,
       },
     })
   } catch (e) {
