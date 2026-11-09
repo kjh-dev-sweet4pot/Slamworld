@@ -14,7 +14,7 @@ interface ExecutiveSummarySectionProps {
   showRoi?: boolean
 }
 
-const CARD = 'bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5'
+const CARD = 'bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-[18px]'
 
 function monthStats(rows: Content[]) {
   const uploaded = rows.filter(c => c.upload_url).length
@@ -113,48 +113,27 @@ export default function ExecutiveSummarySection({ contents = [], showRoi = false
   ]
 
   return (
-    <section>
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-3 pb-2.5 px-1">
+    <section className={CARD}>
+      <div className="text-[18px] font-extrabold text-[#1a1d2e]">
         핵심 성과 요약{' '}
-        <span className="text-[13px] font-semibold tracking-normal text-[#9a9486]">
+        <span className="text-[12px] font-medium text-[#6b6558]">
           ( 누적 · 증감은 {data.curLabel} vs {data.prevLabel} )
         </span>
       </div>
 
-      {/* KPI 타일 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      {/* 성과 타일 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
         {tiles.map(t => (
-          <div key={t.label} className={CARD}>
-            <div className="text-[11.5px] font-bold text-[#9a9486]">{t.label}</div>
-            <div className="text-[24px] font-extrabold tracking-tight text-[#1a1d2e] mt-1">{t.value}</div>
-            <div className="text-[11.5px] mt-1 text-[#6b6558]">
+          <div key={t.label} className="bg-[#faf8f3] rounded-[6px] p-3">
+            <div className="text-[12px] text-[#6b6558]">{t.label}</div>
+            <div className="text-[17px] font-extrabold text-[#1a1d2e] mt-1 whitespace-nowrap">{t.value}</div>
+            <div className="text-[11px] font-bold mt-0.5 text-[#6b6558]">
               {data.curLabel} <Delta cur={t.cur} prev={t.prev} pt={t.pt} />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 mt-4">
-        {/* 데이터 신뢰도 */}
-        <div className={CARD}>
-          <div className="text-[14.5px] font-extrabold text-[#1a1d2e]">🔎 데이터 신뢰도</div>
-          <div className="flex items-baseline gap-2 mt-3">
-            <span className="text-[30px] font-extrabold text-[#1a1d2e]">{data.measuredPct.toFixed(0)}%</span>
-            <span className="text-[12px] text-[#6b6558]">조회수 중 플랫폼 실측값</span>
-          </div>
-          <div className="h-3 rounded-full bg-[#f4efe3] overflow-hidden flex mt-2">
-            <span className="block h-full bg-[#1a1d2e]" style={{ width: `${data.measuredPct}%` }} />
-            <span className="block h-full bg-[#d8cfbd]" style={{ width: `${100 - data.measuredPct}%` }} />
-          </div>
-          <div className="flex gap-3 mt-2 text-[11px] text-[#6b6558]">
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#1a1d2e]" />실측</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#d8cfbd]" />추정 (샤오홍슈·도우인 반응 역산)</span>
-          </div>
-          <div className="bg-[#fbf9f4] rounded-xl p-3 mt-4 text-[12px] leading-relaxed text-[#4b4a44]">
-            조회수 미공개 채널은 좋아요·저장·댓글로 역산한 추정치를 사용합니다.
-          </div>
-        </div>
-      </div>
     </section>
   )
 }

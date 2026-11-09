@@ -17,8 +17,8 @@ interface PipelineCountCardProps {
 type Period = 'recent30' | 'all' | `month:${string}`
 
 const DAY = 24 * 3600_000
-const VISIT_COLOR = '#4f7cff'
-const SEEDING_COLOR = '#f59e0b'
+const VISIT_COLOR = '#3557d6'
+const SEEDING_COLOR = '#f0b35a'
 
 function kstToday(): string {
   return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
@@ -92,84 +92,74 @@ export default function PipelineCountCard({ contents, partnerBrand }: PipelineCo
     { label: '발행', sub: '게시일 기준', ...counts.published, loading: false },
   ]
 
+  const pill = (on: boolean) =>
+    `text-[11px] rounded-full px-[9px] py-[5px] border whitespace-nowrap transition-colors ${
+      on ? 'font-bold text-white bg-[#1a1d2e] border-[#1a1d2e]' : 'font-medium text-[#1a1d2e] bg-white border-[#e3d9c4] hover:bg-[#faf8f3]'
+    }`
+
   return (
-    <section className="mb-4">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-3 pb-2.5 px-1">
-        인플루언서 현황{' '}
-        <span className="text-[13px] font-semibold tracking-normal text-[#9a9486]">( {periodLabel(period)} · 고유 인원 )</span>
-      </div>
-      <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {(global ? (['recent30'] as const) : (['recent30', 'all'] as const)).map(p => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriod(global && period === p ? globalPeriod! : p)}
-              className={`text-[11.5px] rounded-[16px] px-3 py-1.5 transition-all whitespace-nowrap ${
-                period === p ? 'font-bold text-white bg-[#4f7cff]' : 'font-semibold bg-[#f7f4ec] text-[#6b6558] hover:text-[#1a1d2e]'
-              }`}
-            >
-              {periodLabel(p)}
-            </button>
-          ))}
-          {!global && (
+    <section className="mb-4 bg-white border border-[#f2ebdd] rounded-[6px] p-[18px] shadow-[0_4px_16px_rgba(30,41,59,0.06)]">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">
+          인플루언서 현황{' '}
+          <span className="text-[12px] font-medium text-[#6b6558]">( {periodLabel(period)} · 고유 인원 )</span>
+        </h3>
+        <div className="flex-1" />
+        {(global ? (['recent30'] as const) : (['recent30', 'all'] as const)).map(p => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPeriod(global && period === p ? globalPeriod! : p)}
+            className={pill(period === p)}
+          >
+            {periodLabel(p)}
+          </button>
+        ))}
+        {!global && (
           <select
             value={period.startsWith('month:') ? period : ''}
             onChange={e => e.target.value && setPeriod(e.target.value as Period)}
-            className={`ml-auto text-[11.5px] font-semibold border rounded-[10px] px-2.5 py-1.5 focus:outline-none ${
-              period.startsWith('month:') ? 'text-[#1a1d2e] bg-white border-[#4f7cff]' : 'text-[#6b6558] bg-[#fbf9f4] border-[#f0e9da]'
-            }`}
+            className={`${pill(period.startsWith('month:'))} focus:outline-none`}
           >
-            <option value="" disabled>월별</option>
+            <option value="" disabled>월별 ▾</option>
             {[...V2_MONTHS].reverse().map(m => (
               <option key={m} value={`month:${m}`}>{m.replace('-', '.')}</option>
             ))}
           </select>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4 mt-5">
-          {bars.map(b => (
-            <div key={b.label}>
-              <div className="flex items-baseline gap-2">
-                <span className="text-[12.5px] font-bold text-[#1a1d2e]">{b.label} 인플루언서</span>
-                <span className="text-[10.5px] text-[#9a9486]">{b.sub}</span>
-                <span className="ml-auto text-[26px] font-extrabold tracking-tight text-[#1a1d2e] leading-none">
-                  {b.loading ? '…' : b.total.toLocaleString()}
-                  <span className="text-[13px] font-bold text-[#9a9486] ml-0.5">명</span>
-                </span>
-              </div>
-              <div className="h-3.5 rounded-full bg-[#f4efe3] overflow-hidden mt-2 flex">
-                <span
-                  className="block h-full transition-all duration-500"
-                  style={{ width: b.loading ? '0%' : `${(b.visit / max) * 100}%`, backgroundColor: VISIT_COLOR }}
-                />
-                <span
-                  className="block h-full transition-all duration-500"
-                  style={{ width: b.loading ? '0%' : `${(b.seeding / max) * 100}%`, backgroundColor: SEEDING_COLOR }}
-                />
-              </div>
-              <div className="flex gap-4 mt-1.5 text-[11px] text-[#6b6558]">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: VISIT_COLOR }} />
-                  방문 <b className="text-[#1a1d2e]">{b.loading ? '…' : b.visit}</b>명
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: SEEDING_COLOR }} />
-                  시딩 <b className="text-[#1a1d2e]">{b.loading ? '…' : b.seeding}</b>명
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="text-[10.5px] text-[#9a9486] mt-3">
-          ※ 날짜가 없는 등록(대부분의 시딩)은 &lsquo;전체 기간&rsquo;에만 집계됩니다. 방문·시딩이 겹치면 방문으로 셉니다.
-        </div>
-
-        {error && (
-          <div className="text-[11px] text-[#e03131] mt-3">진행예정 등록 데이터를 불러오지 못했습니다.</div>
         )}
       </div>
+
+      {bars.map(b => (
+        <div key={b.label} className="mt-3.5">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[13px] font-extrabold text-[#1a1d2e]">{b.label} 인플루언서</span>
+            <span className="text-[11px] text-[#6b6558]">{b.sub}</span>
+            <span className="ml-auto text-[18px] font-extrabold text-[#1a1d2e]">
+              {b.loading ? '…' : b.total.toLocaleString()}명
+            </span>
+          </div>
+          <div className="h-3 rounded-[6px] bg-[#f4efe3] overflow-hidden mt-1.5 flex">
+            <span
+              className="block h-full transition-all duration-500"
+              style={{ width: b.loading ? '0%' : `${(b.visit / max) * 100}%`, backgroundColor: VISIT_COLOR }}
+            />
+            <span
+              className="block h-full transition-all duration-500"
+              style={{ width: b.loading ? '0%' : `${(b.seeding / max) * 100}%`, backgroundColor: SEEDING_COLOR }}
+            />
+          </div>
+          <div className="text-[11px] text-[#4a4538] mt-1">
+            방문 {b.loading ? '…' : b.visit}명 · 시딩 {b.loading ? '…' : b.seeding}명
+          </div>
+        </div>
+      ))}
+      <div className="text-[10.5px] text-[#6b6558] mt-3">
+        ※ 날짜가 없는 등록(대부분의 시딩)은 &lsquo;전체 기간&rsquo;에만 집계됩니다. 방문·시딩이 겹치면 방문으로 셉니다.
+      </div>
+
+      {error && (
+        <div className="text-[11px] text-[#e03131] mt-3">진행예정 등록 데이터를 불러오지 못했습니다.</div>
+      )}
     </section>
   )
 }

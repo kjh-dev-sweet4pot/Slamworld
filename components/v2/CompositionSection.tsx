@@ -135,26 +135,26 @@ export default function CompositionSection({
 
   return (
     <section className="mb-8">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-6 pb-2.5 px-1">
-        구성비 분석
-      </div>
+      {/* 섹션 카드 — 제목 + 2열 */}
+      <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-[18px]">
+      <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">구성비 분석</h3>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-[18px] mt-3">
         {/* 1. 채널별 분석 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
+            <span className="text-[13px] font-extrabold text-[#1a1d2e]">
               채널별 분석
             </span>
-            <span className="text-[11px] text-[#9a9486]" title="채널별 점유율 및 성과">ⓘ</span>
-            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
+            <span className="text-[11px] text-[#6b6558]" title="채널별 점유율 및 성과">ⓘ</span>
+            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[8px] p-[3px]">
               <button
                 type="button"
                 onClick={() => setChMetric('count')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   chMetric === 'count'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 건수
@@ -162,10 +162,10 @@ export default function CompositionSection({
               <button
                 type="button"
                 onClick={() => setChMetric('views')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   chMetric === 'views'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 조회수
@@ -182,8 +182,8 @@ export default function CompositionSection({
                   key={opt}
                   type="button"
                   onClick={() => setSelectedLoc(opt)}
-                  className={`text-[11.5px] font-semibold rounded-[16px] px-3 py-1.5 transition-all ${
-                    active ? 'bg-[#4f7cff] text-white font-bold shadow-xs' : 'bg-[#f7f4ec] text-[#8b8578] hover:text-[#1a1d2e]'
+                  className={`text-[10.5px] font-medium rounded-full px-2 py-[3px] border transition-all ${
+                    active ? 'bg-[#3557d6] border-[#3557d6] text-white' : 'bg-white border-[#e3d9c4] text-[#4a4538] hover:text-[#1a1d2e]'
                   }`}
                 >
                   {opt}
@@ -261,7 +261,7 @@ export default function CompositionSection({
                   <span className="text-[13px] font-extrabold text-[#1a1d2e] w-14 text-right">
                     {chMetric === 'count' ? `${ch.count}건` : formatViews(ch.views)}
                   </span>
-                  <span className="text-[11.5px] text-[#9a9486] w-12 text-right">
+                  <span className="text-[11.5px] text-[#6b6558] w-12 text-right">
                     {ch.pct}%
                   </span>
                 </div>
@@ -271,19 +271,19 @@ export default function CompositionSection({
         </div>
 
         {/* 2. 권역별 조회 비중 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
+            <span className="text-[13px] font-extrabold text-[#1a1d2e]">
               권역별 {regionMetric === 'views' ? '조회' : '건수'} 비중
             </span>
-            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
+            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[8px] p-[3px]">
               <button
                 type="button"
                 onClick={() => setRegionMetric('views')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   regionMetric === 'views'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 조회수
@@ -291,10 +291,10 @@ export default function CompositionSection({
               <button
                 type="button"
                 onClick={() => setRegionMetric('count')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   regionMetric === 'count'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 건수
@@ -316,7 +316,7 @@ export default function CompositionSection({
           {/* 지점별 스택 바 */}
           <div className="flex flex-col gap-3 mt-4">
             {regionalData.locList.length === 0 ? (
-              <div className="text-center py-8 text-[12px] text-[#9a9486]">권역별 데이터가 없습니다.</div>
+              <div className="text-center py-8 text-[12px] text-[#6b6558]">권역별 데이터가 없습니다.</div>
             ) : (
               regionalData.locList.map(loc => (
                 <div
@@ -368,7 +368,7 @@ export default function CompositionSection({
 
           {/* 하단 요약 카드 2종 */}
           <div className="flex gap-3.5 mt-8">
-            <div className="flex-1 bg-[#fff7ed] border border-[#fed7aa] rounded-xl p-3.5">
+            <div className="flex-1 bg-[#fdf0ef] rounded-[6px] p-2.5">
               <div className="text-[11.5px] font-bold text-[#9a3412]">중화권</div>
               <div className="text-[20px] sm:text-[22px] font-extrabold tracking-tight mt-1.5 text-[#c2410c]">
                 {regionMetric === 'views' ? regionalData.allChinaViews.toLocaleString() : `${regionalData.allChinaCount}건`}
@@ -378,7 +378,7 @@ export default function CompositionSection({
               </div>
             </div>
 
-            <div className="flex-1 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-3.5">
+            <div className="flex-1 bg-[#eef2ff] rounded-[6px] p-2.5">
               <div className="text-[11.5px] font-bold text-[#475569]">영미·글로벌</div>
               <div className="text-[20px] sm:text-[22px] font-extrabold tracking-tight mt-1.5 text-[#334155]">
                 {regionMetric === 'views' ? regionalData.allGlobalViews.toLocaleString() : `${regionalData.allGlobalCount}건`}
@@ -389,6 +389,7 @@ export default function CompositionSection({
             </div>
           </div>
         </div>
+      </div>
       </div>
       {tooltip.node}
     </section>

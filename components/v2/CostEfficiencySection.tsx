@@ -21,61 +21,60 @@ export default function CostEfficiencySection() {
 
   const list = rows ? (showAll ? rows : rows.slice(0, 10)) : []
 
+  const cols = 'grid grid-cols-[40px_minmax(0,1.6fr)_70px_90px_90px] sm:grid-cols-[40px_minmax(0,1.6fr)_90px_110px_110px] gap-2'
+
   return (
-    <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4 sm:p-5">
-      <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="text-[14px] font-extrabold text-[#1a1d2e]">가성비 리스트</h3>
-        <span className="text-[10px] font-bold text-[#b42318] bg-[#fef2f2] rounded px-1.5 py-0.5">관리자 전용</span>
-        <span className="text-[11px] text-[#9a9486]">조회수 1회당 단가 · 낮을수록 좋음 · 8만원 일괄 등록분 제외</span>
+    <div className="bg-white border border-[#f2ebdd] rounded-[6px] p-[18px] shadow-[0_4px_16px_rgba(30,41,59,0.06)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">가성비 리스트</h3>
+        <span className="text-[11px] font-bold text-white bg-[#d6336c] rounded-full px-2 py-[3px]">관리자 전용</span>
+        <span className="text-[11.5px] text-[#6b6558]">조회수 1회당 단가 · 낮을수록 좋음 · 8만원 일괄 등록분 제외</span>
       </div>
 
-      {error && <div className="py-6 text-center text-[12px] text-[#9a9486]">{error}</div>}
-      {!error && !rows && <div className="py-6 text-center text-[12px] text-[#9a9486]">불러오는 중이에요…</div>}
+      {error && <div className="py-6 text-center text-[12px] text-[#6b6558]">{error}</div>}
+      {!error && !rows && <div className="py-6 text-center text-[12px] text-[#6b6558]">불러오는 중이에요…</div>}
 
       {rows && (
-        <div className="overflow-x-auto mt-3">
-          <table className="w-full min-w-[360px] text-[12px] border-collapse">
-            <thead>
-              <tr className="text-[11px] text-[#9a9486] border-b border-[#eee6d6]">
-                <th className="text-center font-semibold py-2 w-10">순위</th>
-                <th className="text-left font-semibold py-2">인플루언서</th>
-                <th className="text-right font-semibold py-2">원가</th>
-                <th className="text-right font-semibold py-2">조회수</th>
-                <th className="text-right font-semibold py-2 pr-1">1회당 단가</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((r, i) => (
-                <tr key={r.name + i} className="border-b border-[#f7f2e8] last:border-b-0">
-                  <td className="text-center py-2 font-extrabold text-[#9a9486]">{i + 1}</td>
-                  <td className="py-1.5 max-w-0 w-full">
-                    <div className="truncate font-bold text-[#1a1d2e]">{r.name}</div>
-                    <div className="text-[10.5px] text-[#9a9486]">
-                      {PLATFORM_LABEL[r.platform] ?? r.platform}
-                      {r.tier ? ` · ${TIER_LABEL[r.tier] ?? r.tier}` : ''}
-                    </div>
-                  </td>
-                  <td className="py-2 pl-3 text-right whitespace-nowrap">{Math.round(r.cost / 10000).toLocaleString()}만</td>
-                  <td className="py-2 pl-3 text-right whitespace-nowrap">{r.views.toLocaleString()}</td>
-                  <td className={`py-2 pl-3 pr-1 text-right whitespace-nowrap font-extrabold ${i < 3 ? 'text-[#2f5fd8]' : 'text-[#1a1d2e]'}`}>
-                    {r.costPerView.toFixed(2)}원
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <>
+          {/* 좁은 화면은 카드 안에서만 가로 스크롤 */}
+          <div className="overflow-x-auto mt-1.5">
+            <div className={`${cols} min-w-[360px] text-[11px] text-[#6b6558] pt-2.5 pb-1.5 border-b border-[#efe5d0]`}>
+              <span>순위</span>
+              <span>인플루언서</span>
+              <span className="text-right">원가 (만)</span>
+              <span className="text-right">조회수</span>
+              <span className="text-right">1회당 단가</span>
+            </div>
+            {list.map((r, i) => (
+              <div key={r.name + i} className={`${cols} min-w-[360px] items-center py-2 border-b border-[#f4efe4] text-[12px] text-[#1a1d2e]`}>
+                <span className="font-extrabold">{i + 1}</span>
+                <span className="min-w-0 truncate">
+                  <b>{r.name}</b>{' '}
+                  <span className="text-[11px] text-[#6b6558]">
+                    {PLATFORM_LABEL[r.platform] ?? r.platform}
+                    {r.tier ? ` · ${TIER_LABEL[r.tier] ?? r.tier}` : ''}
+                  </span>
+                </span>
+                <span className="text-right whitespace-nowrap">{Math.round(r.cost / 10000).toLocaleString()}</span>
+                <span className="text-right whitespace-nowrap">{r.views.toLocaleString()}</span>
+                <span className={`text-right whitespace-nowrap font-extrabold ${i < 3 ? 'text-[#3557d6]' : 'text-[#1a1d2e]'}`}>
+                  {r.costPerView.toFixed(2)}원
+                </span>
+              </div>
+            ))}
+          </div>
           {rows.length > 10 && (
-            <div className="flex justify-center mt-2">
+            <div className="text-center mt-2.5">
               <button
                 type="button"
                 onClick={() => setShowAll(v => !v)}
-                className="text-[11px] font-bold text-[#4f7cff] bg-[#eef3ff] hover:bg-[#e0ebff] rounded-full px-3 py-1"
+                className="border border-[#e3d9c4] bg-white text-[12px] font-medium text-[#1a1d2e] rounded-full px-3.5 py-1.5 hover:bg-[#faf8f3]"
               >
                 {showAll ? '접기' : `전체 ${rows.length}명 보기`}
               </button>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   )

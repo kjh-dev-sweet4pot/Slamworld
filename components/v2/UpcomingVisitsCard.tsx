@@ -22,14 +22,16 @@ function dayLabel(date: string): string {
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()} (${WEEKDAYS[d.getUTCDay()]})`
 }
 
-function Badge({ children, tone }: { children: React.ReactNode; tone: 'gray' | 'blue' | 'orange' }) {
+function Badge({ children, tone }: { children: React.ReactNode; tone: 'gray' | 'blue' | 'orange' | 'green' }) {
   const cls =
     tone === 'blue'
-      ? 'bg-[#eef3ff] text-[#4f7cff]'
+      ? 'bg-[#e6edff] text-[#3557d6]'
+      : tone === 'green'
+        ? 'bg-[#e3f4ea] text-[#1f7a4d]'
       : tone === 'orange'
-        ? 'bg-[#fff1e6] text-[#f97316]'
+        ? 'bg-[#fff1dc] text-[#c2410c]'
         : 'bg-[#f7f4ec] text-[#6b6558]'
-  return <span className={`text-[10.5px] font-bold rounded-md px-1.5 py-0.5 whitespace-nowrap ${cls}`}>{children}</span>
+  return <span className={`text-[10.5px] font-bold rounded-full px-[7px] py-0.5 whitespace-nowrap ${cls}`}>{children}</span>
 }
 
 /** 방문 예정 인플루언서 — 지점·유형·티어·PPL (리스트/달력) */
@@ -89,152 +91,150 @@ export default function UpcomingVisitsCard({ partnerBrand }: UpcomingVisitsCardP
     setMonth(d.toISOString().slice(0, 7))
   }
 
-  return (
-    <section className="mb-4">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-3 pb-2.5 px-1">
-        방문 일정 인플루언서{' '}
-        <span className="text-[13px] font-semibold tracking-normal text-[#9a9486]">
-          ( 완료 {visits ? counts.완료 : '…'} · 예정 {visits ? counts.예정 : '…'} )
-        </span>
+  // 세그먼트 버튼 (목업 토글)
+  const seg = (on: boolean) =>
+    `border-0 text-[11px] px-[9px] py-[5px] rounded-[6px] whitespace-nowrap ${on ? 'bg-white font-bold text-[#1a1d2e]' : 'bg-transparent font-medium text-[#4a4538]'}`
+
+  const listView = (
+    <div className="min-w-0">
+      {visits && rows.length === 0 && <div className="text-[12px] text-[#6b6558] mt-2">예정된 방문이 없습니다.</div>}
+      {visits && rows.length > 0 && (
+        <div className="max-h-[420px] overflow-y-auto overflow-x-auto">
+          <table className="w-full text-[12px] text-left border-collapse">
+            <thead className="sticky top-0 bg-white text-[#6b6558] text-[11px]">
+              <tr className="border-b border-[#efe5d0]">
+                {['방문일', '상태', '지점', '인플루언서', '유형', '티어', 'PPL', '브랜드'].map(h => (
+                  <th key={h} className="pb-1.5 pr-1.5 font-normal whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(v => (
+                <tr key={`${v.date}|${v.store}|${v.influencer_id}`} className="border-b border-[#f4efe4]">
+                  <td className="py-2 pr-1.5 whitespace-nowrap">{dayLabel(v.date)}</td>
+                  <td className="py-2 pr-1.5">{v.done ? <Badge tone="green">완료</Badge> : <Badge tone="blue">예정</Badge>}</td>
+                  <td className="py-2 pr-1.5 whitespace-nowrap">{v.store}</td>
+                  <td className="py-2 pr-1.5 whitespace-nowrap font-bold text-[#1a1d2e]">{v.influencer_name}</td>
+                  <td className="py-2 pr-1.5 whitespace-nowrap">{v.region || '-'}</td>
+                  <td className="py-2 pr-1.5 whitespace-nowrap">{v.tier || '-'}</td>
+                  <td className="py-2 pr-1.5">{v.ppl ? <Badge tone="orange">PPL</Badge> : '-'}</td>
+                  <td className="py-2">{v.companies.join(', ') || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+
+  const calendarView = (
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2 text-[13px] font-extrabold text-[#1a1d2e]">
+        <button type="button" aria-label="이전 달" onClick={() => shiftMonth(-1)} className="border-0 bg-transparent text-[14px] text-[#1a1d2e]">‹</button>
+        {calMonth.replace('-', '.')}
+        <button type="button" aria-label="다음 달" onClick={() => shiftMonth(1)} className="border-0 bg-transparent text-[14px] text-[#1a1d2e]">›</button>
+        <span className="ml-auto text-[10.5px] font-medium text-[#c2410c]">■ PPL</span>
+        <span className="text-[10.5px] font-medium text-[#3557d6]">■ 예정 방문</span>
+        <span className="text-[10.5px] font-medium text-[#1f7a4d]">■ 방문 완료</span>
       </div>
-      <div className={`grid gap-4 items-start ${partnerBrand ? '' : 'xl:grid-cols-[minmax(0,1fr)_340px]'}`}>
-      <div className="min-w-0 bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {stores.map(s => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStore(s)}
-              className={`text-[11.5px] rounded-[16px] px-3 py-1.5 transition-all whitespace-nowrap ${
-                store === s ? 'font-bold text-white bg-[#4f7cff]' : 'font-semibold bg-[#f7f4ec] text-[#6b6558] hover:text-[#1a1d2e]'
-              }`}
-            >
-              {s}
+      <div className="grid grid-cols-7 gap-[3px] mt-2">
+        {WEEKDAYS.map(w => (
+          <div key={w} className="text-center text-[10.5px] text-[#6b6558]">{w}</div>
+        ))}
+        {calCells.map((d, i) => (
+          <div key={d ?? `e${i}`} className={`min-h-[46px] min-w-0 rounded-[5px] p-[3px] text-[9.5px] leading-[1.3] ${d ? 'bg-[#faf8f3]' : ''}`}>
+            {d && (
+              <>
+                <div className="text-[#6b6558]">{Number(d.slice(8))}</div>
+                {(byDate.get(d) ?? []).slice(0, 3).map(v => (
+                  <div
+                    key={`${v.store}|${v.influencer_id}`}
+                    title={`${v.store} · ${v.influencer_name} · ${[v.region, v.tier, v.ppl && 'PPL'].filter(Boolean).join(' · ')}\n${v.companies.join(', ')}`}
+                    className={`truncate font-semibold ${v.done ? 'text-[#1f7a4d]' : v.ppl ? 'text-[#c2410c]' : 'text-[#3557d6]'}`}
+                  >
+                    {v.influencer_name}
+                    <span className="font-normal opacity-70"> · {v.store.replace('점', '')}{v.tier ? ` · ${v.tier}` : ''}</span>
+                  </div>
+                ))}
+                {(byDate.get(d)?.length ?? 0) > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatus('전체')
+                      setView('list')
+                    }}
+                    title={byDate.get(d)!.slice(3).map(v => `${v.influencer_name} · ${v.store}`).join('\n')}
+                    className="font-bold text-[#3557d6]"
+                  >
+                    +{byDate.get(d)!.length - 3}명
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <section className="mb-4 bg-white border border-[#f2ebdd] rounded-[6px] p-[18px] shadow-[0_4px_16px_rgba(30,41,59,0.06)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">
+          방문 일정 인플루언서{' '}
+          <span className="text-[12px] font-medium text-[#6b6558]">
+            ( 완료 {visits ? counts.완료 : '…'} · 예정 {visits ? counts.예정 : '…'} )
+          </span>
+        </h3>
+        <div className="flex-1" />
+        <div className="flex gap-[3px] bg-[#f7f4ec] rounded-[8px] p-[3px]">
+          {(['예정', '완료', '전체'] as const).map(s => (
+            <button key={s} type="button" onClick={() => setStatus(s)} className={seg(status === s)}>
+              {s} {visits ? counts[s] : ''}
             </button>
           ))}
-          <div className="ml-auto flex rounded-[10px] border border-[#f0e9da] overflow-hidden">
-            {(['예정', '완료', '전체'] as const).map(s => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setStatus(s)}
-                className={`text-[11.5px] px-3 py-1.5 whitespace-nowrap ${status === s ? 'font-bold text-white bg-[#4f7cff]' : 'font-semibold text-[#6b6558] bg-[#fbf9f4]'}`}
-              >
-                {s} {visits ? counts[s] : ''}
-              </button>
-            ))}
-          </div>
-          <div className="flex rounded-[10px] border border-[#f0e9da] overflow-hidden">
-            {(['list', 'calendar'] as const).map(v => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                className={`text-[11.5px] px-3 py-1.5 ${view === v ? 'font-bold text-white bg-[#1a1d2e]' : 'font-semibold text-[#6b6558] bg-[#fbf9f4]'}`}
-              >
-                {v === 'list' ? '리스트' : '달력'}
-              </button>
-            ))}
-          </div>
         </div>
-
-        {error && <div className="text-[11px] text-[#e03131] mt-4">방문 예정 데이터를 불러오지 못했습니다.</div>}
-        {!error && visits === null && <div className="text-[12px] text-[#9a9486] mt-4">불러오는 중…</div>}
-        {visits && view === 'list' && rows.length === 0 && <div className="text-[12px] text-[#9a9486] mt-4">예정된 방문이 없습니다.</div>}
-
-        {visits && rows.length > 0 && view === 'list' && (
-          <div className="mt-4 max-h-[420px] overflow-y-auto overflow-x-auto">
-            <table className="w-full text-[12px] text-left">
-              <thead className="sticky top-0 bg-white text-[#9a9486] text-[11px]">
-                <tr>
-                  <th className="py-1.5 pr-3 font-semibold">방문일</th>
-                  <th className="py-1.5 pr-3 font-semibold">상태</th>
-                  <th className="py-1.5 pr-3 font-semibold">지점</th>
-                  <th className="py-1.5 pr-3 font-semibold">인플루언서</th>
-                  <th className="py-1.5 pr-3 font-semibold">유형</th>
-                  <th className="py-1.5 pr-3 font-semibold">티어</th>
-                  <th className="py-1.5 pr-3 font-semibold">PPL</th>
-                  <th className="py-1.5 font-semibold">브랜드</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(v => (
-                  <tr key={`${v.date}|${v.store}|${v.influencer_id}`} className="border-t border-[#f4efe3]">
-                    <td className="py-2 pr-3 whitespace-nowrap font-bold text-[#1a1d2e]">{dayLabel(v.date)}</td>
-                    <td className="py-2 pr-3">{v.done ? <Badge tone="gray">완료</Badge> : <Badge tone="blue">예정</Badge>}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">{v.store}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap font-semibold text-[#1a1d2e]">{v.influencer_name}</td>
-                    <td className="py-2 pr-3">{v.region ? <Badge tone="gray">{v.region}</Badge> : '-'}</td>
-                    <td className="py-2 pr-3">{v.tier ? <Badge tone="blue">{v.tier}</Badge> : '-'}</td>
-                    <td className="py-2 pr-3">{v.ppl ? <Badge tone="orange">PPL</Badge> : '-'}</td>
-                    <td className="py-2 text-[#6b6558]">{v.companies.join(', ') || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {visits && view === 'calendar' && (
-          <div className="mt-4">
-            <div className="flex items-center justify-center gap-3 mb-2 text-[13px] font-bold text-[#1a1d2e]">
-              <button type="button" onClick={() => shiftMonth(-1)} className="px-2 text-[#9a9486] hover:text-[#1a1d2e]">‹</button>
-              {calMonth.replace('-', '.')}
-              <button type="button" onClick={() => shiftMonth(1)} className="px-2 text-[#9a9486] hover:text-[#1a1d2e]">›</button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-[10.5px]">
-              {WEEKDAYS.map(w => (
-                <div key={w} className="text-center font-semibold text-[#9a9486] py-1">{w}</div>
-              ))}
-              {calCells.map((d, i) => (
-                <div
-                  key={d ?? `e${i}`}
-                  className={`min-h-[72px] rounded-lg p-1 ${d ? 'bg-[#fbf9f4] border border-[#f4efe3]' : ''}`}
-                >
-                  {d && (
-                    <>
-                      <div className="font-bold text-[#6b6558]">{Number(d.slice(8))}</div>
-                      {(byDate.get(d) ?? []).slice(0, 3).map(v => (
-                        <div
-                          key={`${v.store}|${v.influencer_id}`}
-                          title={`${v.store} · ${v.influencer_name} · ${[v.region, v.tier, v.ppl && 'PPL'].filter(Boolean).join(' · ')}\n${v.companies.join(', ')}`}
-                          className={`mt-0.5 truncate rounded px-1 py-0.5 font-semibold ${
-                            v.done ? 'bg-[#efece4] text-[#8a8478]' : v.ppl ? 'bg-[#fff1e6] text-[#c2410c]' : 'bg-[#eef3ff] text-[#3b5bdb]'
-                          }`}
-                        >
-                          {v.influencer_name}
-                          <span className="font-normal opacity-70"> · {v.store.replace('점', '')}{v.tier ? ` · ${v.tier}` : ''}</span>
-                        </div>
-                      ))}
-                      {(byDate.get(d)?.length ?? 0) > 3 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStatus('전체')
-                            setView('list')
-                          }}
-                          title={byDate.get(d)!.slice(3).map(v => `${v.influencer_name} · ${v.store}`).join('\n')}
-                          className="mt-0.5 text-[10px] font-bold text-[#9a9486] hover:text-[#1a1d2e]"
-                        >
-                          +{byDate.get(d)!.length - 3}명
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-4 mt-2 text-[10.5px] text-[#6b6558]">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#fff1e6] border border-[#f97316]" />PPL</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#eef3ff] border border-[#4f7cff]" />예정 방문</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#efece4] border border-[#8a8478]" />방문 완료</span>
-            </div>
-          </div>
-        )}
-        <div className="text-[10.5px] text-[#9a9486] mt-3">※ 보딩패스 배정 기준 · 완료 = 픽업 처리 · 테스트 회원사·취소·시딩·방문일 미정 제외</div>
+        <div className="flex gap-[3px] bg-[#f7f4ec] rounded-[8px] p-[3px]">
+          {(['list', 'calendar'] as const).map(v => (
+            <button key={v} type="button" onClick={() => setView(v)} className={seg(view === v)}>
+              {v === 'list' ? '리스트' : '달력'}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* 지점 칩 */}
+      <div className="flex flex-wrap gap-[5px] mt-2.5">
+        {stores.map(s => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStore(s)}
+            className={`text-[11px] font-medium rounded-full px-2.5 py-1 border whitespace-nowrap ${
+              store === s ? 'border-[#3557d6] bg-[#3557d6] text-white' : 'border-[#e3d9c4] bg-white text-[#4a4538] hover:text-[#1a1d2e]'
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {error && <div className="text-[11px] text-[#e03131] mt-3">방문 예정 데이터를 불러오지 못했습니다.</div>}
+      {!error && visits === null && <div className="text-[12px] text-[#6b6558] mt-3">불러오는 중…</div>}
+
+      {/* 리스트 모드: 넓은 화면은 리스트+달력 나란히 */}
+      {visits && view === 'list' && (
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-[18px] mt-3">
+          {listView}
+          <div className="hidden xl:block">{calendarView}</div>
+        </div>
+      )}
+      {visits && view === 'calendar' && <div className="mt-3">{calendarView}</div>}
+
+      <div className="text-[10.5px] text-[#6b6558] mt-2.5">※ 보딩패스 배정 기준 · 완료 = 픽업 처리 · 테스트 회원사·취소·시딩·방문일 미정 제외</div>
+
       {!partnerBrand && <NegotiationPanel visits={visits ?? []} />}
-      </div>
     </section>
   )
 }
@@ -254,19 +254,21 @@ function NegotiationPanel({ visits }: { visits: UpcomingVisit[] }) {
   const open = ALL_NEGOTIATIONS.filter(n => !assigned.has(key(n.influencer_name)))
   const list = group === '전체' ? open : open.filter(n => (n.group ?? '기타') === group)
   return (
-    <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
-      <div className="flex items-baseline gap-2">
-        <span className="text-[14px] font-extrabold text-[#1a1d2e]">협상 진행중</span>
-        <span className="text-[12px] font-bold text-[#9a9486]">{list.length}명</span>
+    <div className="mt-4 pt-3.5 border-t border-dashed border-[#e3d9c4]">
+      <div className="flex flex-wrap items-center gap-2">
+        <h4 className="m-0 text-[17px] font-extrabold text-[#1a1d2e]">
+          협상 진행중 <span className="font-medium text-[#6b6558]">{list.length}명</span>
+        </h4>
+        <span className="text-[11px] font-bold text-white bg-[#d6336c] px-2 py-[3px] rounded-full">관리자 전용</span>
       </div>
-      <div className="flex flex-wrap gap-1 mt-2">
+      <div className="flex flex-wrap gap-[5px] mt-2">
         {NEGOTIATION_GROUPS.map(g => (
           <button
             key={g}
             type="button"
             onClick={() => setGroup(g)}
-            className={`text-[10.5px] rounded-[12px] px-2 py-1 whitespace-nowrap ${
-              group === g ? 'font-bold text-white bg-[#4f7cff]' : 'font-semibold bg-[#f7f4ec] text-[#6b6558] hover:text-[#1a1d2e]'
+            className={`text-[11px] font-medium rounded-full px-[9px] py-1 border whitespace-nowrap ${
+              group === g ? 'border-[#3557d6] bg-[#3557d6] text-white' : 'border-[#e3d9c4] bg-white text-[#4a4538] hover:text-[#1a1d2e]'
             }`}
           >
             {g} {g === '전체' ? open.length : open.filter(n => (n.group ?? '기타') === g).length}
@@ -274,34 +276,61 @@ function NegotiationPanel({ visits }: { visits: UpcomingVisit[] }) {
         ))}
       </div>
       {list.length === 0 ? (
-        <div className="text-[12px] text-[#9a9486] mt-4">협상 중인 인플루언서가 없습니다.</div>
+        <div className="text-[12px] text-[#6b6558] mt-3">협상 중인 인플루언서가 없습니다.</div>
       ) : (
-        <div className="mt-3 flex flex-col gap-2 max-h-[640px] overflow-y-auto">
+        <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 max-h-[640px] overflow-y-auto">
           {list.map(n => (
-            <div key={`${n.group}|${n.influencer_name}`} className="rounded-xl bg-[#fbf9f4] border border-[#f4efe3] px-3 py-2.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[12.5px] font-bold text-[#1a1d2e] truncate">{n.influencer_name}</span>
-                {n.followers && <span className="ml-auto text-[10.5px] font-semibold text-[#9a9486] whitespace-nowrap">팔로워 {followerLabel(n.followers)}</span>}
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-[#6b6558]">
+            <div key={`${n.group}|${n.influencer_name}`} className="min-w-0 rounded-[6px] border border-[#f0e9da] p-2.5 text-[12px]">
+              <div className="font-extrabold text-[#1a1d2e] truncate">{n.influencer_name}</div>
+              <div className="flex flex-wrap items-center gap-1 text-[11px] text-[#6b6558]">
+                {n.followers && <span>팔로워 {followerLabel(n.followers)}</span>}
+                {n.followers && n.date_text && <span>·</span>}
+                {n.date_text && <span className="text-[#8a4b00]">{n.date_text}</span>}
                 {group === '전체' && n.group && <Badge tone="gray">{n.group}</Badge>}
-                {n.date_text && <span className="font-semibold">{n.date_text}</span>}
                 {n.store && <Badge tone="blue">{n.store}</Badge>}
-                {n.url && (
-                  <a href={n.url} target="_blank" rel="noreferrer" className="text-[#4f7cff] hover:underline">{n.url.includes('instagram') ? 'IG' : 'XHS'}</a>
-                )}
-                {n.tiktok && (
-                  <a href={`https://www.tiktok.com/@${n.tiktok}`} target="_blank" rel="noreferrer" className="text-[#4f7cff] hover:underline">TT</a>
-                )}
-                {n.instagram && (
-                  <a href={`https://www.instagram.com/${n.instagram}`} target="_blank" rel="noreferrer" className="text-[#4f7cff] hover:underline">IG</a>
-                )}
               </div>
-              {n.memo && <div className="text-[11px] text-[#9a9486] mt-1">{n.memo}</div>}
+              {(n.url || n.tiktok || n.instagram) && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {n.url && (n.url.includes('instagram') ? <SnsBadge kind="ig" href={n.url} /> : <SnsBadge kind="xhs" href={n.url} />)}
+                  {n.instagram && !n.url?.includes('instagram') && <SnsBadge kind="ig" href={`https://www.instagram.com/${n.instagram}`} />}
+                  {n.tiktok && <SnsBadge kind="tt" href={`https://www.tiktok.com/@${n.tiktok}`} />}
+                </div>
+              )}
+              {n.memo && <div className="text-[11px] text-[#6b6558] mt-1">{n.memo}</div>}
             </div>
           ))}
         </div>
       )}
     </div>
+  )
+}
+
+/** SNS 프로필 바로가기 배지 */
+function SnsBadge({ kind, href }: { kind: 'ig' | 'xhs' | 'tt'; href: string }) {
+  const base = 'inline-flex items-center justify-center gap-1 h-7 px-[9px] rounded-[6px] text-[11px] font-extrabold text-white no-underline hover:opacity-90'
+  if (kind === 'ig')
+    return (
+      <a href={href} target="_blank" rel="noreferrer" aria-label="인스타그램 프로필 열기" className={base} style={{ background: 'linear-gradient(45deg,#f09433,#dc2743 50%,#bc1888)' }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="5" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="17.5" cy="6.5" r="1" fill="#fff" />
+        </svg>
+        IG
+      </a>
+    )
+  if (kind === 'xhs')
+    return (
+      <a href={href} target="_blank" rel="noreferrer" aria-label="샤오홍슈 프로필 열기" className={base} style={{ background: '#ff2442' }}>
+        小红书
+      </a>
+    )
+  return (
+    <a href={href} target="_blank" rel="noreferrer" aria-label="틱톡 프로필 열기" className={base} style={{ background: '#111111' }}>
+      <svg width="12" height="13" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+        <path d="M16 3c.4 2.4 1.9 4 4.5 4.3v3.2c-1.7 0-3.2-.5-4.5-1.4v6.4a5.6 5.6 0 1 1-5.6-5.6c.3 0 .6 0 .9.1v3.3a2.4 2.4 0 1 0 1.5 2.2V3H16z" />
+      </svg>
+      TT
+    </a>
   )
 }

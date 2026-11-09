@@ -169,25 +169,25 @@ export default function OverallTotalsSection({
 
   return (
     <section className="mb-8">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-6 pb-2.5 px-1">
-        전체 합계
-      </div>
+      {/* 섹션 카드 — 제목 + 2열 */}
+      <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-[18px]">
+      <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">전체 합계</h3>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] mt-3">
         {/* 월별 전체 조회수/건수 합계 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
+            <span className="text-[13px] font-extrabold text-[#1a1d2e]">
               {isMonthly ? `${monthName} 주차별` : '월별'} 전체 {metricMode === 'views' ? '조회수' : '건수'} 합계
             </span>
-            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
+            <div className="ml-auto flex items-center gap-1 bg-[#f7f4ec] rounded-[8px] p-[3px]">
               <button
                 type="button"
                 onClick={() => setMetricMode('views')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   metricMode === 'views'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 조회수
@@ -195,22 +195,22 @@ export default function OverallTotalsSection({
               <button
                 type="button"
                 onClick={() => setMetricMode('count')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
+                className={`text-[11px] rounded-[6px] px-2 py-1 transition-all ${
                   metricMode === 'count'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+                    ? 'font-bold text-[#1a1d2e] bg-white'
+                    : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'
                 }`}
               >
                 건수
               </button>
             </div>
-            <span className="text-[11px] text-[#9a9486]">{rangeLabel}</span>
+            <span className="text-[11px] text-[#6b6558]">{rangeLabel}</span>
           </div>
 
           {/* 지점 범례 */}
           <div className="flex flex-wrap gap-2.5 mt-3 min-h-[20px]">
             {activeLocations.length === 0 ? (
-              <span className="text-[11px] text-[#9a9486]">해당 지점 없음</span>
+              <span className="text-[11px] text-[#6b6558]">해당 지점 없음</span>
             ) : (
               activeLocations.map(loc => (
                 <span key={loc} className="flex items-center gap-1.5 text-[11px] text-[#6b6558]">
@@ -223,7 +223,7 @@ export default function OverallTotalsSection({
 
           {/* 스택 바 차트 */}
           <div
-            className="grid gap-3.5 items-end h-[232px] mt-4.5 pt-1 border-b border-[#eee6d6]"
+            className="grid gap-3.5 items-end h-[232px] mt-4.5 pt-1 border-b border-[#efe5d0]"
             style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
           >
             {monthlyData.map((m, idx) => {
@@ -288,7 +288,7 @@ export default function OverallTotalsSection({
               <span
                 key={b.key}
                 className={`text-center text-[11.5px] ${
-                  idx === highlightIdx ? 'font-bold text-[#e03131]' : 'text-[#9a9486]'
+                  idx === highlightIdx ? 'font-bold text-[#e03131]' : 'text-[#6b6558]'
                 }`}
               >
                 {b.label}{idx === highlightIdx ? ' ⚡' : ''}
@@ -298,12 +298,12 @@ export default function OverallTotalsSection({
         </div>
 
         {/* 채널별 업로드 추이 */}
-        <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
+            <span className="text-[13px] font-extrabold text-[#1a1d2e]">
               {isMonthly ? `${monthName} 주차별 ` : ''}채널별 업로드 추이
             </span>
-            <span className="ml-auto text-[11px] text-[#9a9486]">
+            <span className="ml-auto text-[11px] text-[#6b6558]">
               {isMonthly ? '주차별' : '월별'} 건수 · {channelTrends.chLines.length}개 활성 채널
             </span>
           </div>
@@ -413,7 +413,7 @@ export default function OverallTotalsSection({
             })}
           </svg>
 
-          <div className="bg-[#fbf9f4] rounded-xl p-3 sm:p-3.5 mt-1.5 text-[12px] leading-relaxed text-[#4b4a44]">
+          <div className="bg-[#faf8f3] rounded-[8px] px-2.5 py-2 mt-1.5 text-[12px] leading-relaxed text-[#3b3830]">
             {channelTrends.topAugCount > 0 ? (
               <>
                 <b>{highlightIdx >= 0 ? buckets[highlightIdx].label : monthName} {channelTrends.topAugCh} {channelTrends.topAugCount}건 집행.</b> 집중 채널을 중심으로 안정적인 노출량을 확보했습니다.
@@ -423,6 +423,7 @@ export default function OverallTotalsSection({
             )}
           </div>
         </div>
+      </div>
       </div>
       {tooltip.node}
     </section>

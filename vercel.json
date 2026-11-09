@@ -3,6 +3,10 @@
     {
       "path": "/api/sync-boardingpass",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/owm-report/send",
+      "schedule": "0 23 * * 0"
     }
   ]
 }

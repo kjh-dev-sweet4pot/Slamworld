@@ -4,6 +4,7 @@ import { createServerSupabase } from '@/lib/supabase-server'
 import { contentViews } from '@/lib/content-views'
 import { contentPeriodDate, isSeedingLocation } from '@/lib/posted-date'
 import { contentMatchesBrand } from '@/lib/brand-content'
+import { sessionFromRequest } from '@/lib/session-cookie'
 import type { Content } from '@/lib/types'
 
 export const maxDuration = 60
@@ -153,7 +154,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 없음' }, { status: 500 })
   }
   const body = (await req.json().catch(() => ({}))) as { brand?: string | null; question?: string; refresh?: boolean }
-  const brand = body.brand || null
+  // 회원사 로그인은 자기 브랜드로 고정
+  const session = await sessionFromRequest(req)
+  const brand = session?.kind === 'partner' ? session.brand ?? '' : body.brand || null
   const question = body.question?.trim().slice(0, 500)
 
   try {

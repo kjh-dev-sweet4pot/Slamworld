@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sessionFromRequest } from '@/lib/session-cookie'
+import { contentMatchesBrand } from '@/lib/brand-content'
 import { isTestCompany } from '@/lib/test-companies.mjs'
 import { isSeedingLocation } from '@/lib/posted-date'
 
@@ -36,7 +38,7 @@ interface Row {
 const PLACEHOLDER_VISIT = '2026-01-01'
 
 /** 방문 완료·예정 인플루언서 — 보딩패스 allocations, 테스트 회원사·취소 제외 */
-export async function GET() {
+export async function GET(req: Request) {
   const url = process.env.BP_SUPABASE_URL
   const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return NextResponse.json({ error: 'BoardingPass 환경변수 없음' }, { status: 500 })
@@ -91,8 +93,11 @@ export async function GET() {
     if (company && !v.companies.includes(company)) v.companies.push(company)
   }
 
+  const session = await sessionFromRequest(req)
+  const brand = session?.kind === 'partner' ? session.brand ?? '' : null
+  const visits = [...byKey.values()]
   return NextResponse.json(
-    { data: [...byKey.values()] },
-    { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=1800' } },
+    { data: brand === null ? visits : visits.filter(v => v.companies.some(c => contentMatchesBrand(c, brand))) },
+    { headers: { 'Cache-Control': 'private, max-age=60' } },
   )
 }

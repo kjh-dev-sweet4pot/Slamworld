@@ -141,27 +141,31 @@ export default function LocationVisitSection({
   }, [contents])
 
   return (
-    <section className="mb-8">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] py-3.5 px-1">
-        지점별 방문 현황
+    <section id="sec-01" className="scroll-mt-32 mb-2">
+      <div className="flex items-baseline gap-2.5 py-3.5 px-1">
+        <span className="text-[12px] font-extrabold text-[#3557d6]">01</span>
+        <h2 className="m-0 text-[26px] font-extrabold tracking-tight text-[#1a1d2e]">지점별 방문 현황</h2>
       </div>
 
       {/* 지점별 조회수 — 한 줄 카드 */}
-      <div className="text-[12px] font-bold text-[#6b6558] px-1 mb-2">지점별 조회수</div>
-      <div className="flex gap-2 mb-4">
+      <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4 mb-3.5">
+      <div className="text-[17px] font-extrabold text-[#1a1d2e] mb-2.5">
+        지점별 조회수{' '}
+        <span className="text-[11px] font-medium text-[#6b6558]">· 카드 누르면 업로드 목록이 그 지점으로 바뀌어요</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         {activeCards.length > 1 && (
           <div
-            className="flex-1 min-w-0 overflow-hidden bg-[#1a1d2e] text-white rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.12)] px-2.5 py-2.5"
-            style={{ borderTop: '4px solid #1a1d2e' }}
+            className="min-w-0 overflow-hidden bg-[#1a1d2e] text-white border border-[#1a1d2e] rounded-[6px] p-2.5"
+            style={{ borderTop: '3px solid #1a1d2e' }}
           >
-            <div className="flex items-center gap-1.5 text-[12px] font-bold whitespace-nowrap">
-              <span className="w-[8px] h-[8px] rounded-full bg-white" />
+            <div className="flex items-center gap-1 text-[12px] font-extrabold whitespace-nowrap">
               전체 합계
             </div>
-            <div className="text-[clamp(12px,1.1vw,18px)] font-extrabold tracking-tight truncate mt-2 whitespace-nowrap">
+            <div className="text-[16px] font-extrabold truncate mt-1.5 whitespace-nowrap">
               {activeCards.reduce((sum, c) => sum + c.viewsRaw, 0).toLocaleString()}
             </div>
-            <div className="text-[10.5px] text-white/60 mt-1 whitespace-nowrap">
+            <div className="text-[11px] text-white/60 whitespace-nowrap">
               {kpiData.influencers}명 · {activeCards.reduce((sum, c) => sum + c.uploaded, 0)}건
             </div>
           </div>
@@ -172,46 +176,44 @@ export default function LocationVisitSection({
             <div
               key={card.name}
               onClick={() => onSelectLocation?.(card.name)}
-              className={`flex-1 min-w-0 overflow-hidden cursor-pointer bg-white border border-[#f2ebdd] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] px-2.5 py-2.5 hover:shadow-[0_6px_20px_rgba(30,41,59,0.1)] transition-all ${empty ? 'opacity-60' : ''}`}
-              style={{ borderTop: `4px solid ${card.color}` }}
+              className={`min-w-0 overflow-hidden cursor-pointer bg-[#faf8f3] border border-[#f0e9da] rounded-[6px] p-2.5 hover:bg-white hover:shadow-[0_4px_16px_rgba(30,41,59,0.08)] transition-all ${empty ? 'opacity-60' : ''}`}
+              style={{ borderTop: `3px solid ${card.color}` }}
             >
-              <div className="flex items-center gap-1.5 text-[12px] font-bold text-[#1a1d2e] whitespace-nowrap">
-                <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: card.color }} />
+              <div className="flex items-center gap-1 text-[12px] font-extrabold text-[#1a1d2e] whitespace-nowrap">
                 {card.name}
-                <span className="ml-auto text-[10px] font-medium text-[#a9a294] truncate">{card.tag}</span>
+                <span className="ml-auto text-[10px] font-normal text-[#6b6558] truncate">{card.tag}</span>
               </div>
-              <div className={`text-[clamp(12px,1.1vw,18px)] font-extrabold tracking-tight truncate text-[#1a1d2e] mt-2 whitespace-nowrap`}>
+              <div className={`text-[16px] font-extrabold truncate text-[#1a1d2e] mt-1.5 whitespace-nowrap`}>
                 {empty ? '----' : card.views}
               </div>
-              <div className="text-[10.5px] text-[#9a9486] mt-1 whitespace-nowrap">
+              <div className="text-[11px] text-[#6b6558] whitespace-nowrap">
                 {card.influencers}명 · {card.uploaded}건
               </div>
             </div>
           )
         })}
       </div>
+      </div>
 
-      <div className="flex flex-wrap gap-4 items-start">
+      <div className="flex flex-wrap gap-3.5 items-start">
         {/* 좌측 랭킹 레일 */}
-        <aside className="flex-1 min-w-[280px] max-w-full lg:max-w-[340px] flex flex-col gap-3.5">
+        <aside className="hidden xl:flex flex-[0_0_300px] w-[300px] flex-col gap-3.5">
           {/* 조회수 TOP 3 */}
-          <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
-            <div className="flex items-center gap-1.5 text-[14px] font-extrabold text-[#1a1d2e]">
-              🏆 조회수 TOP 3
+          <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[17px] font-extrabold text-[#1a1d2e]">🏆 조회수 TOP 3</span>
+              <span className="ml-auto text-[10.5px] text-[#6b6558] bg-[#f6f0e3] px-[7px] py-[3px] rounded-full">전체 기간</span>
             </div>
-            <div className="text-[11px] text-[#9a9486] mt-1">
-              전체 기간
-            </div>
-            <div className="flex gap-1 mt-2.5 bg-[#f7f4ec] rounded-[10px] p-[3px] overflow-x-auto">
+            <div className="flex gap-[3px] mt-2.5 bg-[#f7f4ec] rounded-[6px] p-[3px] overflow-x-auto">
               {availableTabs.map(tab => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setTopTab(tab)}
-                  className={`flex-1 min-w-[40px] text-center text-[11.5px] rounded-[8px] py-1.5 transition-all whitespace-nowrap ${
+                  className={`flex-1 min-w-[40px] text-center text-[11px] text-[#1a1d2e] rounded-[6px] px-[7px] py-[5px] transition-all whitespace-nowrap ${
                     effectiveTopTab === tab
-                      ? 'font-bold text-white bg-[#4f7cff] shadow-xs'
-                      : 'font-semibold text-[#8b8578] hover:text-[#1a1d2e]'
+                      ? 'font-bold bg-white shadow-xs'
+                      : 'font-medium hover:bg-white/60'
                   }`}
                 >
                   {tab}
@@ -219,29 +221,25 @@ export default function LocationVisitSection({
               ))}
             </div>
 
-            <div className="flex flex-col gap-2 mt-3">
+            <div className="flex flex-col mt-1.5">
               {topViewsItems.map(item => (
                 <div
                   key={item.rank + item.name}
                   onClick={() => onSelectInfluencer?.(item.name)}
-                  className="cursor-pointer flex items-center gap-2.5 bg-[#fbf9f4] hover:bg-[#f5f1e8] transition-colors rounded-xl p-2.5 border-l-4"
-                  style={{ borderLeftColor: item.color }}
+                  className="cursor-pointer flex items-center gap-2.5 py-[9px] border-b border-[#f4efe4] last:border-b-0 hover:bg-[#faf8f3] transition-colors"
                 >
-                  <span
-                    className="w-[22px] h-[22px] rounded-[7px] text-white text-[11px] font-extrabold grid place-items-center shrink-0"
-                    style={{ backgroundColor: item.badgeColor }}
-                  >
+                  <span className="w-[18px] text-[14px] font-extrabold text-[#c08a1e] shrink-0">
                     {item.rank}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-bold text-[#1a1d2e] truncate">
+                    <span className="block text-[12.5px] font-bold text-[#1a1d2e] truncate">
                       {item.name}
                     </span>
-                    <span className="block text-[10.5px] text-[#9a9486] mt-0.5">
+                    <span className="block text-[11px] text-[#6b6558]">
                       {item.channel} · {item.location}
                     </span>
                   </span>
-                  <span className="text-[14px] font-extrabold tracking-tight text-[#1a1d2e]">
+                  <span className="text-[13px] font-extrabold text-[#1a1d2e]">
                     {item.views}
                   </span>
                 </div>
@@ -250,30 +248,27 @@ export default function LocationVisitSection({
           </div>
 
           {/* 좋아요 TOP 3 */}
-          <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
-            <div className="flex items-center gap-1.5 text-[14px] font-extrabold text-[#1a1d2e]">
-              💎 좋아요 TOP 3
+          <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[17px] font-extrabold text-[#1a1d2e]">💎 좋아요 TOP 3</span>
+              <span className="ml-auto text-[10.5px] text-[#6b6558] bg-[#f6f0e3] px-[7px] py-[3px] rounded-full">전체 기간 · 실측</span>
             </div>
-            <div className="text-[11px] text-[#9a9486] mt-1">
-              전체 기간 · 실측
-            </div>
-            <div className="flex flex-col gap-2 mt-3">
+            <div className="flex flex-col mt-1.5">
               {topLikesItems.map((item, idx) => (
                 <div
                   key={item.name + idx}
                   onClick={() => onSelectInfluencer?.(item.name)}
-                  className="cursor-pointer flex items-center gap-2.5 bg-[#fbf9f4] hover:bg-[#f5f1e8] transition-colors rounded-xl p-2.5 border-l-4"
-                  style={{ borderLeftColor: item.borderLeftColor }}
+                  className="cursor-pointer flex items-center gap-2.5 py-[9px] border-b border-[#f4efe4] last:border-b-0 hover:bg-[#faf8f3] transition-colors"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-bold text-[#1a1d2e] truncate">
+                    <span className="block text-[12.5px] font-bold text-[#1a1d2e] truncate">
                       {item.name}
                     </span>
-                    <span className="block text-[10.5px] text-[#9a9486] mt-0.5">
+                    <span className="block text-[11px] text-[#6b6558]">
                       {item.sub}
                     </span>
                   </span>
-                  <span className="text-[14px] font-extrabold tracking-tight text-[#1a1d2e]">
+                  <span className="text-[13px] font-extrabold text-[#1a1d2e]">
                     {item.likes}
                   </span>
                 </div>
@@ -283,55 +278,53 @@ export default function LocationVisitSection({
         </aside>
 
         {/* 중앙 지점 카드 그리드 & 누적 KPI */}
-        <div className="flex-[4_1_430px] min-w-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="flex-[4_1_430px] min-w-0 flex flex-col gap-3.5">
           {/* 누적 KPI 4종 */}
-          <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-1">
-            <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#4f8cff] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
-              <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
+              <div className="flex items-center gap-1.5 text-[12.5px] font-bold text-[#4a4538]">
                 🧍 등록 인플루언서 수
               </div>
-              <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
+              <div className="text-[22px] font-extrabold tracking-[-0.02em] text-[#1a1d2e] mt-2 whitespace-nowrap">
                 {kpiData.influencers}
-                <span className="text-[14px] font-bold text-[#9a9486] ml-1">명</span>
+                <span className="text-[13px] font-bold text-[#6b6558] ml-0.5">명</span>
               </div>
-              <div className="h-px bg-[#f4efe3] my-2.5" />
-              <div className="text-[11px] text-[#9a9486]">{kpiData.locationsCount}개 지점 · {kpiData.campaignsCount}개 캠페인</div>
+              <div className="text-[11px] text-[#6b6558] mt-1">{kpiData.locationsCount}개 지점 · {kpiData.campaignsCount}개 캠페인</div>
             </div>
 
-            <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#8b5cf6] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
-              <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
+            <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
+              <div className="flex items-center gap-1.5 text-[12.5px] font-bold text-[#4a4538]">
                 📮 발행량
               </div>
-              <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
+              <div className="text-[22px] font-extrabold tracking-[-0.02em] text-[#1a1d2e] mt-2 whitespace-nowrap">
                 {kpiData.uploaded}
-                <span className="text-[14px] font-bold text-[#9a9486] ml-1">건</span>
+                <span className="text-[13px] font-bold text-[#6b6558] ml-0.5">건</span>
               </div>
-              <div className="h-px bg-[#f4efe3] my-2.5" />
-              <div className="text-[11px] text-[#9a9486]">발행률 {kpiData.pubRate}% · 미발행 {kpiData.unreleased}건</div>
+              <div className="text-[11px] text-[#6b6558] mt-1">발행률 {kpiData.pubRate}% · 미발행 {kpiData.unreleased}건</div>
             </div>
 
-            <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#06b6d4] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
-              <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
+            <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
+              <div className="flex items-center gap-1.5 text-[12.5px] font-bold text-[#4a4538]">
                 👀 조회수
               </div>
-              <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
+              <div className="text-[22px] font-extrabold tracking-[-0.02em] text-[#1a1d2e] mt-2 whitespace-nowrap">
                 {kpiData.viewsFormatted}
               </div>
 
             </div>
 
-            <div className="bg-white border border-[#f2ebdd] border-l-4 border-l-[#ec4899] rounded-[14px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
-              <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[#6b6558]">
+            <div className="bg-white border border-[#f2ebdd] rounded-[6px] shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-4">
+              <div className="flex items-center gap-1.5 text-[12.5px] font-bold text-[#4a4538]">
                 ❤️ 좋아요
               </div>
-              <div className="text-[32px] font-extrabold tracking-tight text-[#1a1d2e] mt-2.5">
+              <div className="text-[22px] font-extrabold tracking-[-0.02em] text-[#1a1d2e] mt-2 whitespace-nowrap">
                 {kpiData.likes}
               </div>
 
             </div>
           </div>
 
-          {children && <div className="col-span-full">{children}</div>}
+          {children && <div className="flex flex-col gap-3.5">{children}</div>}
         </div>
 
         {/* 우측 최근 30일 마케팅 요약 + 질문 */}

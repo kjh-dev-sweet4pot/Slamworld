@@ -115,325 +115,207 @@ export default function PopularContentSection({
     onSelectInfluencer?.(name)
   }
 
+  const CH_COLOR: Record<string, string> = { 샤오홍슈: '#e03131', 인스타그램: '#8b5cf6', 틱톡: '#06b6d4', 도우인: '#475569', 웨이보: '#f59e0b' }
+  const rowCols = 'grid grid-cols-[28px_minmax(0,1fr)_68px_72px] sm:grid-cols-[40px_minmax(0,1.6fr)_80px_80px_90px_60px_24px] gap-1.5'
+  const seg = (on: boolean) =>
+    `text-[11px] rounded-[6px] px-[9px] py-[5px] transition-colors ${on ? 'font-bold text-[#1a1d2e] bg-white' : 'font-medium text-[#4a4538] hover:text-[#1a1d2e]'}`
+
+  // 함께 방문한 인플루언서 알약 (상세 패널 · 모바일 공용)
+  const coVisitorBlock = selectedItem && coVisitors.length > 0 && (
+    <>
+      <div className="text-[12px] font-extrabold text-[#1a1d2e] mt-3">
+        함께 방문한 인플루언서{' '}
+        <span className="font-medium text-[#6b6558]">{selectedItem.location} · 총 {coVisitors.length}명</span>
+      </div>
+      <div className="flex flex-wrap gap-[5px] mt-1.5">
+        {coVisitors.map((cov, i) => (
+          <button
+            key={cov.influencer_name + i}
+            type="button"
+            onClick={() => handleSelect(cov.influencer_name)}
+            title={`${cov.channel}${cov.upload_url ? ` · 좋아요 ${(cov.likes ?? 0).toLocaleString()}` : ''}`}
+            className="border border-[#e3d9c4] bg-white text-[11px] font-medium text-[#1a1d2e] rounded-full px-2 py-1 hover:border-[#3557d6] transition-colors"
+          >
+            {cov.influencer_name}
+            <span className="text-[#6b6558]"> · {cov.upload_url ? `${formatViews(contentViews(cov))} 뷰 · ${(cov.likes ?? 0).toLocaleString()} ❤️` : '미발행'}</span>
+          </button>
+        ))}
+      </div>
+    </>
+  )
+
   return (
-    <section className="mb-10">
-      <div className="text-[18px] font-extrabold tracking-tight text-[#1a1d2e] pt-6 pb-2.5 px-1">
-        인기 콘텐츠 분석{' '}
-        <span className="text-[13px] font-semibold tracking-normal text-[#9a9486]">
-          ( ※ 콘텐츠 클릭 시 상세 표시 )
-        </span>
+    <section className="mb-10 bg-white border border-[#f2ebdd] rounded-[6px] p-[18px] shadow-[0_4px_16px_rgba(30,41,59,0.06)]">
+      {/* 헤더 · 검색 · 지표 토글 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="m-0 text-[18px] font-extrabold text-[#1a1d2e]">
+          인기 콘텐츠 분석{' '}
+          <span className="text-[11.5px] font-medium text-[#6b6558]">( ※ 콘텐츠 클릭 시 상세 표시 )</span>
+        </h3>
+        <div className="flex-1" />
+        <input
+          type="text"
+          aria-label="인플루언서 검색"
+          placeholder="🔍 인플루언서 검색"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="w-full sm:w-[200px] text-[12px] text-[#1a1d2e] placeholder-[#a9a294] bg-[#fbf9f4] border border-[#f0e9da] rounded-[6px] px-2.5 py-[7px] focus:outline-none focus:border-[#3557d6] transition-colors"
+        />
+        <div className="flex gap-[3px] bg-[#f7f4ec] rounded-[8px] p-[3px]">
+          <button type="button" onClick={() => setMetricMode('views')} className={seg(metricMode === 'views')}>조회수</button>
+          <button type="button" onClick={() => setMetricMode('likes')} className={seg(metricMode === 'likes')}>좋아요</button>
+        </div>
       </div>
 
-      <div className="bg-white border border-[#f2ebdd] rounded-2xl shadow-[0_4px_16px_rgba(30,41,59,0.06)] p-5">
-        {/* 상단 1차 필터 바 */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <span className="text-[14.5px] font-extrabold text-[#1a1d2e]">
-            인기 콘텐츠 랭킹
-          </span>
+      {/* 지점 칩 */}
+      <div className="flex flex-wrap gap-[5px] mt-2.5">
+        {locOptions.map(opt => {
+          const active = locFilter === opt
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setLocFilter(opt)}
+              className={`text-[11px] font-medium rounded-full px-2.5 py-1 border transition-colors ${
+                active ? 'text-white bg-[#1a1d2e] border-[#1a1d2e]' : 'text-[#1a1d2e] bg-white border-[#e3d9c4] hover:bg-[#faf8f3]'
+              }`}
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
 
-          <div className="flex flex-wrap gap-1.5 ml-2">
-            {locOptions.map(opt => {
-              const active = locFilter === opt
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setLocFilter(opt)}
-                  className={`text-[11.5px] rounded-[16px] px-3 py-1.5 transition-all ${
-                    active ? 'font-bold text-white bg-[#4f7cff]' : 'font-semibold bg-[#f7f4ec] text-[#6b6558] hover:text-[#1a1d2e]'
-                  }`}
-                >
-                  {opt}
-                </button>
-              )
-            })}
+      {/* 랭킹 목록 & 상세 2분할 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-[18px] mt-3">
+        <div className="min-w-0">
+          <div className={`${rowCols} text-[11px] text-[#6b6558] pb-1.5 border-b border-[#efe5d0]`}>
+            <span>순위</span>
+            <span>인플루언서</span>
+            <span>채널</span>
+            <span className="hidden sm:block">지점</span>
+            <span className="text-right">{metricMode === 'views' ? '조회수' : '좋아요'}</span>
+            <span className="hidden sm:block text-right">비중</span>
+            <span className="hidden sm:block" />
           </div>
 
-          <div className="ml-auto flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="🔍 인플루언서 검색"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="text-[11.5px] text-[#1a1d2e] placeholder-[#a9a294] bg-[#fbf9f4] border border-[#f0e9da] rounded-[10px] px-3 py-1.5 focus:outline-none focus:border-[#4f7cff] transition-colors"
-              />
-            </div>
+          {filteredRows.slice(0, displayCount).map((item, idx) => {
+            const isSelected = item.influencer_name === selectedItem?.influencer_name
+            const itemVal = metricMode === 'views' ? contentViews(item) : (item.likes ?? 0)
+            const pct = ((itemVal / totalMetric) * 100).toFixed(1)
+            const { value, estimated } = contentViewsDisplay(item)
+            const displayVal = metricMode === 'views'
+              ? (value ? (estimated ? `~${value.toLocaleString()}` : value.toLocaleString()) : '0')
+              : (item.likes ?? 0).toLocaleString()
 
-            <div className="flex items-center gap-1 bg-[#f7f4ec] rounded-[9px] p-[3px]">
-              <button
-                type="button"
-                onClick={() => setMetricMode('views')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
-                  metricMode === 'views'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
+            return (
+              <div
+                key={item.influencer_name + idx}
+                onClick={() => {
+                  // 모바일: 상세 카드 대신 바로 콘텐츠로
+                  if (item.upload_url && window.matchMedia('(max-width: 639px)').matches) {
+                    window.open(item.upload_url, '_blank', 'noopener')
+                    return
+                  }
+                  handleSelect(item.influencer_name)
+                }}
+                className={`${rowCols} cursor-pointer items-center py-2 border-b border-[#f4efe4] text-[12px] text-[#1a1d2e] transition-colors ${
+                  isSelected ? 'bg-[#eef1fb]' : 'hover:bg-[#faf8f3]'
                 }`}
               >
-                조회수
-              </button>
+                <span className="font-extrabold">{idx + 1}</span>
+                <span className="font-bold truncate">{item.influencer_name}</span>
+                <span className="font-bold truncate" style={{ color: CH_COLOR[item.channel] ?? '#475569' }}>● {item.channel}</span>
+                <span className="hidden sm:block truncate">{item.location.replace('점', '')}</span>
+                <span className="text-right font-bold">{displayVal}</span>
+                <span className="hidden sm:block text-right">{pct}%</span>
+                <span className="hidden sm:block">
+                  {item.upload_url && (
+                    <a
+                      href={item.upload_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="업로드 열기"
+                      onClick={e => e.stopPropagation()}
+                      className="no-underline text-[#3557d6]"
+                    >
+                      ↗
+                    </a>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+
+          {filteredRows.length > displayCount && (
+            <div className="text-center mt-2.5">
               <button
                 type="button"
-                onClick={() => setMetricMode('likes')}
-                className={`text-[11.5px] rounded-[7px] px-3 py-1 transition-all ${
-                  metricMode === 'likes'
-                    ? 'font-bold text-[#1a1d2e] bg-white shadow-xs'
-                    : 'font-semibold text-[#9a9486] hover:text-[#1a1d2e]'
-                }`}
+                onClick={() => setDisplayCount(prev => prev + 8)}
+                className="border border-[#e3d9c4] bg-white text-[12px] font-medium text-[#1a1d2e] rounded-full px-3.5 py-1.5 hover:bg-[#faf8f3] transition-colors"
               >
-                좋아요
+                더보기
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 랭킹 목록 & 상세 2분할 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-5 mt-4">
-          {/* 좌측 랭킹 리스트 */}
-          <div>
-            <div className="grid grid-cols-[28px_minmax(0,1fr)_68px_72px] sm:grid-cols-[44px_minmax(110px,1fr)_78px_56px_94px_54px] gap-2 items-center px-2.5 pb-2.5 border-b border-[#eee6d6]">
-              <span className="text-[11px] text-[#9a9486] font-semibold text-center">순위</span>
-              <span className="text-[11px] text-[#9a9486] font-semibold">인플루언서</span>
-              <span className="text-[11px] text-[#9a9486] font-semibold">채널</span>
-              <span className="hidden sm:block text-[11px] text-[#9a9486] font-semibold">지점</span>
-              <span className="text-[11px] text-[#9a9486] font-semibold text-right">
-                {metricMode === 'views' ? '조회수' : '좋아요'}
-              </span>
-              <span className="hidden sm:block text-[11px] text-[#9a9486] font-semibold text-right">비중</span>
-            </div>
-
-            <div className="flex flex-col gap-1.5 mt-1.5">
-              {filteredRows.slice(0, displayCount).map((item, idx) => {
-                const isSelected = item.influencer_name === selectedItem?.influencer_name
-                const itemVal = metricMode === 'views' ? contentViews(item) : (item.likes ?? 0)
-                const pct = ((itemVal / totalMetric) * 100).toFixed(1)
-
-                let rankBadgeBg = '#f5c142'
-                if (idx === 1) rankBadgeBg = '#d7d3d3'
-                if (idx === 2) rankBadgeBg = '#f0a878'
-
-                let channelBadgeBg = '#f3e8ff'
-                let channelBadgeColor = '#6b21a8'
-                if (item.channel === '샤오홍슈') {
-                  channelBadgeBg = '#fee2e2'
-                  channelBadgeColor = '#b42318'
-                } else if (item.channel === '틱톡') {
-                  channelBadgeBg = '#cffafe'
-                  channelBadgeColor = '#0e7490'
-                } else if (item.channel === '도우인' || item.channel === '웨이보') {
-                  channelBadgeBg = '#f1f5f9'
-                  channelBadgeColor = '#475569'
-                }
-
-                const { value, estimated } = contentViewsDisplay(item)
-                const displayVal = metricMode === 'views'
-                  ? (value ? (estimated ? `~${value.toLocaleString()}` : value.toLocaleString()) : '0')
-                  : (item.likes ?? 0).toLocaleString()
-
-                return (
-                  <div
-                    key={item.influencer_name + idx}
-                    onClick={() => {
-                      // 모바일: 상세 카드 대신 바로 콘텐츠로
-                      if (item.upload_url && window.matchMedia('(max-width: 639px)').matches) {
-                        window.open(item.upload_url, '_blank', 'noopener')
-                        return
-                      }
-                      handleSelect(item.influencer_name)
-                    }}
-                    className={`cursor-pointer grid grid-cols-[28px_minmax(0,1fr)_68px_72px] sm:grid-cols-[44px_minmax(110px,1fr)_78px_56px_94px_54px] gap-2 items-center px-2.5 py-2.5 rounded-xl transition-colors ${
-                      isSelected
-                        ? 'bg-[#f4f1ff] border border-[#e0dbf5]'
-                        : 'hover:bg-[#faf7f0] border-b border-[#f7f2e8] last:border-b-0'
-                    }`}
-                  >
-                    <span
-                      className={`justify-self-center text-[11.5px] font-extrabold ${
-                        idx < 3
-                          ? 'w-6 h-6 rounded-lg text-white grid place-items-center'
-                          : 'text-[#9a9486]'
-                      }`}
-                      style={idx < 3 ? { backgroundColor: rankBadgeBg } : {}}
-                    >
-                      {idx + 1}
-                    </span>
-
-                    <span className="text-[13px] font-bold text-[#1a1d2e] truncate flex items-center gap-1">
-                      {item.influencer_name}
-                      {item.upload_url && (
-                        <a
-                          href={item.upload_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="text-[11px] text-[#2f5fd8] hover:underline"
-                        >
-                          🔗
-                        </a>
-                      )}
-                    </span>
-
-                    <span
-                      className="text-[11.5px] font-semibold rounded-lg px-2 py-0.5 justify-self-start truncate"
-                      style={{ backgroundColor: channelBadgeBg, color: channelBadgeColor }}
-                    >
-                      {item.channel}
-                    </span>
-
-                    <span className="hidden sm:block text-[11.5px] text-[#6b6558] truncate">
-                      {item.location.replace('점', '')}
-                    </span>
-
-                    <span className="text-[13px] font-extrabold text-[#1a1d2e] text-right">
-                      {displayVal}
-                    </span>
-
-                    <span className="hidden sm:block text-[11.5px] text-[#6b6558] text-right">
-                      {pct}%
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
-            {filteredRows.length > displayCount && (
-              <div className="flex justify-center mt-3">
-                <button
-                  type="button"
-                  onClick={() => setDisplayCount(prev => prev + 8)}
-                  className="w-8 h-8 rounded-full bg-[#eef3ff] hover:bg-[#e0ebff] text-[#4f7cff] font-bold grid place-items-center text-[12px] transition-colors"
-                  title="더보기"
-                >
-                  ⌄
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 우측 선택된 인플루언서 상세 프로필 카드 */}
-          {selectedItem && (
-            <div className="hidden sm:flex bg-[#fbfaf6] border border-[#f2ebdd] rounded-xl p-4 flex-col h-fit">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-bold text-white bg-[#6b6558] rounded-lg px-2.5 py-1">
-                  {selectedItem.location}
-                </span>
-                <span className="text-[11px] font-semibold text-[#2f5fd8]">
-                  {selectedItem.channel}
-                </span>
-                <span className="text-[11px] text-[#b5ab96]">›</span>
-                <span className="text-[11px] font-semibold text-[#2f5fd8]">
-                  {selectedItem.target_audience || '인플루언서'}
-                </span>
-              </div>
-
-              <div className="text-[18px] font-extrabold text-[#1a1d2e] mt-3">
-                {selectedItem.influencer_name}
-              </div>
-
-              <div className="flex flex-col gap-2.5 mt-3.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[11.5px] text-[#9a9486]">조회수</span>
-                  <span className="text-[15px] font-extrabold text-[#1a1d2e]">
-                    {contentViews(selectedItem).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[11.5px] text-[#9a9486]">좋아요</span>
-                  <span className="text-[14px] font-bold text-[#1a1d2e]">
-                    {(selectedItem.likes ?? 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[11.5px] text-[#9a9486]">댓글</span>
-                  <span className="text-[14px] font-bold text-[#1a1d2e]">
-                    {(selectedItem.comments ?? 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[11.5px] text-[#9a9486]">참여율</span>
-                  <span className="text-[14px] font-bold text-[#16a34a]">
-                    {contentViews(selectedItem) > 0
-                      ? `${(((selectedItem.likes ?? 0) + (selectedItem.comments ?? 0) + (selectedItem.saves ?? 0)) / contentViews(selectedItem) * 100).toFixed(2)}%`
-                      : '—'}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[11.5px] text-[#9a9486]">방문일</span>
-                  <span className="text-[13px] font-semibold text-[#1a1d2e]">
-                    {selectedItem.visit_date || '—'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="h-px bg-[#f0e9da] my-3.5" />
-
-              <div className="text-[11px] font-semibold text-[#9a9486]">
-                채널별 조회 편중
-              </div>
-              <div className="flex flex-col gap-2.5 mt-2.5">
-                {channelBias.map(ch => (
-                  <div key={ch.key} className="flex items-center gap-2.5">
-                    <span className="w-12 text-[11.5px] text-[#6b6558]">{ch.name}</span>
-                    <span className="flex-1 h-2.5 rounded-full bg-[#eee6d6] overflow-hidden">
-                      <span
-                        className="block h-full rounded-full transition-all duration-300"
-                        style={{ width: `${ch.pct}%`, backgroundColor: ch.color }}
-                      />
-                    </span>
-                    <span className="w-9 text-right text-[11px] font-bold text-[#1a1d2e]">{ch.pct}%</span>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
 
-        {/* 함께 방문한 인플루언서 */}
-        {selectedItem && coVisitors.length > 0 && (
-          <div className="mt-5 pt-4 border-t border-[#f4efe3]">
-            <div className="text-[11px] font-semibold text-[#9a9486]">
-              함께 방문한 인플루언서{' '}
-              <span className="font-bold text-[#6b6558]">
-                {selectedItem.location} · 총 {coVisitors.length}명
+        {/* 우측 선택된 인플루언서 상세 패널 */}
+        {selectedItem && (
+          <div className="hidden sm:block bg-[#faf8f3] rounded-[6px] p-4 h-fit min-w-0">
+            <div className="flex gap-3 items-center">
+              <span className="w-14 h-14 rounded-full bg-[#ece4d2] text-[#6b6558] grid place-items-center text-[18px] font-extrabold shrink-0">
+                {selectedItem.influencer_name.slice(0, 1)}
               </span>
+              <div className="min-w-0">
+                <div className="text-[11px] text-[#6b6558]">{selectedItem.target_audience || '인플루언서'}</div>
+                <div className="text-[16px] font-extrabold text-[#1a1d2e] truncate">{selectedItem.influencer_name}</div>
+                <div className="text-[11.5px] text-[#4a4538]">{selectedItem.location} · {selectedItem.channel}</div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 mt-3">
-              {coVisitors.map((cov, i) => (
-                <div
-                  key={cov.influencer_name + i}
-                  onClick={() => handleSelect(cov.influencer_name)}
-                  className="cursor-pointer border border-[#f2ebdd] rounded-xl p-3 bg-white hover:border-[#4f7cff] transition-all"
-                >
-                  <span
-                    className={`inline-block text-[10px] font-bold rounded-[7px] px-2 py-0.5 ${
-                      cov.upload_url ? 'text-white bg-[#6b6558]' : 'text-[#a9a294] bg-[#f4efe3]'
-                    }`}
-                  >
-                    {cov.upload_url ? `${formatViews(contentViews(cov))} 뷰` : '미발행'}
-                  </span>
-                  <div className="text-[12.5px] font-bold text-[#1a1d2e] mt-2.5 truncate">
-                    {cov.influencer_name}
-                  </div>
-                  <div className="text-[10.5px] text-[#9a9486] mt-1 truncate">
-                    {cov.channel}
-                  </div>
-                  <div className="text-[13px] font-extrabold text-[#1a1d2e] mt-2.5">
-                    {cov.upload_url ? `${(cov.likes ?? 0).toLocaleString()} ❤️` : '—'}
-                  </div>
+            <div className="grid grid-cols-3 xl:grid-cols-5 gap-1.5 mt-3">
+              {[
+                { l: '조회수', v: contentViews(selectedItem).toLocaleString() },
+                { l: '좋아요', v: (selectedItem.likes ?? 0).toLocaleString() },
+                { l: '댓글', v: (selectedItem.comments ?? 0).toLocaleString() },
+                {
+                  l: '참여율',
+                  v: contentViews(selectedItem) > 0
+                    ? `${(((selectedItem.likes ?? 0) + (selectedItem.comments ?? 0) + (selectedItem.saves ?? 0)) / contentViews(selectedItem) * 100).toFixed(2)}%`
+                    : '—',
+                },
+                { l: '방문일', v: selectedItem.visit_date || '—' },
+              ].map(s => (
+                <div key={s.l} className="bg-white rounded-[8px] p-2 min-w-0">
+                  <div className="text-[10px] text-[#6b6558]">{s.l}</div>
+                  <div className="text-[13px] font-extrabold text-[#1a1d2e] truncate">{s.v}</div>
                 </div>
               ))}
             </div>
+
+            <div className="text-[12px] font-extrabold text-[#1a1d2e] mt-3">채널별 조회 편중</div>
+            {channelBias.map(ch => (
+              <div key={ch.key} className="flex items-center gap-1.5 text-[11px] mt-[5px]">
+                <span className="w-14 text-[#1a1d2e]">{ch.name}</span>
+                <span className="flex-1 h-1.5 rounded-[3px] bg-[#ece4d2]">
+                  <span className="block h-1.5 rounded-[3px] transition-all duration-300" style={{ width: `${ch.pct}%`, backgroundColor: ch.color }} />
+                </span>
+                <span className="w-8 text-right">{ch.pct}%</span>
+              </div>
+            ))}
+
+            {coVisitorBlock}
           </div>
         )}
       </div>
 
-      {/* 수치 기준 안내 박스 */}
-      <div className="bg-white/65 border border-[#f0e6d2] rounded-xl p-3.5 sm:p-4 mt-5">
-        <p className="text-[11.5px] leading-relaxed text-[#6b6558] m-0">
-          <b className="text-[#1a1d2e]">수치 기준 — </b>
-          샤오홍슈·도우인 조회수는 플랫폼이 조회수를 제공하지 않아 좋아요·저장·댓글 합을 인터랙션율 2.3%로 역산한 값이며 <b>~</b> 로 표시했습니다. 누적 조회수에 반영되며 실제 노출과 차이가 있을 수 있습니다. 콘텐츠 형식(릴스·노트·숏폼·게시물)은 업로드 링크 패턴으로 자동 분류했습니다. 지표는 자동 수집이고 마지막 갱신은 2026.08.31입니다.
-        </p>
+      {/* 모바일: 상세 패널이 숨겨지므로 함께 방문만 따로 */}
+      <div className="sm:hidden">{coVisitorBlock}</div>
+
+      {/* 수치 기준 안내 */}
+      <div className="text-[11px] text-[#4a4538] bg-[#faf8f3] rounded-[6px] px-3 py-2.5 mt-3 leading-[1.7]">
+        <b>수치 기준 —</b> 샤오홍슈·도우인 조회수는 플랫폼이 조회수를 제공하지 않아 좋아요·저장·댓글 합을 인터랙션율 2.3%로 역산한 값이며 <b>~</b> 로 표시했습니다. 누적 조회수에 반영되며 실제 노출과 차이가 있을 수 있습니다. 콘텐츠 형식(릴스·노트·숏폼·게시물)은 업로드 링크 패턴으로 자동 분류했습니다. 지표는 자동 수집이고 마지막 갱신은 2026.08.31입니다.
       </div>
     </section>
   )
