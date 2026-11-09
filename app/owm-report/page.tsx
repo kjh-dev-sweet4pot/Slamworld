@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import LoginGate from '@/components/LoginGate'
 import VisitCalendar, { MiniCalendar } from '@/components/owm/VisitCalendar'
 import { weekLabel, weeksSince } from '@/lib/week'
 
@@ -195,6 +196,14 @@ function GroupTables({ data, group, label, desc, no, week }: { data: OwmReport; 
 }
 
 export default function OwmReportPage() {
+  return (
+    <LoginGate>
+      <OwmReportInner />
+    </LoginGate>
+  )
+}
+
+function OwmReportInner() {
   const [data, setData] = useState<OwmReport | null>(null)
   const [error, setError] = useState('')
   // 기간 지정 — 비우면 기본(누적 11/1~오늘, 주간 = 지난주)
