@@ -9,6 +9,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.18',
+    date: '2026-11-10',
+    icon: '📱',
+    title: '모바일 대시보드·OWM 리포트 최적화, Playwright E2E 추가',
+    items: [
+      '대시보드 기간 네비·KPI·파이프라인 좁은 화면 대응',
+      '방문 캘린더·인기 콘텐츠·방문 일정 카드 모바일화',
+      'Playwright 모바일 E2E (375/390/360px) 진단·회귀 스펙 추가',
+    ],
+  },
+  {
     version: '1.0.17',
     date: '2026-11-06',
     icon: '🐇',
