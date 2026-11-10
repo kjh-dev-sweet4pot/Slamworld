@@ -14,6 +14,8 @@ const MONTHS = (() => {
   for (let d = new Date(2026, 9, 1); d <= now; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   return out
 })()
+import { toMobileRows } from '@/lib/owm-report-rows'
+import { shortPeriodLabel } from '@/lib/period-label'
 import type { Group, OwmReport, ReportRow, ReportTable, Span, Status } from '@/lib/owm-report'
 
 const COLUMNS = ['방문일', '지점', '인플루언서 핸들', '콘텐츠', '업로드일', '조회수']
@@ -58,10 +60,52 @@ function Tile({ label, value, unit, note }: { label: string; value: number; unit
   )
 }
 
+function MobileList({ t }: { t: ReportTable }) {
+  const rows = toMobileRows(t.rows)
+  if (rows.length === 0)
+    return (
+      <p data-testid="owm-empty" className="md:hidden py-10 text-center text-[13px] text-[#9a9384]">
+        데이터 없음
+      </p>
+    )
+  return (
+    <ul data-testid="owm-mobile-list" className="md:hidden flex flex-col gap-2">
+      {rows.map((r, i) => (
+        <li key={i} className="border border-[#f2ebdd] rounded-[6px] px-3 py-2.5 text-[13px] min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-bold truncate min-w-0" title={r.handleLong ? r.handle : undefined}>
+              {r.handle}
+            </span>
+            <span className="ml-auto shrink-0 tabular-nums font-bold">{r.views}</span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[12px] text-[#6b6558] min-w-0">
+            <span className="shrink-0 tabular-nums">{r.visitDate}</span>
+            <span className="truncate min-w-0" title={r.storeLong ? r.store : undefined}>
+              {r.store}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[12px]">
+            <span className="text-[#9a9384] tabular-nums">업로드 {r.postedDate}</span>
+            {r.url ? (
+              <a href={r.url} target="_blank" rel="noreferrer" className="ml-auto text-[#3557d6] py-1">
+                콘텐츠 열기 ↗
+              </a>
+            ) : (
+              <span className="ml-auto text-[#c4bcaa]">-</span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function DataTable({ t }: { t: ReportTable }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-[13px] min-w-[720px]">
+    <>
+    <MobileList t={t} />
+    <div className="hidden md:block overflow-x-auto">
+      <table className="w-full text-[13px] md:min-w-[720px]">
         <thead className="text-[#6b6558] bg-[#faf8f3]">
           <tr>
             {COLUMNS.map(c => (
@@ -100,6 +144,7 @@ function DataTable({ t }: { t: ReportTable }) {
         </tbody>
       </table>
     </div>
+    </>
   )
 }
 
@@ -156,7 +201,7 @@ function GroupTables({ data, group, label, desc, no, week }: { data: OwmReport; 
             <span className="rounded-full bg-[#e8f5ee] text-[#1f7a4d] font-bold px-2 py-[2px]">조회수 {num(wkViews)}</span>
           </span>
         </div>
-        <div className={`grid grid-cols-2 ${visible.length === 4 ? "sm:grid-cols-4" : ""} gap-2 p-3 border-b border-[#f2ebdd]`}>
+        <div className={`grid grid-cols-1 ${visible.length === 4 ? "sm:grid-cols-4" : "sm:grid-cols-2"} gap-2 p-3 border-b border-[#f2ebdd]`}>
           {visible.map(i => tables[i]).map((x, j) => { const i = visible[j]; return (
             <button
               key={x.key}
@@ -230,6 +275,16 @@ function OwmReportInner() {
       : mode === 'week'
         ? `${weekLabel(WEEKS[wi]).replace(/ \(.*\)/, '')} · ${f(WEEKS[wi].start)}~${f(WEEKS[wi].end)}`
         : `${MONTHS[0].replace('-', '.')} – ${MONTHS[MONTHS.length - 1].replace('-', '.')} 누적`
+  const lastDay = (ym: string) => `${ym}-${String(new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).getDate()).padStart(2, '0')}`
+  const shortText =
+    mode === 'range' ? periodText : shortPeriodLabel(
+      mode === 'month'
+        ? [`${MONTHS[mi]}-01`, lastDay(MONTHS[mi])]
+        : mode === 'week'
+          ? [WEEKS[wi].start, WEEKS[wi].end]
+          : [`${MONTHS[0]}-01`, lastDay(MONTHS[MONTHS.length - 1])],
+      mode,
+    ) || periodText
 
   useEffect(() => {
     setData(null)
@@ -260,11 +315,14 @@ function OwmReportInner() {
           </div>
           {/* 기간 — 대시보드와 같은 ◀ 기간 ▶ + 전체/월별/주간 */}
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <button type="button" disabled={!canPrev} onClick={() => step(-1)} className="w-[34px] h-[34px] rounded-[6px] border border-[#e3d9c4] bg-white text-[13px] disabled:opacity-30" aria-label="이전 기간">
+            <button type="button" disabled={!canPrev} onClick={() => step(-1)} className="w-10 h-10 rounded-[6px] border border-[#e3d9c4] bg-white text-[13px] disabled:opacity-30" aria-label="이전 기간">
               ◀
             </button>
-            <span className="text-[15px] font-extrabold tabular-nums min-w-[150px] text-center">{periodText}</span>
-            <button type="button" disabled={!canNext} onClick={() => step(1)} className="w-[34px] h-[34px] rounded-[6px] border border-[#e3d9c4] bg-white text-[13px] disabled:opacity-30" aria-label="다음 기간">
+            <span className="text-[15px] font-extrabold tabular-nums min-w-0 sm:min-w-[150px] text-center">
+              <span className="sm:hidden">{shortText}</span>
+              <span className="hidden sm:inline">{periodText}</span>
+            </span>
+            <button type="button" disabled={!canNext} onClick={() => step(1)} className="w-10 h-10 rounded-[6px] border border-[#e3d9c4] bg-white text-[13px] disabled:opacity-30" aria-label="다음 기간">
               ▶
             </button>
             {mode === 'range' && (
@@ -289,7 +347,7 @@ function OwmReportInner() {
                   role="tab"
                   aria-selected={mode === k}
                   onClick={() => setMode(k)}
-                  className={`rounded-full px-3 py-1 ${mode === k ? 'bg-[#1a1d2e] text-white font-extrabold' : 'text-[#6b6558] font-semibold hover:text-[#1a1d2e]'}`}
+                  className={`rounded-full px-3 h-10 sm:h-auto sm:py-1 ${mode === k ? 'bg-[#1a1d2e] text-white font-extrabold' : 'text-[#6b6558] font-semibold hover:text-[#1a1d2e]'}`}
                 >
                   {l}
                 </button>
@@ -299,7 +357,7 @@ function OwmReportInner() {
           <a
             href={`/api/owm-report/xlsx${query}`}
             download
-            className="rounded-[6px] bg-[#1f7a4d] hover:bg-[#19663f] text-white px-4 py-2 text-[13px] font-bold shadow-[0_4px_16px_rgba(31,122,77,.2)]"
+            className="inline-flex items-center h-10 rounded-[6px] bg-[#1f7a4d] hover:bg-[#19663f] text-white px-4 text-[13px] font-bold shadow-[0_4px_16px_rgba(31,122,77,.2)]"
           >
             엑셀 다운로드
           </a>
@@ -349,14 +407,14 @@ function OwmReportInner() {
                         <h3 className="text-[17px] font-extrabold">{label}</h3>
                         <span className="text-[12px] text-[#6b6558]">{desc}</span>
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="mt-3 grid grid-cols-1 min-[400px]:grid-cols-2 gap-2">
                         {/* 누적이 위, 주간이 아래 */}
                         <Tile label="누적 노출 조회수" value={c.views} note={rangeLabel(data.cumulative.range)} />
                         <Tile label="누적 업로드 콘텐츠" value={c.uploads} unit="건" note={rangeLabel(data.cumulative.range)} />
                         <Tile label="주간 노출 조회수" value={w.views} note={rangeLabel(data.summary.range)} />
                         <Tile label="주간 업로드 콘텐츠" value={w.uploads} unit="건" note={rangeLabel(data.summary.range)} />
                       </div>
-                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
+                      <div className="mt-3 grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
                         {([
                           ['방문·누적', vc],
                           ['방문예정·누적', pc],

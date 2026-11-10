@@ -73,7 +73,7 @@ function PipelineRow({
       <span className={`num text-[19px] font-semibold w-7 flex-none tracking-tight ${rank === 1 ? 'text-azure' : 'text-mist'}`}>
         {String(rank).padStart(2, '0')}
       </span>
-      <div className="flex-1 min-w-[170px]">
+      <div className="flex-1 min-w-0 sm:min-w-[170px]">
         {onViewBrandContent ? (
           <button
             type="button"
@@ -150,7 +150,7 @@ export default function BrandPipeline({
               {LEAD_RANGE.typical}<small className="text-[17px] text-slate ml-1 font-normal">일</small>
             </div>
           </div>
-          <p className="flex-1 min-w-[250px] text-[12.5px] text-body leading-relaxed">
+          <p className="flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[250px]text-[12.5px] text-body leading-relaxed">
             계약 단계: <b className="text-azure-deep">협의중 → 계약 완료 → 입금 완료 → 캠페인 진행중 → 캠페인 종료</b>.
             입금 완료 후 마케팅 시작까지 통상 <b className="text-azure-deep">{LEAD_RANGE.min}~{LEAD_RANGE.max}일</b>
             (평균 {LEAD_RANGE.typical}일)이 걸립니다.

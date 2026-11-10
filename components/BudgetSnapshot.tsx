@@ -506,7 +506,7 @@ function MonthBars({ rows, maxTotal }: { rows: MonthBar[]; maxTotal: number }) {
               >
                 {isHover && (
                   <div
-                    className={`absolute bottom-full z-20 hidden lg:flex flex-col pointer-events-auto
+                    className={`absolute bottom-full z-20 flex flex-col pointer-events-auto
                       ${barTooltipClass(i, rows.length)}`}
                   >
                     <MonthTooltip month={row.month} total={row.total} items={row.items} caption={row.caption} />

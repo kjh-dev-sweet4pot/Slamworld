@@ -116,7 +116,7 @@ function ContentGrid({ list, pending = [], photos }: { list: Content[]; pending?
             <div className="text-[10.5px] text-[#6b6558] mt-[5px] truncate">
               {posted ? fmtDate(posted) : '—'} · {c.location}
             </div>
-            <div className="text-[12px] font-bold">조회수 {v.value == null ? '—' : `${v.estimated ? '~' : ''}${v.value.toLocaleString()}`}</div>
+            <div className="text-[11px] sm:text-[12px] font-bold tabular-nums whitespace-nowrap truncate">조회수 {v.value == null ? '—' : `${v.estimated ? '~' : ''}${v.value.toLocaleString()}`}</div>
           </a>
         )
       })}

@@ -19,3 +19,7 @@ supabase/.temp/
 *.log
 npm-debug.log*
 tsconfig.tsbuildinfo
+
+# playwright
+playwright-report/
+test-results/
