@@ -119,7 +119,7 @@ export default function PeriodNavV2({
           className={
             compact
               ? 'text-[12px] font-extrabold tracking-normal text-[#1a1d2e] min-w-[128px] text-center select-none'
-              : 'text-[15px] font-extrabold text-[#1a1d2e] min-w-[200px] text-center select-none'
+              : 'text-[15px] font-extrabold text-[#1a1d2e] min-w-0 truncate sm:min-w-[200px] text-center select-none'
           }
         >
           {displayPeriodText}
@@ -193,7 +193,7 @@ function PreNav({
           className={
             compact
               ? 'text-[12px] font-extrabold text-[#1a1d2e] min-w-[128px] text-center select-none'
-              : 'text-[15px] font-extrabold text-[#1a1d2e] min-w-[200px] text-center select-none'
+              : 'text-[15px] font-extrabold text-[#1a1d2e] min-w-0 truncate sm:min-w-[200px] text-center select-none'
           }
         >
           7월 이전 데이터
@@ -240,7 +240,7 @@ function WeeklyNav({
         </button>
         <span
           className={`text-center select-none text-[#1a1d2e] ${
-            compact ? 'text-[12px] font-extrabold min-w-[150px]' : 'flex flex-col leading-tight min-w-[200px] sm:min-w-[230px]'
+            compact ? 'text-[12px] font-extrabold min-w-0 truncate sm:min-w-[150px]' : 'flex flex-col leading-tight min-w-0 sm:min-w-[230px]'
           }`}
         >
           {compact ? (
