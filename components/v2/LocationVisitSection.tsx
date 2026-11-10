@@ -204,7 +204,7 @@ export default function LocationVisitSection({
               <span className="text-[17px] font-extrabold text-[#1a1d2e]">🏆 조회수 TOP 3</span>
               <span className="ml-auto text-[10.5px] text-[#6b6558] bg-[#f6f0e3] px-[7px] py-[3px] rounded-full">전체 기간</span>
             </div>
-            <div className="flex gap-[3px] mt-2.5 bg-[#f7f4ec] rounded-[6px] p-[3px] overflow-x-auto">
+            <div className="flex gap-[3px] mt-2.5 bg-[#f7f4ec] rounded-[6px] p-[3px] flex-wrap">
               {availableTabs.map(tab => (
                 <button
                   key={tab}
