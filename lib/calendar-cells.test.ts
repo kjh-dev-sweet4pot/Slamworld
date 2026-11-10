@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+// @ts-ignore node --test 는 확장자가 있어야 찾음
 import { monthCells, weekTotals } from './calendar-cells.ts'
 
 const z = { visits: 0, done: 0, views: 0 }
