@@ -8,8 +8,16 @@ test.use({ baseURL: BASE })
 const mobile = (n: string) => n !== 'desktop'
 const LONG = 'very_long_handle_'.repeat(8)
 
-function report(rows: Record<string, unknown>[]) {
-  return { range: { start: '2026-11-02', end: '2026-11-08' }, tables: [{ title: '테스트', rows }] }
+/** 실제 응답을 받아 모든 표의 행만 바꿔 돌려줌 (응답 구조는 유지) */
+async function mockRows(page: Page, rows: Record<string, unknown>[]) {
+  const h = async (r: Parameters<Parameters<Page['route']>[1]>[0]) => {
+    const res = await r.fetch()
+    const json = await res.json()
+    for (const t of json.tables ?? []) t.rows = rows
+    await r.fulfill({ response: res, json })
+  }
+  await page.route('**/api/owm-report?*', h)
+  await page.route('**/api/owm-report', h)
 }
 
 async function mockReport(page: Page, body: unknown, status = 200) {
@@ -48,9 +56,9 @@ test('Q3 리포트 페이지 기본 렌더·넘침 없음', async ({ page }) => 
 })
 
 test('Q4 아주 긴 핸들·매장명 → 넘침 없음', async ({ page }, info) => {
-  await mockReport(page, report([
-    { handle: LONG, name: LONG, store: '매장'.repeat(40), visitDate: '2026-11-03', postedDate: '2026-11-04', views: 1234567, url: 'https://example.com' },
-  ]))
+  await mockRows(page, [
+    { handle: LONG, store: '매장'.repeat(40), visit_date: '2026-11-03', posted_date: '2026-11-04', views: 1234567, url: 'https://example.com' },
+  ])
   await page.goto('/owm-report')
   await page.waitForLoadState('networkidle')
   await noCrash(page)
@@ -61,15 +69,15 @@ test('Q4 아주 긴 핸들·매장명 → 넘침 없음', async ({ page }, info)
 test('Q5 null·0 값 행 → 오류 없음', async ({ page }) => {
   const errs: string[] = []
   page.on('pageerror', e => errs.push(e.message))
-  await mockReport(page, report([{ handle: null, store: null, visitDate: null, postedDate: null, views: 0, url: null }]))
+  await mockRows(page, [{ handle: '', store: '', visit_date: '2026-11-03', posted_date: null, views: null, url: null }, { handle: 'z', store: 'z', visit_date: '2026-11-03', posted_date: null, views: 0, url: null }])
   await page.goto('/owm-report')
   await page.waitForLoadState('networkidle')
   await noCrash(page)
   expect(errs).toEqual([])
 })
 
-test('Q6 빈 tables → 흰 화면 아님', async ({ page }) => {
-  await mockReport(page, { tables: [] })
+test('Q6 0건 행 → 흰 화면 아님', async ({ page }) => {
+  await mockRows(page, [])
   await page.goto('/owm-report')
   await page.waitForLoadState('networkidle')
   await noCrash(page)
