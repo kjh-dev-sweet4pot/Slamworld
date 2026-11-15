@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { buildOwmReport, reportFilename, reportRangeLabel, reportXlsx, tablePeople, findTable } from '@/lib/owm-report'
+import { buildOwmReport, reportFilename, reportOpts, reportRangeLabel, reportXlsx, tablePeople, findTable } from '@/lib/owm-report'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -21,7 +21,12 @@ export async function GET(req: NextRequest) {
   if (!key) return NextResponse.json({ error: 'RESEND_API_KEY 없음' }, { status: 500 })
 
   try {
-    const r = await buildOwmReport({ month: req.nextUrl.searchParams.get('month') ?? undefined })
+    // 기간 지정이 없으면 발송일(KST)이 속한 주차 — 월요일 08시 예약 발송 = 그 주 리포트
+    const opts = reportOpts(req.nextUrl.searchParams)
+    if (!opts.month && !opts.week && !(opts.from && opts.to)) {
+      opts.week = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+    }
+    const r = await buildOwmReport(opts)
     const to = (process.env.REPORT_MAIL_TO || 'kjh@slam-global.com').split(',').map(s => s.trim()).filter(Boolean)
     const from = process.env.REPORT_MAIL_FROM || 'BrandSlam <reportDoNotREPLY@slam-global.com>'
     const site = process.env.REPORT_SITE_URL || `${req.nextUrl.origin}/owm-report`
@@ -65,7 +70,7 @@ export async function GET(req: NextRequest) {
         to,
         subject: `[BrandSlam] OWM·옵티팜 주간 리포트 (${ws} ~ ${we})`,
         html,
-        attachments: [{ filename: reportFilename(r), content: xlsx }],
+        attachments: [{ filename: reportFilename(r, !(opts.from && opts.to)), content: xlsx }],
       }),
     })
     const body = await res.json().catch(() => ({}))
