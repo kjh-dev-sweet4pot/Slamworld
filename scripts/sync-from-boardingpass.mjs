@@ -406,7 +406,7 @@ const LINK_SELECT = [
   'url', 'publish_url', 'platform', 'content_status', 'status',
   'published_at', 'views', 'likes', 'comments', 'saves', 'metrics_collected_at',
   'influencers(name,sns_url,instagram_handle,followers,profile_image_path)',
-  'allocations(visit_date,stores(name),companies(name,login_id),campaigns(name),products(name,company_id))',
+  'allocations(visit_date,stores(name),companies(name,login_id),campaigns!allocations_campaign_id_fkey(name),products(name,company_id))',
 ].join(',')
 
 const COMPANY_SELECT = 'id,name,login_id,aliases,is_active,contract_stage,budget_amount,spent_amount,first_meet_on,planned_start_on,planned_end_on'

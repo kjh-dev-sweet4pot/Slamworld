@@ -1,6 +1,6 @@
 {
   "name": "owm-report",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -14,7 +14,9 @@
     "sync-metrics": "tsx scripts/sync-metrics.ts",
     "sync-profile-photos": "tsx scripts/sync-profile-photos.ts",
     "estimate-xhs-views": "tsx scripts/estimate-xhs-views.ts",
-    "estimate-xhs-accuracy": "tsx scripts/estimate-xhs-views.ts -- --accuracy-only"
+    "estimate-xhs-accuracy": "tsx scripts/estimate-xhs-views.ts -- --accuracy-only",
+    "test": "node --test lib/**/*.test.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",
@@ -26,6 +28,7 @@
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
