@@ -34,8 +34,8 @@ const ymd = (t: number) => new Date(t + KST).toISOString().slice(0, 10)
  * 테스트 회원사·취소·시딩 제외.
  */
 export async function GET(req: Request) {
-  const url = process.env.BP_SUPABASE_URL
-  const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY
+  const url = process.env.BP_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return NextResponse.json({ error: 'BoardingPass 환경변수 없음' }, { status: 500 })
   const bp = createClient(url, key, { auth: { persistSession: false } })
 

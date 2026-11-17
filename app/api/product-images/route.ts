@@ -13,8 +13,8 @@ export interface ProductInfo {
  * 이미지는 image_url 또는 content-files 버킷 경로 서명. 없으면 같은 회원사 상품 사진으로 대체한다.
  */
 export async function GET() {
-  const url = process.env.BP_SUPABASE_URL
-  const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY
+  const url = process.env.BP_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return NextResponse.json({ error: 'BoardingPass 환경변수 없음' }, { status: 500 })
 
   const bp = createClient(url, key, { auth: { persistSession: false } })

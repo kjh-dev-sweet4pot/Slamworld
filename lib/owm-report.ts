@@ -104,8 +104,8 @@ interface Visit {
 }
 
 async function loadVisits(start: string): Promise<Visit[]> {
-  const url = process.env.BP_SUPABASE_URL
-  const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY
+  const url = process.env.BP_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.BP_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('BoardingPass 환경변수 없음')
   const bp = createClient(url, key, { auth: { persistSession: false } })
   const data: AllocRow[] = []
