@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { SW_SCHEMA } from './supabase-schema'
 
 /** 서버 전용 — RLS 우회, metrics UPDATE 용 */
 export function createAdminSupabase() {
@@ -7,5 +8,5 @@ export function createAdminSupabase() {
   if (!url || !key) {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required')
   }
-  return createClient(url, key)
+  return createClient(url, key, { db: { schema: SW_SCHEMA } })
 }

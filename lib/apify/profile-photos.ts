@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminSupabase } from '@/lib/supabase-admin'
+
+type AdminSupabase = ReturnType<typeof createAdminSupabase>
 import { runActor } from './client'
 import { APIFY_ACTORS, BATCH_SIZE, PROFILE_BUCKET } from './config'
 import { isDouyinPostUrl, resolveDouyinPostUrl } from './scrapers'
@@ -404,7 +405,7 @@ async function downloadImage(url: string): Promise<{ buf: Buffer; contentType: s
   return tryOnce(`https://wsrv.nl/?url=${encodeURIComponent(url)}&w=320&output=jpg`)
 }
 
-export async function ensureProfileBucket(supabase: SupabaseClient): Promise<void> {
+export async function ensureProfileBucket(supabase: AdminSupabase): Promise<void> {
   const { data } = await supabase.storage.getBucket(PROFILE_BUCKET)
   if (data) return
   const { error } = await supabase.storage.createBucket(PROFILE_BUCKET, {
@@ -414,7 +415,7 @@ export async function ensureProfileBucket(supabase: SupabaseClient): Promise<voi
   if (error && !/already exists/i.test(error.message)) throw error
 }
 
-export async function ensureProfileImageColumn(supabase: SupabaseClient): Promise<boolean> {
+export async function ensureProfileImageColumn(supabase: AdminSupabase): Promise<boolean> {
   const { error } = await supabase.from('contents').select('profile_image_url').limit(1)
   if (!error) return true
 
@@ -422,7 +423,7 @@ export async function ensureProfileImageColumn(supabase: SupabaseClient): Promis
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return false
 
-  const sql = 'ALTER TABLE contents ADD COLUMN IF NOT EXISTS profile_image_url TEXT'
+  const sql = 'ALTER TABLE slamworld.contents ADD COLUMN IF NOT EXISTS profile_image_url TEXT'
   for (const endpoint of [`${url}/pg/query`, `${url}/pg-meta/query`]) {
     try {
       const res = await fetch(endpoint, {

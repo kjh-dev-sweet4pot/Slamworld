@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminSupabase } from '@/lib/supabase-admin'
 import { runBoardingpassSync } from '@/scripts/sync-from-boardingpass.mjs'
 
 export const maxDuration = 60
@@ -12,10 +12,12 @@ const MIN_GAP_SEC = 120
  * sync_state 잠금으로 여러 사람이 동시에 열어도 한 번만 돈다.
  */
 export async function POST() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY 없음' }, { status: 500 })
-  const sw = createClient(url, key, { auth: { persistSession: false } })
+  let sw: ReturnType<typeof createAdminSupabase>
+  try {
+    sw = createAdminSupabase()
+  } catch {
+    return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY 없음' }, { status: 500 })
+  }
 
   const { data: claimed, error } = await sw.rpc('claim_sync', { p_id: 'boardingpass', min_gap: MIN_GAP_SEC })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
