@@ -152,7 +152,7 @@ export async function backfillPlaceholderVisitDates({ apply = false } = {}) {
   const swUrl = swEnv.NEXT_PUBLIC_SUPABASE_URL
   const swKey = swEnv.SUPABASE_SERVICE_ROLE_KEY
   if (!swUrl || !swKey) throw new Error('Slamworld URL/service role 이 없습니다.')
-  const rows = await allRows(swUrl, swKey, 'contents', 'id,upload_url,visit_date')
+  const rows = await allRows(swUrl, swKey, 'contents', 'id,upload_url,visit_date', SW_PROFILE)
   const jobs = []
   for (const row of rows) {
     if (row.visit_date !== PLACEHOLDER_VISIT) continue
@@ -172,6 +172,7 @@ export async function backfillPlaceholderVisitDates({ apply = false } = {}) {
         apikey: swKey,
         Authorization: `Bearer ${swKey}`,
         'Content-Type': 'application/json',
+        ...SW_PROFILE,
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({ visit_date: job.visit_date }),
@@ -251,10 +252,14 @@ async function fillPostedDates(rows) {
 
 async function hasColumn(base, key, column) {
   const res = await fetch(`${base}/rest/v1/contents?select=${column}&limit=1`, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
+    headers: { apikey: key, Authorization: `Bearer ${key}`, ...SW_PROFILE },
   })
   return res.ok
 }
+
+// Slamworld 테이블은 BoardingPass DB 의 slamworld 스키마에 있다
+const SW_SCHEMA = 'slamworld'
+const SW_PROFILE = { 'Accept-Profile': SW_SCHEMA, 'Content-Profile': SW_SCHEMA }
 
 const BP_AVATAR_BUCKET = 'influencer-avatars'
 const SW_PHOTO_BUCKET = 'profile-photos'
@@ -388,11 +393,11 @@ export function toContent(link) {
   }
 }
 
-async function allRows(base, key, table, select) {
+async function allRows(base, key, table, select, profile = {}) {
   const rows = []
   for (let from = 0; ; from += 1000) {
     const res = await fetch(`${base}/rest/v1/${table}?select=${encodeURIComponent(select)}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}`, Range: `${from}-${from + 999}` },
+      headers: { apikey: key, Authorization: `Bearer ${key}`, Range: `${from}-${from + 999}`, ...profile },
     })
     if (!res.ok) throw new Error(`${table} ${res.status}: ${(await res.text()).slice(0, 200)}`)
     const batch = await res.json()
@@ -418,6 +423,7 @@ async function rest(base, key, path, init = {}) {
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
+      ...SW_PROFILE,
       ...(init.headers || {}),
     },
   })
@@ -516,7 +522,7 @@ async function writeCompanies(swUrl, swKey, companies, rounds, skipped = []) {
 
 async function loadContentPhotos(base, key) {
   try {
-    return await allRows(base, key, 'contents', 'id,upload_url,profile_image_url')
+    return await allRows(base, key, 'contents', 'id,upload_url,profile_image_url', SW_PROFILE)
   } catch (e) {
     if (/profile_image_url/i.test(String(e.message || e))) return null
     throw e
@@ -688,7 +694,7 @@ export async function runBoardingpassSync({ apply = false } = {}) {
   if (postedColumn) await fillPostedDates(mapped.map(item => item.row))
 
   const swReadKey = swKey || swEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const existing = await allRows(swUrl, swReadKey, 'contents', 'id,upload_url,campaign')
+  const existing = await allRows(swUrl, swReadKey, 'contents', 'id,upload_url,campaign', SW_PROFILE)
   const canon = await canonicalizeXhsKeys([...mapped.map(item => item.key), ...existing.map(row => urlKey(row.upload_url))])
   const canonKey = key => canon.get(key) || key
   console.log(`샤오홍슈 단축링크 노트 ID 확인 ${canon.size}건`)
@@ -764,6 +770,7 @@ export async function runBoardingpassSync({ apply = false } = {}) {
         apikey: swKey,
         Authorization: `Bearer ${swKey}`,
         'Content-Type': 'application/json',
+        ...SW_PROFILE,
         Prefer: 'return=minimal',
       },
       body: JSON.stringify(patch),
@@ -782,6 +789,7 @@ export async function runBoardingpassSync({ apply = false } = {}) {
         apikey: swKey,
         Authorization: `Bearer ${swKey}`,
         'Content-Type': 'application/json',
+        ...SW_PROFILE,
         Prefer: 'return=minimal',
       },
       body: JSON.stringify(chunk),
@@ -794,7 +802,7 @@ export async function runBoardingpassSync({ apply = false } = {}) {
   let photoErrors = 0
   try {
     const after = photoRows ? await loadContentPhotos(swUrl, swKey) : null
-    const plan = photoTargets(mapped, after || (await allRows(swUrl, swKey, 'contents', 'id,upload_url')).map(row => ({
+    const plan = photoTargets(mapped, after || (await allRows(swUrl, swKey, 'contents', 'id,upload_url', SW_PROFILE)).map(row => ({
       ...row,
       profile_image_url: null,
     })))
