@@ -19,6 +19,14 @@ export interface UpcomingVisit {
   status: string
   /** 방문 완료 (picked_up) */
   done: boolean
+  /** 업로드된 콘텐츠 링크 (보딩패스 creator_links) */
+  links: VisitLink[]
+}
+
+export interface VisitLink {
+  url: string
+  platform: string | null
+  company: string
 }
 
 interface Row {
@@ -32,6 +40,7 @@ interface Row {
   influencers: { name: string | null; region: string | null; tier: string | null } | null
   companies: { name: string | null; login_id: string | null } | null
   stores: { name: string | null } | null
+  creator_links: { url: string | null; publish_url: string | null; platform: string | null }[] | null
 }
 
 /** 보딩패스 allocations 의 placeholder 방문일 (실제 날짜 미정) */
@@ -49,7 +58,7 @@ export async function GET(req: Request) {
     const { data: page, error } = await bp
       .from('allocations')
       .select(
-        'influencer_id,status,visit_date,sheet_region,sheet_tier,sheet_format,quote_service,influencers(name,region,tier),companies(name,login_id),stores(name)',
+        'influencer_id,status,visit_date,sheet_region,sheet_tier,sheet_format,quote_service,influencers(name,region,tier),companies(name,login_id),stores(name),creator_links(url,publish_url,platform)',
       )
       .not('visit_date', 'is', null)
       .neq('status', 'cancelled')
@@ -84,6 +93,7 @@ export async function GET(req: Request) {
         companies: [],
         status: r.status ?? '',
         done: false,
+        links: [],
       }
       byKey.set(k, v)
     }
@@ -91,13 +101,25 @@ export async function GET(req: Request) {
     if (r.quote_service || format?.toUpperCase().includes('PPL')) v.ppl = true
     const company = r.companies?.name?.trim()
     if (company && !v.companies.includes(company)) v.companies.push(company)
+    for (const l of r.creator_links ?? []) {
+      const link = (l.publish_url || l.url)?.trim()
+      if (!link || !/^https?:\/\//.test(link)) continue
+      v.links.push({ url: link, platform: l.platform, company: company ?? '' })
+    }
   }
 
   const session = await sessionFromRequest(req)
   const brand = session?.kind === 'partner' ? session.brand ?? '' : null
   const visits = [...byKey.values()]
   return NextResponse.json(
-    { data: brand === null ? visits : visits.filter(v => v.companies.some(c => contentMatchesBrand(c, brand))) },
+    {
+      data:
+        brand === null
+          ? visits
+          : visits
+              .filter(v => v.companies.some(c => contentMatchesBrand(c, brand)))
+              .map(v => ({ ...v, links: v.links.filter(l => contentMatchesBrand(l.company, brand)) })),
+    },
     { headers: { 'Cache-Control': 'private, max-age=60' } },
   )
 }

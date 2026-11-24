@@ -103,7 +103,7 @@ export default function UpcomingVisitsCard({ partnerBrand }: UpcomingVisitsCardP
           <table className="w-full text-[12px] text-left border-collapse">
             <thead className="sticky top-0 bg-white text-[#6b6558] text-[11px]">
               <tr className="border-b border-[#efe5d0]">
-                {['방문일', '상태', '지점', '인플루언서', '유형', '티어', 'PPL', '브랜드'].map(h => (
+                {['방문일', '상태', '지점', '인플루언서', '유형', '티어', 'PPL', '콘텐츠', '브랜드'].map(h => (
                   <th key={h} className="pb-1.5 pr-1.5 font-normal whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -118,6 +118,7 @@ export default function UpcomingVisitsCard({ partnerBrand }: UpcomingVisitsCardP
                   <td className="py-2 pr-1.5 whitespace-nowrap">{v.region || '-'}</td>
                   <td className="py-2 pr-1.5 whitespace-nowrap">{v.tier || '-'}</td>
                   <td className="py-2 pr-1.5">{v.ppl ? <Badge tone="orange">PPL</Badge> : '-'}</td>
+                  <td className="py-2 pr-1.5"><ContentLinks links={v.links} /></td>
                   <td className="py-2">{v.companies.join(', ') || '-'}</td>
                 </tr>
               ))}
@@ -236,6 +237,30 @@ export default function UpcomingVisitsCard({ partnerBrand }: UpcomingVisitsCardP
 
       {!partnerBrand && <NegotiationPanel visits={visits ?? []} />}
     </section>
+  )
+}
+
+const PLATFORM_LABEL: Record<string, string> = { instagram: 'IG', xiaohongshu: '小红书', tiktok: 'TT', douyin: '抖音', weibo: '微博', youtube: 'YT' }
+
+/** 업로드된 콘텐츠 링크 — 같은 URL(여러 브랜드 공유)은 한 번만 */
+function ContentLinks({ links }: { links: UpcomingVisit['links'] }) {
+  const uniq = [...new Map(links.map(l => [l.url, l])).values()]
+  if (uniq.length === 0) return <span className="text-[#b5ad9c]">-</span>
+  return (
+    <div className="flex flex-wrap gap-1">
+      {uniq.map(l => (
+        <a
+          key={l.url}
+          href={l.url}
+          target="_blank"
+          rel="noreferrer"
+          title={l.url}
+          className="text-[10.5px] font-bold rounded-full px-[7px] py-0.5 whitespace-nowrap bg-[#e6edff] text-[#3557d6] no-underline hover:bg-[#d4e0ff]"
+        >
+          {(l.platform && PLATFORM_LABEL[l.platform]) || '링크'} ↗
+        </a>
+      ))}
+    </div>
   )
 }
 
